@@ -8,7 +8,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    const publicProducts = products.map((p) => ({
+    const publicProducts = products.map((p: typeof products[0]) => ({
       id: p.id,
       name: p.name,
       slug: p.slug,
