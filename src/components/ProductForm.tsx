@@ -57,10 +57,10 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: parseFloat(formData.price),
-          discountPercentage: formData.discountPercentage ? parseFloat(formData.discountPercentage) : null,
+          price: parseFloat(String(formData.price)),
+          discountPercentage: formData.discountPercentage ? parseFloat(String(formData.discountPercentage)) : null,
           notes: formData.notes || null,
-          stock: parseInt(formData.stock),
+          stock: parseInt(String(formData.stock)),
           imageUrl: formData.imageUrl || null,
           visible: formData.visible,
         }),

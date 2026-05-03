@@ -62,14 +62,9 @@ export async function uploadToSupabaseStorage(
     }
 
     // Get public URL
-    const { data: publicUrlData, error: publicUrlError } = supabaseAdmin.storage
+    const { data: publicUrlData } = supabaseAdmin.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
-
-    if (publicUrlError) {
-      console.error('Supabase getPublicUrl error:', publicUrlError);
-      throw new Error('Failed to get public URL');
-    }
 
     if (!publicUrlData?.publicUrl) {
       throw new Error('Failed to get public URL');
