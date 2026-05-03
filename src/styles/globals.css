@@ -1,0 +1,104 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply transition-colors duration-300;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-black;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.btn {
+  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300;
+}
+
+.btn-primary {
+  @apply bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl;
+}
+
+.btn-secondary {
+  @apply bg-white border-2 border-red-600 text-red-600 hover:bg-red-50;
+}
+
+.btn-ghost {
+  @apply text-gray-600 hover:text-black;
+}
+
+.card {
+  @apply bg-white border border-gray-200 rounded-xl p-6 hover:border-red-300 hover:shadow-lg transition-all duration-300;
+}
+
+.card-hover {
+  @apply hover:shadow-xl hover:shadow-red-100;
+}
+
+.section {
+  @apply py-16 lg:py-24 px-4 sm:px-6 lg:px-8;
+}
+
+.container-custom {
+  @apply max-w-7xl mx-auto;
+}
+
+.text-h1 {
+  @apply text-4xl md:text-6xl font-bold tracking-tight text-black;
+}
+
+.text-h2 {
+  @apply text-3xl md:text-4xl font-bold tracking-tight text-black;
+}
+
+.text-h3 {
+  @apply text-2xl md:text-3xl font-semibold text-black;
+}
+
+.gradient-gold {
+  @apply bg-gradient-to-r from-red-500 via-red-600 to-red-700;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+  background-size: 1000px 100%;
+}
+
+.focus-visible {
+  @apply focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white;
+}
+
+::-webkit-scrollbar {
+  @apply w-3;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-red-500 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-red-700;
+}
