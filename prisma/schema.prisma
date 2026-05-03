@@ -1,0 +1,48 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Product model represents a TCG/Pokemon card product in the catalog
+/// Fields:
+/// - id: Unique identifier (auto-generated CUID)
+/// - name: Product name/title (max 255 chars)
+/// - slug: URL-friendly identifier (unique, auto-generated from name)
+/// - description: Detailed product description (text field for long content)
+/// - price: Product price in EUR (decimal with 2 decimal places)
+/// - stock: Number of units available (0 means sold out)
+/// - imageUrl: S3 URL to product image (optional)
+/// - visible: Whether product appears on public catalog (default: true)
+/// - createdAt: Timestamp when product was created (auto-set)
+/// - updatedAt: Timestamp of last update (auto-updated)
+/// 
+/// Indexes:
+/// - visible: For filtering public products
+/// - slug: For product detail page lookups
+/// 
+/// Constraints:
+/// - slug: UNIQUE to prevent duplicate URLs
+model Product {
+  id                   String   @id @default(cuid())
+  name                 String   @db.VarChar(255)
+  slug                 String   @unique @db.VarChar(255)
+  description          String   @db.Text
+  price                Decimal  @db.Decimal(10, 2)
+  discountPercentage   Decimal? @db.Decimal(5, 2)
+  notes                String?  @db.Text
+  stock                Int      @default(0)
+  imageUrl             String?  @db.VarChar(500)
+  visible              Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([visible])
+  @@index([slug])
+}
