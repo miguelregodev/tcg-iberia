@@ -10,6 +10,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Language {
+  JAPANESE
+  KOREAN
+  ENGLISH
+  SPANISH
+}
+
 /// Product model represents a TCG/Pokemon card product in the catalog
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)
@@ -22,6 +29,7 @@ datasource db {
 /// - visible: Whether product appears on public catalog (default: true)
 /// - createdAt: Timestamp when product was created (auto-set)
 /// - updatedAt: Timestamp of last update (auto-updated)
+/// - hitCards: Relationship to hit cards associated with this product
 /// 
 /// Indexes:
 /// - visible: For filtering public products
@@ -39,10 +47,44 @@ model Product {
   notes                String?  @db.Text
   stock                Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
+  language             Language @default(ENGLISH)
   visible              Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  hitCards             HitCard[]
 
   @@index([visible])
   @@index([slug])
+  @@index([language])
+}
+
+/// HitCard model represents promotional/best hit cards associated with a product
+/// Fields:
+/// - id: Unique identifier (auto-generated CUID)
+/// - productId: Foreign key reference to Product
+/// - product: Relationship to the Product
+/// - name: Hit card name/title (max 255 chars)
+/// - type: Type of hit card (string field for flexibility)
+/// - imageUrl: Supabase storage URL to hit card image
+/// - marketPrice: Market price of the hit card in EUR (decimal with 2 decimal places)
+/// - createdAt: Timestamp when hit card was created (auto-set)
+/// - updatedAt: Timestamp of last update (auto-updated)
+/// 
+/// Indexes:
+/// - productId: For filtering hit cards by product
+/// 
+/// Constraints:
+/// - productId: Foreign key to Product, cascade delete
+model HitCard {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String   @db.VarChar(255)
+  type          String   @db.VarChar(100)
+  imageUrl      String   @db.VarChar(500)
+  marketPrice   Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([productId])
 }

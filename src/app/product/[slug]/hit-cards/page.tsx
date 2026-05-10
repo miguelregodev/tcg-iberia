@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { Metadata } from 'next';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
-import { ProductDetailClient } from '@/components/ProductDetailClient';
+import { HitCardsClient } from '@/components/HitCardsClient';
 
 export async function generateMetadata({
   params,
@@ -22,12 +22,12 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${product.name} | TCG Iberia`,
-    description: product.description,
+    title: `${product.name} - Best Hit Cards | TCG Iberia`,
+    description: `Best hit cards and special editions for ${product.name}`,
   };
 }
 
-export default async function ProductDetail({
+export default async function HitCardsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -74,7 +74,6 @@ export default async function ProductDetail({
     discountPercentage: product.discountPercentage
       ? Number(product.discountPercentage)
       : null,
-    language: product.language,
     available: product.stock > 0,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -89,7 +88,7 @@ export default async function ProductDetail({
   return (
     <>
       <Navigation />
-      <ProductDetailClient product={serializedProduct} />
+      <HitCardsClient product={serializedProduct} />
       <Footer />
     </>
   );

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "HitCard" ALTER COLUMN "type" SET DATA TYPE VARCHAR(100);

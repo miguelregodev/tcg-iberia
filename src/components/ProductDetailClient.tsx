@@ -7,9 +7,20 @@ interface ProductDetailClientProps {
   product: Product;
 }
 
+function getLanguageFlag(language: string): { path: string; name: string } {
+  const flags: Record<string, { path: string; name: string }> = {
+    ENGLISH: { path: '/images/united-kingdom.png', name: 'English' },
+    JAPANESE: { path: '/images/japan.png', name: 'Japanese' },
+    KOREAN: { path: '/images/south-korea.png', name: 'Korean' },
+    SPANISH: { path: '/images/spain.png', name: 'Spanish' },
+  };
+  return flags[language] || flags.ENGLISH;
+}
+
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const flagInfo = getLanguageFlag(product.language);
 
   const finalPrice = product.discountPercentage
     ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
@@ -38,6 +49,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const isSoldOut = product.stock === 0;
+  const hasHitCards = product.hitCards && product.hitCards.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-8 md:py-16">
@@ -55,6 +67,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     alt={product.name}
                     className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-300"
                   />
+
+                  {/* Language Flag */}
+                  <div className="absolute top-4 left-4 bg-white rounded-lg p-2 shadow-md">
+                    <img
+                      src={flagInfo.path}
+                      alt={flagInfo.name}
+                      title={flagInfo.name}
+                      className="w-8 h-5 object-cover rounded"
+                    />
+                  </div>
 
                   {/* Badge Overlay */}
                   {product.discountPercentage && (
@@ -182,6 +204,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {/* Action Buttons */}
             <div className="space-y-3 flex flex-col">
+              {hasHitCards && (
+                <a
+                  href={`/product/${product.slug}/hit-cards`}
+                  className="btn bg-purple-600 hover:bg-purple-700 text-white w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
+                >
+                  ✨ View Best Hit Cards ({product.hitCards?.length || 0})
+                </a>
+              )}
+
               <a
                 href={`https://wa.me/34689178762?text=Hola, estoy interesado en "${product.name}". ¿Podrían darme más información?`}
                 target="_blank"
