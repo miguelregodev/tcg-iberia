@@ -1,7 +1,7 @@
 export function TrustSection() {
   const features = [
     {
-      title: 'Authentic Japanese Products',
+      title: 'Authentic Pokemon Products',
       description: 'Every card verified and authenticated by certified professionals',
       icon: '✓',
     },

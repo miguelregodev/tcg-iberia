@@ -18,25 +18,22 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const product = await db.product.update({
+    
+    const hitCard = await db.hitCard.update({
       where: { id },
       data: {
         name: body.name,
-        description: body.description,
-        price: parseFloat(body.price),
-        discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
-        notes: body.notes || null,
-        stock: parseInt(body.stock),
+        type: body.type,
         imageUrl: body.imageUrl,
-        language: body.language || 'ENGLISH',
-        visible: body.visible,
+        marketPrice: parseFloat(body.marketPrice),
       },
     });
 
-    return NextResponse.json(product);
+    return NextResponse.json(hitCard);
   } catch (error) {
+    console.error('Failed to update hit card:', error);
     return NextResponse.json(
-      { error: 'Failed to update product' },
+      { error: 'Failed to update hit card' },
       { status: 500 }
     );
   }
@@ -52,7 +49,8 @@ export async function DELETE(
   }
 
   try {
-    const existing = await db.product.findUnique({ where: { id } });
+    const existing = await db.hitCard.findUnique({ where: { id } });
+    
     if (existing?.imageUrl) {
       try {
         await deleteFromSupabaseStorage(existing.imageUrl);
@@ -61,14 +59,15 @@ export async function DELETE(
       }
     }
 
-    await db.product.delete({
+    await db.hitCard.delete({
       where: { id },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Failed to delete hit card:', error);
     return NextResponse.json(
-      { error: 'Failed to delete product' },
+      { error: 'Failed to delete hit card' },
       { status: 500 }
     );
   }

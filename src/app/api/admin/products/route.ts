@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         notes: body.notes || null,
         stock: parseInt(body.stock),
         imageUrl: body.imageUrl,
+        language: body.language || 'ENGLISH',
         visible: body.visible ?? true,
       },
     });

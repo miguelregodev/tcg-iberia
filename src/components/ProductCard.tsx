@@ -1,17 +1,36 @@
 import Link from 'next/link';
 import { Product } from '@/types';
 
+function getLanguageFlag(language: string): { path: string; name: string } {
+  const flags: Record<string, { path: string; name: string }> = {
+    ENGLISH: { path: '/images/united-kingdom.png', name: 'English' },
+    JAPANESE: { path: '/images/japan.png', name: 'Japanese' },
+    KOREAN: { path: '/images/south-korea.png', name: 'Korean' },
+    SPANISH: { path: '/images/spain.png', name: 'Spanish' },
+  };
+  return flags[language] || flags.ENGLISH;
+}
+
 export function ProductCard({ product }: { product: Product }) {
+  const flagInfo = getLanguageFlag(product.language);
   return (
     <Link href={`/product/${product.slug}`}>
       <div className="card card-hover cursor-pointer group">
         {product.imageUrl && (
-          <div className="mb-4 h-64 bg-gray-100 rounded-lg overflow-hidden">
+          <div className="mb-4 h-64 bg-gray-100 rounded-lg overflow-hidden relative">
             <img
               src={product.imageUrl}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
+            <div className="absolute top-3 right-3 bg-white rounded-lg p-1.5 shadow-md">
+              <img
+                src={flagInfo.path}
+                alt={flagInfo.name}
+                title={flagInfo.name}
+                className="w-6 h-4 object-cover rounded"
+              />
+            </div>
           </div>
         )}
         

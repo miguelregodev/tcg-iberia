@@ -15,6 +15,7 @@ export async function GET() {
       price: parseFloat(p.price.toString()),
       discountPercentage: p.discountPercentage ? parseFloat(p.discountPercentage.toString()) : null,
       imageUrl: p.imageUrl,
+      language: p.language,
       available: p.stock > 0,
       description: p.description,
       createdAt: p.createdAt,
