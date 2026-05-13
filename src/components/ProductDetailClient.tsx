@@ -126,15 +126,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="bg-gradient-to-r from-red-50 to-red-100/50 rounded-xl p-6 mb-8 border border-red-200">
               <div className="flex items-baseline gap-4">
                 <span className="text-4xl font-bold text-red-600">
-                  €{finalPrice.toFixed(2)}
+                  {finalPrice.toFixed(2)}€
                 </span>
                 {product.discountPercentage && (
                   <div className="flex flex-col gap-1">
                     <span className="text-lg text-gray-400 line-through">
-                      €{Number(product.price).toFixed(2)}
+                      {Number(product.price).toFixed(2)}€
                     </span>
                     <span className="text-sm font-semibold text-red-600">
-                      Save €{savingsAmount}
+                      Save {savingsAmount}€
                     </span>
                   </div>
                 )}
@@ -217,9 +217,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 href={`https://wa.me/34689178762?text=Hola, estoy interesado en "${product.name}". ¿Podrían darme más información?`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`btn btn-primary w-full text-center font-bold py-4 text-lg transition-all ${
-                  isSoldOut ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl'
-                }`}
+                className="btn btn-primary w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
               >
                 💬 Contact on WhatsApp
               </a>
@@ -237,7 +235,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>
-                  <strong>Fast EU Shipping:</strong> 2-3 business days
+                  <strong>Fast Shipping:</strong> 2-3 business days
                 </span>
               </div>
               <div className="flex items-center gap-3">

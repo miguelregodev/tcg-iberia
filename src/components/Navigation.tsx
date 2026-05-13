@@ -6,7 +6,7 @@ export function Navigation() {
       <div className="container-custom px-4 py-4 flex justify-between items-center">
         <a href="/" className="flex items-center gap-2">
           <img src="/images/logo.png" alt="TCG Iberia" className="h-10 w-auto" />
-          <span className="text-2xl font-bold text-red-600">TCG Iberia</span>
+          <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
         </a>
         <div className="flex gap-6">
           <a href="/" className="text-gray-700 hover:text-red-600 font-medium">Home</a>

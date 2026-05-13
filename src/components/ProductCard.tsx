@@ -42,15 +42,15 @@ export function ProductCard({ product }: { product: Product }) {
           {product.discountPercentage ? (
             <div className="flex items-center gap-2">
               <p className="text-red-600 font-bold text-lg">
-                €{(product.price * (1 - product.discountPercentage / 100)).toFixed(2)}
+                {(product.price * (1 - product.discountPercentage / 100)).toFixed(2)}€
               </p>
               <p className="text-sm text-gray-400 line-through">
-                €{Number(product.price).toFixed(2)}
+                {Number(product.price).toFixed(2)}€
               </p>
             </div>
           ) : (
             <p className="text-red-600 font-bold text-lg">
-              €{Number(product.price).toFixed(2)}
+              {Number(product.price).toFixed(2)}€
             </p>
           )}
         </div>
