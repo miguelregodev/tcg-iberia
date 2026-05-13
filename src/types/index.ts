@@ -9,6 +9,7 @@ export type Product = {
   stock: number;
   imageUrl: string | null;
   language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
+  priority: number;
   visible: boolean;
   available: boolean;
   createdAt: String;

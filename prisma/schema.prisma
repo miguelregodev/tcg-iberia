@@ -26,6 +26,7 @@ enum Language {
 /// - price: Product price in EUR (decimal with 2 decimal places)
 /// - stock: Number of units available (0 means sold out)
 /// - imageUrl: S3 URL to product image (optional)
+/// - priority: Display order in catalog (lower numbers appear first, default: 999)
 /// - visible: Whether product appears on public catalog (default: true)
 /// - createdAt: Timestamp when product was created (auto-set)
 /// - updatedAt: Timestamp of last update (auto-updated)
@@ -34,6 +35,7 @@ enum Language {
 /// Indexes:
 /// - visible: For filtering public products
 /// - slug: For product detail page lookups
+/// - priority: For ordering products by priority
 /// 
 /// Constraints:
 /// - slug: UNIQUE to prevent duplicate URLs
@@ -48,6 +50,7 @@ model Product {
   stock                Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
   language             Language @default(ENGLISH)
+  priority             Int      @default(999)
   visible              Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -56,6 +59,7 @@ model Product {
   @@index([visible])
   @@index([slug])
   @@index([language])
+  @@index([priority])
 }
 
 /// HitCard model represents promotional/best hit cards associated with a product

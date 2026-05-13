@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         stock: parseInt(body.stock),
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
+        priority: body.priority !== undefined ? parseInt(body.priority) : 999,
         visible: body.visible ?? true,
       },
     });

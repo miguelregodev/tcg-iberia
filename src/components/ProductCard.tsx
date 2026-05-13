@@ -60,8 +60,10 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
         
         <div className="flex justify-between items-center">
-          {product.available ? (
+          {product.stock > 5 ? (
             <span className="text-green-600 text-sm font-semibold">Available</span>
+          ) : product.stock > 0 ? (
+            <span className="text-orange-600 text-sm font-semibold">Last Units</span>
           ) : (
             <span className="text-red-600 text-sm font-semibold">Sold Out</span>
           )}
