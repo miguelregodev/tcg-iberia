@@ -47,7 +47,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         .filter(note => note.length > 0)
     : [];
 
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  const isAvailable = product.stock > 5;
+  const isLastUnits = product.stock > 0 && product.stock <= 5;
   const isSoldOut = product.stock === 0;
   const hasHitCards = product.hitCards && product.hitCards.length > 0;
 
@@ -85,9 +86,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </div>
                   )}
 
-                  {isLowStock && (
-                    <div className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
-                      Limited Stock
+                  {isLastUnits && (
+                    <div className="absolute bottom-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
+                      Last Units
                     </div>
                   )}
                 </div>
@@ -103,13 +104,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <span className="inline-block bg-gray-300 text-gray-700 px-4 py-2 rounded-full font-semibold text-sm">
                   Sold Out
                 </span>
-              ) : isLowStock ? (
+              ) : isLastUnits ? (
                 <span className="inline-block bg-orange-100 text-orange-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Limited Availability
+                  Last Units
                 </span>
               ) : (
                 <span className="inline-block bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  In Stock
+                  Available
                 </span>
               )}
             </div>
@@ -126,15 +127,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="bg-gradient-to-r from-red-50 to-red-100/50 rounded-xl p-6 mb-8 border border-red-200">
               <div className="flex items-baseline gap-4">
                 <span className="text-4xl font-bold text-red-600">
-                  €{finalPrice.toFixed(2)}
+                  {finalPrice.toFixed(2)}€
                 </span>
                 {product.discountPercentage && (
                   <div className="flex flex-col gap-1">
                     <span className="text-lg text-gray-400 line-through">
-                      €{Number(product.price).toFixed(2)}
+                      {Number(product.price).toFixed(2)}€
                     </span>
                     <span className="text-sm font-semibold text-red-600">
-                      Save €{savingsAmount}
+                      Save {savingsAmount}€
                     </span>
                   </div>
                 )}
@@ -152,27 +153,21 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {(notesList.length > 0 || features.length > 1) && (
               <div className="mb-8">
                 <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-4">
-                  {notesList.length > 0 ? 'Notes' : 'Key Features'}
+                  {notesList.length > 0 ? 'Product Info' : 'Key Features'}
                 </h3>
-                <ul className="space-y-3">
+                <div className="space-y-3">
                   {notesList.length > 0
                     ? notesList.map((note, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="text-red-600 font-bold mt-1">•</span>
-                          <span className="text-gray-700 text-sm leading-relaxed">
-                            {note}
-                          </span>
-                        </li>
+                        <p key={idx} className="text-gray-700 text-sm leading-relaxed">
+                          {note}
+                        </p>
                       ))
                     : features.slice(1).map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="text-red-600 font-bold mt-1">✓</span>
-                          <span className="text-gray-700 text-sm leading-relaxed">
-                            {feature.trim()}
-                          </span>
-                        </li>
+                        <p key={idx} className="text-gray-700 text-sm leading-relaxed">
+                          {feature.trim()}
+                        </p>
                       ))}
-                </ul>
+                </div>
               </div>
             )}
 
@@ -217,9 +212,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 href={`https://wa.me/34689178762?text=Hola, estoy interesado en "${product.name}". ¿Podrían darme más información?`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`btn btn-primary w-full text-center font-bold py-4 text-lg transition-all ${
-                  isSoldOut ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl'
-                }`}
+                className="btn btn-primary w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
               >
                 💬 Contact on WhatsApp
               </a>
@@ -237,7 +230,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>
-                  <strong>Fast EU Shipping:</strong> 2-3 business days
+                  <strong>Fast Shipping:</strong> 2-3 business days
                 </span>
               </div>
               <div className="flex items-center gap-3">

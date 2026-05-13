@@ -29,6 +29,7 @@ export async function PUT(
         stock: parseInt(body.stock),
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
+        priority: body.priority !== undefined ? parseInt(body.priority) : undefined,
         visible: body.visible,
       },
     });

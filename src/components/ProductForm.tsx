@@ -20,6 +20,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     stock: product?.stock || '',
     imageUrl: product?.imageUrl || '',
     language: product?.language || 'ENGLISH',
+    priority: product?.priority || 999,
     visible: product?.visible ?? true,
   });
   const [loading, setLoading] = useState(false);
@@ -104,6 +105,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
           stock: parseInt(String(formData.stock)),
           imageUrl: formData.imageUrl || null,
           language: formData.language,
+          priority: parseInt(String(formData.priority)),
           visible: formData.visible,
         }),
       });
@@ -228,6 +230,21 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
             <option value="KOREAN">Korean</option>
             <option value="SPANISH">Spanish</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Priority (Display Order) <span className="text-gray-500">optional</span></label>
+          <input
+            type="number"
+            name="priority"
+            value={formData.priority}
+            onChange={handleChange}
+            min="0"
+            placeholder="999"
+            className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus-visible"
+            disabled={loading}
+          />
+          <p className="text-xs text-gray-500 mt-1">Lower numbers appear first in the catalog. Default: 999 (end of list).</p>
         </div>
 
         <div>
