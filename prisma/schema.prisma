@@ -47,6 +47,7 @@ model Product {
   price                Decimal  @db.Decimal(10, 2)
   discountPercentage   Decimal? @db.Decimal(5, 2)
   notes                String?  @db.Text
+  type                 String?  @db.VarChar(100)
   stock                Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
   language             Language @default(ENGLISH)

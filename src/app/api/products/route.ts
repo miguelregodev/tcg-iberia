@@ -1,10 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const type = searchParams.get('type');
+    const language = searchParams.get('language');
+
+    // Build the where clause based on query params
+    const where: any = { visible: true };
+    
+    if (type) {
+      where.type = {
+        equals: type,
+        mode: 'insensitive',
+      };
+    }
+    
+    if (language) {
+      where.language = language;
+    }
+
     const products = await db.product.findMany({
-      where: { visible: true },
+      where,
       orderBy: { priority: 'asc' },
     });
 
@@ -22,6 +40,7 @@ export async function GET() {
       description: p.description,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
+      type: p.type,
     }));
 
     return NextResponse.json(publicProducts);

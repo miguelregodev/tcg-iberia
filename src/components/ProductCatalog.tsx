@@ -44,7 +44,7 @@ export function ProductCatalog() {
   return (
     <section id="catalog" className="section">
       <div className="container-custom">
-        <h2 className="text-h2 mb-8 text-center">Catalog</h2>
+        <h2 className="text-h2 mb-8 text-center">All Products</h2>
         
         {/* Language Filter */}
         <div className="mb-8 flex flex-wrap gap-2 justify-center">

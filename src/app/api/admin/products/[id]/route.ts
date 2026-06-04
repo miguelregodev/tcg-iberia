@@ -26,6 +26,7 @@ export async function PUT(
         price: parseFloat(body.price),
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         notes: body.notes || null,
+        type: body.type || null,
         stock: parseInt(body.stock),
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
