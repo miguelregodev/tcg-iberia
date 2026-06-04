@@ -6,6 +6,7 @@ export type Product = {
   price: number;
   discountPercentage: number | null;
   notes: string | null;
+  type: string | null;
   stock: number;
   imageUrl: string | null;
   language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';

@@ -17,6 +17,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     price: product?.price || '',
     discountPercentage: product?.discountPercentage || '',
     notes: product?.notes || '',
+    type: product?.type || '',
     stock: product?.stock || '',
     imageUrl: product?.imageUrl || '',
     language: product?.language || 'ENGLISH',
@@ -102,6 +103,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
           price: parseFloat(String(formData.price)),
           discountPercentage: formData.discountPercentage ? parseFloat(String(formData.discountPercentage)) : null,
           notes: formData.notes || null,
+          type: formData.type || null,
           stock: parseInt(String(formData.stock)),
           imageUrl: formData.imageUrl || null,
           language: formData.language,
@@ -229,6 +231,23 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
             <option value="JAPANESE">Japanese</option>
             <option value="KOREAN">Korean</option>
             <option value="SPANISH">Spanish</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Product Type *<span className="text-gray-500">optional</span></label>
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            required
+            className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus-visible"
+            disabled={loading}
+          >
+            <option value="">Select a type</option>
+            <option value="Booster Box">Booster Box</option>
+            <option value="Starter Deck">Pack</option>
+            <option value="Single Card">Single Card</option>
           </select>
         </div>
 
