@@ -1,18 +1,18 @@
 export function TrustSection() {
   const features = [
     {
-      title: 'Authentic Pokemon Products',
+      title: 'Productos Auténticos Verificados',
       description: 'Every card verified and authenticated by certified professionals',
       icon: '✓',
     },
     {
-      title: 'Fast Shipping',
-      description: 'Secure packaging with less than 5 business day delivery across EU',
+      title: 'Envío Rápido',
+      description: 'Envíos rápidos y seguros a toda España con seguimiento en tiempo real',
       icon: '🚚',
     },
     {
-      title: 'Premium Support',
-      description: '24/7 customer support via WhatsApp and email',
+      title: 'Soporte Premium',
+      description: 'Soporte al cliente 24/7 a través de WhatsApp y correo electrónico',
       icon: '💬',
     },
   ];
@@ -20,7 +20,7 @@ export function TrustSection() {
   return (
     <section id="contact" className="section bg-red-50">
       <div className="container-custom">
-        <h2 className="text-h2 mb-12 text-center">Why TCG Iberia</h2>
+        <h2 className="text-h2 mb-12 text-center">¿Por qué TCG Iberia?</h2>
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           {features.map((feature, index) => (
             <div key={index} className="text-center">
@@ -39,13 +39,13 @@ export function TrustSection() {
               rel="noopener noreferrer"
               className="btn btn-primary"
             >
-              Chat on WhatsApp
+              Chatea en WhatsApp
             </a>
             <a
               href="mailto:sales@tcgiberia.com"
               className="btn btn-secondary"
             >
-              Email Us
+              Envíanos un Email
             </a>
           </div>
         </div>

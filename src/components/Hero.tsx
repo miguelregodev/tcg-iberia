@@ -13,17 +13,14 @@ export function Hero() {
       <div className="absolute inset-0 bg-black/60"></div>
       
       <div className="container-custom relative z-10">
-        <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-h1 mb-6 gradient-gold">Premium TCG Store</h1>
-          <p className="text-text-secondary text-lg md:text-xl mb-12 leading-relaxed">
-            Authenticated Pokémon cards for serious collectors. EU fast shipping, secure transactions, and premium grade authentication.
-          </p>
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-h2 mb-6 gradient-gold">Tu tienda de Pokémon TCG en España</h1>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="#catalog" className="btn btn-primary">
-              View Catalog
+              Ver el catálogo
             </a>
             <a href="#contact" className="btn btn-secondary">
-              Contact Us
+              Contacto
             </a>
           </div>
         </div>

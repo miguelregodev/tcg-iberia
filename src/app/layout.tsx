@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { CartProvider } from "@/context/CartContext";
 
 export const metadata: Metadata = {
   title: "TCG Iberia - Premium Pokémon Trading Card Store",
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-white text-black antialiased">
-        <main>{children}</main>
+        <CartProvider>
+          <main>{children}</main>
+        </CartProvider>
       </body>
     </html>
   );

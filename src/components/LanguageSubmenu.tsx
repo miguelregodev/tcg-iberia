@@ -5,7 +5,7 @@ import Link from 'next/link';
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
 interface LanguageSubmenuProps {
-  category: 'booster-boxes' | 'booster-packs' | 'booster-bundles';
+  category: 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
   onClose: () => void;
 }
 
