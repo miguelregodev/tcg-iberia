@@ -20,13 +20,7 @@ interface SessionMetadata {
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  console.log("WEBHOOK HIT");
-  console.log('HEADERS:', request.headers.get('content-type'));
-  console.log('RAW BODY LENGTH:', body.length);
-  
-  console.log("SECRET:", webhookSecret?.slice(0, 10));
   const signature = request.headers.get('stripe-signature');
-  console.log("SIGNATURE:", signature);
   if (!signature) {
     return NextResponse.json(
       { error: 'Missing stripe-signature header' },
@@ -47,8 +41,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Handle checkout session completed event
-    console.log('Event type:', event.type);
 
     if (event.type === 'checkout.session.completed') {
       
@@ -62,9 +54,6 @@ export async function POST(request: NextRequest) {
       const paymentIntent = expandedSession.payment_intent as Stripe.PaymentIntent;
       const metadata = paymentIntent?.metadata as SessionMetadata;
 
-      console.log('Session:', session.id);
-      console.log('PaymentIntent metadata:', paymentIntent?.metadata);
-      console.log("METADATA SESSION:", session.metadata);
 
       // Get line items from the session
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
@@ -84,8 +73,7 @@ export async function POST(request: NextRequest) {
           // Calculate total amount
         const totalAmount = (session.amount_total || 0) / 100;
         const orderNumber = await generateOrderNumber();
-        // Create order only if we have customer data
-        console.log('Generated orderNumber:', orderNumber);
+
         try {
           const order = await db.order.create({
             data: {
@@ -105,53 +93,11 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          console.log('Order created:', order.id);
         } catch (err) {
           console.error('Prisma create failed', err);
         }
       } else {
         console.warn('Missing customer data for order creation:', { session: session.id, metadata });
-      }
-    }
-
-    // Handle payment intent succeeded event (alternative event type)
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const metadata = (paymentIntent.metadata || {}) as SessionMetadata;
-
-      console.log('Payment intent succeeded:', paymentIntent.id);
-      console.log('Metadata:', metadata);
-
-      // If order wasn't already created via checkout.session.completed, create it here
-      if (metadata.email && metadata.fullName) {
-        const existingOrder = await db.order.findFirst({
-          where: {
-            stripeSessionId: paymentIntent.id,
-          },
-        });
-
-        if (!existingOrder) {
-          const items = (paymentIntent.charges.data[0]?.metadata || {}) as any;
-          const orderNumber = await generateOrderNumber();
-
-          await db.order.create({
-            data: {
-              orderNumber: orderNumber,
-              fullName: metadata.fullName || 'Unknown',
-              email: metadata.email || paymentIntent.receipt_email || '',
-              phone: metadata.phone || '',
-              shippingAddress: metadata.shippingAddress || '',
-              shippingPostalCode: metadata.shippingPostalCode || '',
-              shippingCity: metadata.shippingCity || '',
-              shippingLocality: metadata.shippingLocality || '',
-              shippingProvince: metadata.shippingProvince || '',
-              totalAmount: new Prisma.Decimal((paymentIntent.amount || 0) / 100),
-              status: 'PROCESSING',
-              stripeSessionId: paymentIntent.id,
-              items: items ? JSON.parse(items) : [],
-            },
-          });
-        }
       }
     }
 
