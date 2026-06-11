@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Product } from '@/types';
+import { useCart } from '@/context/CartContext';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -20,6 +21,8 @@ function getLanguageFlag(language: string): { path: string; name: string } {
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const { addToCart } = useCart();
   const flagInfo = getLanguageFlag(product.language);
 
   const finalPrice = product.discountPercentage
@@ -32,6 +35,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const incrementQuantity = () => setQuantity(q => q + 1);
   const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
+
+  const handleAddToCart = () => {
+    addToCart(product, quantity);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
 
   // Parse features from description (split by bullet points or newlines)
   const features = product.description
@@ -88,7 +97,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
                   {isLastUnits && (
                     <div className="absolute bottom-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
-                      Last Units
+                      Últimas unidades
                     </div>
                   )}
                 </div>
@@ -102,15 +111,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="mb-6">
               {isSoldOut ? (
                 <span className="inline-block bg-gray-300 text-gray-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Sold Out
+                  Agotado
                 </span>
               ) : isLastUnits ? (
                 <span className="inline-block bg-orange-100 text-orange-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Last Units
+                  Últimas unidades
                 </span>
               ) : (
                 <span className="inline-block bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Available
+                  Disponible
                 </span>
               )}
             </div>
@@ -120,13 +129,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               {product.name}
             </h1>
 
-            {/* Rating / Meta Info */}
-            <p className="text-gray-500 text-sm mb-6 font-medium">Sealed</p>
+            <br></br>
+
 
             {/* Price Section */}
-            <div className="bg-gradient-to-r from-red-50 to-red-100/50 rounded-xl p-6 mb-8 border border-red-200">
               <div className="flex items-baseline gap-4">
-                <span className="text-4xl font-bold text-red-600">
+                <span className="text-4xl font-bold text-black-600">
                   {finalPrice.toFixed(2)}€
                 </span>
                 {product.discountPercentage && (
@@ -135,12 +143,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       {Number(product.price).toFixed(2)}€
                     </span>
                     <span className="text-sm font-semibold text-red-600">
-                      Save {savingsAmount}€
+                      Ahorras {savingsAmount}€
                     </span>
                   </div>
                 )}
               </div>
-            </div>
 
             {/* Description */}
             <div className="mb-8">
@@ -153,7 +160,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {(notesList.length > 0 || features.length > 1) && (
               <div className="mb-8">
                 <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-4">
-                  {notesList.length > 0 ? 'Product Info' : 'Key Features'}
+                  {notesList.length > 0 ? 'Detalles' : 'Key Features'}
                 </h3>
                 <div className="space-y-3">
                   {notesList.length > 0
@@ -204,25 +211,28 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   href={`/product/${product.slug}/hit-cards`}
                   className="btn bg-purple-600 hover:bg-purple-700 text-white w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
                 >
-                  ✨ View Best Hit Cards ({product.hitCards?.length || 0})
+                  ✨ Ver hits ({product.hitCards?.length || 0})
                 </a>
               )}
 
-              <a
-                href={`https://wa.me/34689178762?text=Hola, estoy interesado en "${product.name}". ¿Podrían darme más información?`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
+              <button
+                onClick={handleAddToCart}
+                disabled={isSoldOut}
+                className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
+                  isSoldOut
+                    ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                    : addedToCart
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
               >
-                💬 Contact on WhatsApp
-              </a>
-
-              <a
-                href="mailto:sales@tcgiberia.com"
-                className="btn btn-secondary w-full text-center font-bold py-4 text-lg transition-all"
-              >
-                📧 Email Us
-              </a>
+                <img
+                  src="/images/add-to-cart.png"
+                  alt="Add to Cart"
+                  className="w-5 h-5"
+                />
+                {addedToCart ? '✓ Añadido al carrito' : 'Añadir al carrito'}
+              </button>
             </div>
 
             {/* Shipping Info */}
@@ -230,45 +240,25 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>
-                  <strong>Fast Shipping:</strong> 2-3 business days
+                  <strong>Envío rápido</strong>
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-lg">✓</span>
                 <span>
-                  <strong>Authentic:</strong> Certified and verified
+                  <strong>Producto original</strong>
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-lg">💬</span>
                 <span>
-                  <strong>Support:</strong> 24/7 customer service
+                  <strong>Contáctanos para cualquier consulta o ayuda con tu pedido</strong> 
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Additional Product Information */}
-        {!isSoldOut && (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 mb-16">
-            <h2 className="text-2xl font-bold text-black mb-6">About This Product</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div>
-                <h3 className="font-bold text-red-600 mb-2">Sealed</h3>
-                <p className="text-gray-600 text-sm">Premium quality sealed cards delivered directly from Japan</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-red-600 mb-2">Secure Packaging</h3>
-                <p className="text-gray-600 text-sm">Professional protection with tracked shipping included</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-red-600 mb-2">Expert Support</h3>
-                <p className="text-gray-600 text-sm">Get detailed information about card conditions and authenticity</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

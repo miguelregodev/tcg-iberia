@@ -21,7 +21,7 @@ export function HamburgerMenu({ onClose }: HamburgerMenuProps) {
         {/* Home */}
         <Link href="/" onClick={onClose}>
           <div className="px-4 py-3 hover:bg-gray-50 rounded-lg text-gray-700 hover:text-red-600 font-medium transition-colors cursor-pointer">
-            Home
+            Inicio
           </div>
         </Link>
 
@@ -70,6 +70,21 @@ export function HamburgerMenu({ onClose }: HamburgerMenuProps) {
           </button>
           {expandedMenu === 'booster-bundles' && (
             <LanguageSubmenu category="booster-bundles" onClose={onClose} />
+          )}
+        </div>
+
+        <div>
+          <button
+            onClick={() => toggleSubmenu('etbs')}
+            className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg text-gray-700 hover:text-red-600 font-medium transition-colors flex justify-between items-center"
+          >
+            Elite Trainer Boxes
+            <span className={`text-gray-400 transition-transform ${expandedMenu === 'etbs' ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
+          </button>
+          {expandedMenu === 'etbs' && (
+            <LanguageSubmenu category="etbs" onClose={onClose} />
           )}
         </div>
       </div>

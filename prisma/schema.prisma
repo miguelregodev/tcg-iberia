@@ -17,6 +17,13 @@ enum Language {
   SPANISH
 }
 
+enum OrderStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 /// Product model represents a TCG/Pokemon card product in the catalog
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)
@@ -92,4 +99,58 @@ model HitCard {
   updatedAt     DateTime @updatedAt
 
   @@index([productId])
+}
+
+/// Order model represents a customer order
+/// Fields:
+/// - id: Unique identifier (auto-generated CUID)
+/// - fullName: Customer's full name
+/// - email: Customer's email address
+/// - phone: Customer's phone number
+/// - shippingAddress: Street address
+/// - shippingPostalCode: Postal/ZIP code
+/// - shippingCity: City name
+/// - shippingLocality: Locality/Region
+/// - shippingProvince: Province/State
+/// - totalAmount: Total order amount in EUR
+/// - status: Order status (PROCESSING, COMPLETED, FAILED, CANCELLED)
+/// - stripeSessionId: Stripe checkout session ID for payment tracking
+/// - items: JSON array of ordered items
+/// - createdAt: Timestamp when order was created
+/// - updatedAt: Timestamp of last update
+/// 
+/// Indexes:
+/// - email: For finding orders by customer email
+/// - stripeSessionId: For finding orders by Stripe session
+/// - status: For filtering orders by status
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique @db.VarChar(50)
+  fullName              String      @db.VarChar(255)
+  email                 String      @db.VarChar(255)
+  phone                 String      @db.VarChar(20)
+  shippingAddress       String      @db.Text
+  shippingPostalCode    String      @db.VarChar(20)
+  shippingCity          String      @db.VarChar(255)
+  shippingLocality      String      @db.VarChar(255)
+  shippingProvince      String      @db.VarChar(255)
+  totalAmount           Decimal     @db.Decimal(12, 2)
+  status                OrderStatus @default(PROCESSING)
+  stripeSessionId       String?     @db.VarChar(500)
+  items                 Json        // Array of {productId, name, quantity, price, discountPercentage}
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([email])
+  @@index([stripeSessionId])
+  @@index([status])
+}
+
+/// Sequence model represents a sequence for auto-incrementing IDs
+/// Fields:
+/// - name: ORDER
+/// - value: incrementing value
+model Sequence {
+  name                  String      @id
+  value                 Int
 }

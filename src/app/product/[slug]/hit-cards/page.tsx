@@ -50,16 +50,16 @@ export default async function HitCardsPage({
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
             <p className="text-2xl font-bold text-gray-900 mb-2">
-              Product Not Found
+              Producto no encontrado
             </p>
             <p className="text-gray-600 mb-6">
-              The product you're looking for doesn't exist or is no longer available.
+              El producto solicitado no se encuentra disponible.
             </p>
             <a
               href="/"
               className="text-red-600 font-semibold hover:text-red-700"
             >
-              ← Back to Home
+              ← Volver a Inicio
             </a>
           </div>
         </div>

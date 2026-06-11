@@ -15,13 +15,15 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
-    "prisma": "^5.7.1",
+    "@stripe/stripe-js": "^9.7.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
     "next": "^15.0.0",
     "next-image-export-optimizer": "^1.18.7",
+    "prisma": "^5.7.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "stripe": "^22.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
