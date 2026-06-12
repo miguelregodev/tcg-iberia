@@ -17,7 +17,6 @@ const LANGUAGES: { value: LanguageFilter; label: string; flag: string }[] = [
 export function ProductCatalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageFilter>('ALL');
 
   useEffect(() => {
     async function fetchProducts() {
@@ -37,38 +36,34 @@ export function ProductCatalog() {
     fetchProducts();
   }, []);
 
-  const filteredProducts = selectedLanguage === 'ALL'
-    ? products
-    : products.filter(product => product.language === selectedLanguage);
-
   return (
     <section id="catalog" className="section">
       <div className="container-custom">
-        <h2 className="text-h2 mb-8 text-center">Nuestro Catálogo</h2>
-        
-        {/* Language Filter */}
-        <div className="mb-8 flex flex-wrap gap-2 justify-center">
-          {LANGUAGES.map(lang => (
-            <button
-              key={lang.value}
-              onClick={() => setSelectedLanguage(lang.value)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedLanguage === lang.value
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {lang.flag && (
-                <img
-                  src={lang.flag}
-                  alt={lang.label}
-                  className="w-5 h-3 rounded"
-                />
-              )}
-              {lang.label}
-            </button>
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid md:grid-cols-4 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="card animate-pulse">
+                <div className="bg-gray-200 rounded h-64 mb-4" />
+                <div className="bg-gray-200 rounded h-6 mb-2" />
+                <div className="bg-gray-200 rounded h-4 w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <p className="text-center text-gray-600">No products available</p>
+        ) : (
+          <div className="grid md:grid-cols-4 gap-6">
+            {products.map(product => {
+              console.log(product)
+              return <ProductCard key={product.id} product={product} />
+            })}
+          </div>
+        )}
+      </div>
+
+      <br/>
+      <div className="container-custom">
+        <h2 className="text-h2 mb-8 text-center">Destacados</h2>
 
         {loading ? (
           <div className="grid md:grid-cols-3 gap-6">
@@ -80,17 +75,18 @@ export function ProductCatalog() {
               </div>
             ))}
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <p className="text-center text-gray-600">No products available</p>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
-            {filteredProducts.map(product => {
+            {products.map(product => {
               console.log(product)
               return <ProductCard key={product.id} product={product} />
             })}
           </div>
         )}
       </div>
+
     </section>
   );
 }

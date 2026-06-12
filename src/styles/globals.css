@@ -1,5 +1,15 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&display=swap");
 
+/* Optional: drop a licensed Airstrike.ttf in /public/fonts/ to use the real
+   font. Falls back to Orbitron (free, OFL-licensed) when not present. */
+@font-face {
+  font-family: "Airstrike";
+  src: url("/fonts/Airstrike.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -68,6 +78,27 @@ body {
   background-clip: text;
 }
 
+.gradient-white {
+  @apply bg-gradient-to-r from-white via-gray-100 to-white;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.font-airstrike {
+  font-family: "Airstrike", "Orbitron", system-ui, sans-serif;
+  letter-spacing: 0.05em;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -1000px 0;
@@ -75,6 +106,56 @@ body {
   100% {
     background-position: 1000px 0;
   }
+}
+
+@keyframes menuSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+    clip-path: inset(0 0 100% 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes menuItemIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes accordionDown {
+  0% {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    max-height: 400px;
+    transform: translateY(0);
+  }
+}
+
+.animate-menu-slide {
+  animation: menuSlideDown 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-menu-item {
+  animation: menuItemIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-accordion {
+  animation: accordionDown 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
 }
 
 .shimmer {

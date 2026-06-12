@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export function CheckoutForm() {
   const router = useRouter();
-  const { items, totalPrice } = useCart();
+  const { items, totalPrice, shippingCost, finalPrice } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +79,7 @@ export function CheckoutForm() {
         body: JSON.stringify({
           items: checkoutItems,
           customerData: formData,
+          shippingCost,
         }),
       });
 
@@ -263,7 +264,7 @@ export function CheckoutForm() {
                 disabled={isProcessing}
                 className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-bold py-3 px-4 rounded-lg transition-colors"
               >
-                {isProcessing ? 'Procesando...' : `Pagar ${totalPrice.toFixed(2)}€`}
+                {isProcessing ? 'Procesando...' : `Pagar ${finalPrice.toFixed(2)}€`}
               </button>
 
               {/* Back Link */}
@@ -302,10 +303,20 @@ export function CheckoutForm() {
               })}
             </div>
 
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex justify-between text-lg font-bold text-gray-900">
+            <div className="border-t border-gray-200 pt-4 space-y-2">
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Subtotal</span>
+                <span className="font-semibold text-gray-900">{totalPrice.toFixed(2)}€</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Envío</span>
+                <span className="font-semibold text-gray-900">
+                  {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
+                </span>
+              </div>
+              <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total:</span>
-                <span className="text-red-600">{totalPrice.toFixed(2)}€</span>
+                <span className="text-red-600">{finalPrice.toFixed(2)}€</span>
               </div>
             </div>
           </div>

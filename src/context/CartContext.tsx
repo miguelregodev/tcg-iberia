@@ -46,15 +46,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((product: Product, quantity: number) => {
     setItems(prevItems => {
+      const stock = Math.max(0, Number(product.stock) || 0);
       const existingItem = prevItems.find(item => item.product.id === product.id);
       if (existingItem) {
+        const desired = existingItem.quantity + quantity;
+        const capped = Math.min(stock, Math.max(1, desired));
+        if (capped === existingItem.quantity) return prevItems;
         return prevItems.map(item =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: capped }
             : item
         );
       }
-      return [...prevItems, { product, quantity }];
+      const initialQty = Math.min(stock, Math.max(1, quantity));
+      if (initialQty <= 0) return prevItems;
+      return [...prevItems, { product, quantity: initialQty }];
     });
   }, []);
 
@@ -68,9 +74,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setItems(prevItems =>
-      prevItems.map(item =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+      prevItems.map(item => {
+        if (item.product.id !== productId) return item;
+        const stock = Math.max(0, Number(item.product.stock) || 0);
+        const capped = Math.min(stock, quantity);
+        return { ...item, quantity: capped };
+      })
     );
   }, [removeFromCart]);
 

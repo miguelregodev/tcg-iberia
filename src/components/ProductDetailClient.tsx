@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
+import { CompleteYourPurchase } from './CompleteYourPurchase';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -22,8 +23,26 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
-  const { addToCart } = useCart();
+  const { addToCart, items } = useCart();
   const flagInfo = getLanguageFlag(product.language);
+
+  // How many of this product are already in the cart.
+  const inCartQuantity =
+    items.find((it) => it.product.id === product.id)?.quantity ?? 0;
+  // Max additional units the user can add right now.
+  const maxAddable = Math.max(0, product.stock - inCartQuantity);
+  const reachedMax = quantity >= maxAddable;
+
+  // Clamp the selected quantity if cart contents change and shrink the limit.
+  useEffect(() => {
+    if (maxAddable === 0) {
+      if (quantity !== 1) setQuantity(1);
+      return;
+    }
+    if (quantity > maxAddable) {
+      setQuantity(maxAddable);
+    }
+  }, [maxAddable, quantity]);
 
   const finalPrice = product.discountPercentage
     ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
@@ -33,11 +52,14 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     ? (Number(product.price) - finalPrice).toFixed(2)
     : null;
 
-  const incrementQuantity = () => setQuantity(q => q + 1);
-  const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
+  const incrementQuantity = () =>
+    setQuantity((q) => (q < maxAddable ? q + 1 : q));
+  const decrementQuantity = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    if (maxAddable === 0) return;
+    const safeQty = Math.min(quantity, maxAddable);
+    addToCart(product, safeQty);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
@@ -179,14 +201,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             )}
 
             {/* Quantity Selector */}
-            <div className="mb-8 flex items-center gap-6">
+            <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-2">
               <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                Quantity
+                Unidades
               </span>
               <div className="flex items-center border-2 border-gray-300 rounded-lg bg-white">
                 <button
+                  type="button"
                   onClick={decrementQuantity}
-                  disabled={isSoldOut}
+                  disabled={isSoldOut || quantity <= 1}
+                  aria-label="Reducir cantidad"
                   className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
                   −
@@ -195,8 +219,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   {quantity}
                 </span>
                 <button
+                  type="button"
                   onClick={incrementQuantity}
-                  disabled={isSoldOut}
+                  disabled={isSoldOut || reachedMax}
+                  aria-label="Aumentar cantidad"
                   className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
                   +
@@ -217,9 +243,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
               <button
                 onClick={handleAddToCart}
-                disabled={isSoldOut}
+                disabled={isSoldOut || maxAddable === 0}
                 className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
-                  isSoldOut
+                  isSoldOut || maxAddable === 0
                     ? 'bg-gray-400 cursor-not-allowed text-gray-200'
                     : addedToCart
                     ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -231,7 +257,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   alt="Add to Cart"
                   className="w-5 h-5"
                 />
-                {addedToCart ? '✓ Añadido al carrito' : 'Añadir al carrito'}
+                {isSoldOut
+                  ? 'Agotado'
+                  : addedToCart
+                  ? '\u2713 A\u00f1adido al carrito'
+                  : 'A\u00f1adir al carrito'}
               </button>
             </div>
 
@@ -258,6 +288,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
           </div>
         </div>
+
+        {/* Suggested products carousel */}
+        <CompleteYourPurchase excludeId={product.id} />
 
       </div>
     </div>

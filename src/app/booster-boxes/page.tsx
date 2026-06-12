@@ -8,7 +8,7 @@ interface PageProps {
 
 export const metadata = {
   title: "Booster Boxes - TCG Iberia",
-  description: "Browse our premium booster box collection in multiple languages",
+  description: "Booster boxes Pokémon TCG en múltiples idiomas",
 };
 
 export default async function BoosterBoxesPage({ searchParams }: PageProps) {
@@ -18,10 +18,12 @@ export default async function BoosterBoxesPage({ searchParams }: PageProps) {
   return (
     <>
       <Navigation />
-      <ProductListPage 
-        title="Booster Boxes" 
+      <ProductListPage
+        title="Booster Boxes"
         productType="booster box"
         language={language}
+        eyebrow="Cajas de expansión"
+        subtitle="Cajas selladas con todos los sobres de la expansión. La opción preferida por coleccionistas serios."
       />
       <Footer />
     </>

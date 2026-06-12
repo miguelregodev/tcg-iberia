@@ -43,8 +43,14 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">
@@ -98,6 +104,8 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                       ? Number(item.product.price) * (1 - Number(item.product.discountPercentage) / 100)
                       : Number(item.product.price);
                     const itemTotal = finalPrice * item.quantity;
+                    const stock = Math.max(0, Number(item.product.stock) || 0);
+                    const atMax = item.quantity >= stock;
 
                     return (
                       <div
@@ -152,7 +160,9 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                                   item.quantity + 1
                                 )
                               }
-                              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                              disabled={atMax}
+                              aria-label="Aumentar cantidad"
+                              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               +
                             </button>

@@ -23,6 +23,12 @@ interface CustomerData {
   shippingProvince: string;
 }
 
+interface CheckoutBody {
+  items: CheckoutItem[];
+  customerData?: CustomerData;
+  shippingCost?: number;
+}
+
 interface LineItem {
   price_data: {
     currency: string;
@@ -38,7 +44,7 @@ interface LineItem {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { items, customerData } = body as { items: CheckoutItem[]; customerData?: CustomerData };
+    const { items, customerData, shippingCost } = body as CheckoutBody;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -73,10 +79,31 @@ export async function POST(request: NextRequest) {
     // Get the origin for redirect URLs
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+    // Build a Stripe shipping rate so the cost is added to the session total
+    // and shown to the customer on Stripe Checkout.
+    const shippingAmountCents = Math.max(
+      0,
+      Math.round(((shippingCost ?? 0) as number) * 100)
+    );
+    const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] =
+      [
+        {
+          shipping_rate_data: {
+            display_name: shippingAmountCents === 0 ? 'Envío gratis' : 'Envío estándar',
+            type: 'fixed_amount',
+            fixed_amount: {
+              amount: shippingAmountCents,
+              currency: 'eur',
+            },
+          },
+        },
+      ];
+
     // Create Stripe checkout session with metadata for order tracking
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       line_items: lineItems as Stripe.Checkout.SessionCreateParams.LineItem[],
       mode: 'payment',
+      shipping_options: shippingOptions,
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,
       payment_intent_data: {
