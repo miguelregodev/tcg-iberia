@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { sendOrderEmails } from '@/lib/email';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
@@ -93,6 +94,33 @@ export async function POST(request: NextRequest) {
             },
           });
 
+          // Fire-and-forget order emails. Failures are logged inside but never
+          // break the webhook response — Stripe must always get a 2xx.
+          try {
+            await sendOrderEmails({
+              orderNumber: order.orderNumber,
+              fullName: order.fullName,
+              email: order.email,
+              phone: order.phone,
+              totalAmount,
+              items: items.map((it) => ({
+                name: typeof it.name === 'string' ? it.name : 'Product',
+                quantity: it.quantity,
+                price: it.price,
+                discountPercentage: it.discountPercentage,
+              })),
+              paymentStatus: session.payment_status || 'unknown',
+              shipping: {
+                address: order.shippingAddress,
+                postalCode: order.shippingPostalCode,
+                city: order.shippingCity,
+                locality: order.shippingLocality,
+                province: order.shippingProvince,
+              },
+            });
+          } catch (mailErr) {
+            console.error('[webhook] sendOrderEmails failed', mailErr);
+          }
         } catch (err) {
           console.error('Prisma create failed', err);
         }

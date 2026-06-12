@@ -8,7 +8,7 @@ interface PageProps {
 
 export const metadata = {
   title: "Booster Bundles - TCG Iberia",
-  description: "Browse our premium booster bundle collection in multiple languages",
+  description: "Booster bundles Pokémon TCG en múltiples idiomas",
 };
 
 export default async function BoosterBundlesPage({ searchParams }: PageProps) {
@@ -18,10 +18,12 @@ export default async function BoosterBundlesPage({ searchParams }: PageProps) {
   return (
     <>
       <Navigation />
-      <ProductListPage 
-        title="Booster Bundles" 
+      <ProductListPage
+        title="Booster Bundles"
         productType="bundle"
         language={language}
+        eyebrow="Packs de varios sobres"
+        subtitle="Bundles que combinan varios sobres en un solo pack — la forma más cómoda de empezar tu colección."
       />
       <Footer />
     </>

@@ -1,6 +1,8 @@
 import { Navigation } from "@/components/Navigation";
-import { Hero } from "@/components/Hero";
-import { ProductCatalog } from "@/components/ProductCatalog";
+import { Recent } from "@/components/Recent";
+import { Featured } from "@/components/Featured";
+import { RecentProductCarousel } from "@/components/RecentProductCarousel";
+import { FeaturedProductCarousel } from "@/components/FeaturedProductCarousel";
 import { TrustSection } from "@/components/TrustSection";
 import { Footer } from "@/components/Footer";
 
@@ -8,8 +10,10 @@ export default function Home() {
   return (
     <>
       <Navigation />
-      <Hero />
-      <ProductCatalog />
+      <Recent />
+      <RecentProductCarousel />
+      <Featured />
+      <FeaturedProductCarousel  />
       <TrustSection />
       <Footer />
     </>

@@ -8,7 +8,7 @@ interface PageProps {
 
 export const metadata = {
   title: "Booster Packs - TCG Iberia",
-  description: "Browse our premium booster pack collection in multiple languages",
+  description: "Booster packs Pokémon TCG en múltiples idiomas",
 };
 
 export default async function BoosterPacksPage({ searchParams }: PageProps) {
@@ -18,10 +18,12 @@ export default async function BoosterPacksPage({ searchParams }: PageProps) {
   return (
     <>
       <Navigation />
-      <ProductListPage 
-        title="Booster Packs" 
+      <ProductListPage
+        title="Booster Packs"
         productType="pack"
         language={language}
+        eyebrow="Sobres individuales"
+        subtitle="Sobres sueltos para coleccionistas y jugadores. Cartas oficiales, listas para abrir."
       />
       <Footer />
     </>
