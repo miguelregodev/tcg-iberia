@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
+import { trackUserLoggedIn } from '@/lib/analytics/events';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -22,11 +24,22 @@ export default function AdminLogin() {
       });
 
       if (response.ok) {
+        trackUserLoggedIn({
+          userType: 'admin',
+        });
         router.push('/admin/products');
       } else {
         setError('Invalid password');
       }
     } catch (err) {
+      Sentry.captureException(err, {
+        tags: {
+          module: 'admin_login',
+        },
+        extra: {
+          page: '/admin/login',
+        },
+      });
       setError('Login failed');
     } finally {
       setLoading(false);

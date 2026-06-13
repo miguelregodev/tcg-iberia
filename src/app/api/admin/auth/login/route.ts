@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { captureServerError } from '@/lib/observability/sentry';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    captureServerError({
+      error,
+      module: 'admin_auth_login_api',
+      request,
+    });
     return NextResponse.json(
       { error: 'Authentication failed' },
       { status: 500 }

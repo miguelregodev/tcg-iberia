@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { CartProvider } from "@/context/CartContext";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 export const metadata: Metadata = {
   title: "TCG Iberia - Premium Pokémon Trading Card Store",
@@ -24,9 +26,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-white text-black antialiased">
-        <CartProvider>
-          <main>{children}</main>
-        </CartProvider>
+        <PostHogProvider>
+          <CartProvider>
+            <main>{children}</main>
+            <CookieConsentBanner />
+          </CartProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

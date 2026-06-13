@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { captureServerError } from '@/lib/observability/sentry';
 
 interface CreateOrderRequest {
   fullName: string;
@@ -22,6 +23,8 @@ interface CreateOrderRequest {
 }
 
 export async function POST(request: NextRequest) {
+  let userEmail: string | undefined;
+
   try {
     const body = await request.json() as CreateOrderRequest;
 
@@ -38,6 +41,8 @@ export async function POST(request: NextRequest) {
       items,
       stripeSessionId,
     } = body;
+
+    userEmail = email;
 
     // Validate required fields
     if (
@@ -84,6 +89,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Order creation error:', error);
+    captureServerError({
+      error,
+      module: 'orders_create_api',
+      request,
+      userEmail,
+    });
     const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
     return NextResponse.json(
       { error: errorMessage },
