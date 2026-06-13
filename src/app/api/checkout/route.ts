@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { captureServerError } from '@/lib/observability/sentry';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -42,9 +43,12 @@ interface LineItem {
 }
 
 export async function POST(request: NextRequest) {
+  let customerEmail: string | undefined;
+
   try {
     const body = await request.json();
     const { items, customerData, shippingCost } = body as CheckoutBody;
+    customerEmail = customerData?.email;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -140,6 +144,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Checkout error:', error);
+    captureServerError({
+      error,
+      module: 'checkout_api',
+      request,
+      userEmail: customerEmail,
+    });
     const errorMessage = error instanceof Error ? error.message : 'Checkout failed';
     return NextResponse.json(
       { error: errorMessage },

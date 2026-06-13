@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Product } from '@/types';
 import { ProductCard } from './ProductCard';
+import { trackProductSearch } from '@/lib/analytics/events';
 
 type LanguageFilter = 'ALL' | 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -25,6 +26,11 @@ export function ProductCatalog() {
         if (response.ok) {
           const data = await response.json();
           setProducts(data);
+          trackProductSearch({
+            query: 'catalog',
+            category: 'all',
+            results: data.length,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch products');
@@ -54,7 +60,6 @@ export function ProductCatalog() {
         ) : (
           <div className="grid md:grid-cols-4 gap-6">
             {products.map(product => {
-              console.log(product)
               return <ProductCard key={product.id} product={product} />
             })}
           </div>
@@ -80,7 +85,6 @@ export function ProductCatalog() {
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {products.map(product => {
-              console.log(product)
               return <ProductCard key={product.id} product={product} />
             })}
           </div>

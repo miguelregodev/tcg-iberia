@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Product } from '@/types';
+import { trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
 
 export interface CartItem {
   product: Product;
@@ -60,12 +61,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       const initialQty = Math.min(stock, Math.max(1, quantity));
       if (initialQty <= 0) return prevItems;
+
+      trackProductAddedToCart({
+        productId: product.id,
+        productName: product.name,
+        category: product.type ?? 'unknown',
+        price: Number(product.price),
+      });
+
       return [...prevItems, { product, quantity: initialQty }];
     });
   }, []);
 
   const removeFromCart = useCallback((productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.product.id !== productId));
+    setItems(prevItems => {
+      const removed = prevItems.find(item => item.product.id === productId);
+      if (removed) {
+        trackProductRemovedFromCart({
+          productId: removed.product.id,
+          productName: removed.product.name,
+          category: removed.product.type ?? 'unknown',
+          price: Number(removed.product.price),
+        });
+      }
+      return prevItems.filter(item => item.product.id !== productId);
+    });
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {

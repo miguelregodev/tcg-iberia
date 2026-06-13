@@ -4,6 +4,8 @@ import { useCart } from '@/context/CartContext';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import * as Sentry from '@sentry/nextjs';
+import { trackCheckoutFailed, trackCheckoutStarted, trackUserRegistered } from '@/lib/analytics/events';
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -42,6 +44,11 @@ export function CheckoutForm() {
     e.preventDefault();
     setIsProcessing(true);
     setError(null);
+
+    trackCheckoutStarted({
+      amount: finalPrice,
+      paymentMethod: 'stripe_checkout',
+    });
 
     try {
       // Validate form data
@@ -89,10 +96,36 @@ export function CheckoutForm() {
       }
 
       const { url } = await response.json();
+
+      const alreadyTracked = window.localStorage.getItem('tcg_user_registered');
+      if (!alreadyTracked) {
+        trackUserRegistered({
+          source: 'checkout',
+        });
+        window.localStorage.setItem('tcg_user_registered', '1');
+      }
+
       window.location.href = url;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Error en el checkout';
+
+      trackCheckoutFailed({
+        amount: finalPrice,
+        paymentMethod: 'stripe_checkout',
+        reason: errorMessage,
+      });
+
+      Sentry.captureException(err, {
+        tags: {
+          module: 'checkout',
+        },
+        extra: {
+          page: '/checkout',
+          amount: finalPrice,
+        },
+      });
+
       setError(errorMessage);
       setIsProcessing(false);
     }

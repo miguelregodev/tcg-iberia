@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Product } from '@/types';
 import { ProductCard } from './ProductCard';
+import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -83,6 +84,32 @@ export function ProductListPage({
       cancelled = true;
     };
   }, [productType, language]);
+
+  useEffect(() => {
+    trackCategoryViewed({
+      category: productType,
+      collection: title,
+      language: language ?? 'ALL',
+    });
+  }, [productType, title, language]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    trackCollectionViewed({
+      category: productType,
+      collection: title,
+      language: language ?? 'ALL',
+      results: products.length,
+    });
+
+    trackProductSearch({
+      query: productType,
+      category: productType,
+      language: language ?? 'ALL',
+      results: products.length,
+    });
+  }, [loading, productType, title, language, products.length]);
 
   const counts = useMemo(() => {
     return {

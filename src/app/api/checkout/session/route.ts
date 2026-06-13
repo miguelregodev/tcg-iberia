@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { captureServerError } from '@/lib/observability/sentry';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 export async function GET(request: NextRequest) {
+  let sessionId: string | null = null;
+
   try {
-    const sessionId = request.nextUrl.searchParams.get('sessionId');
+    sessionId = request.nextUrl.searchParams.get('sessionId');
 
     if (!sessionId) {
       return NextResponse.json(
@@ -50,6 +53,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Session retrieval error:', error);
+    captureServerError({
+      error,
+      module: 'checkout_session_api',
+      request,
+      orderId: sessionId ?? undefined,
+    });
     const errorMessage = error instanceof Error ? error.message : 'Failed to retrieve session';
     return NextResponse.json(
       { error: errorMessage },

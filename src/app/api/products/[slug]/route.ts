@@ -1,12 +1,16 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { captureServerError } from '@/lib/observability/sentry';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  let slug: string | undefined;
+
   try {
-    const { slug } = await params;
+    const resolvedParams = await params;
+    slug = resolvedParams.slug;
     const product = await db.product.findUnique({
       where: { slug },
     });
@@ -31,6 +35,12 @@ export async function GET(
       available: product.stock > 0,
     });
   } catch (error) {
+    captureServerError({
+      error,
+      module: 'products_slug_api',
+      request,
+      productId: slug,
+    });
     return NextResponse.json(
       { error: 'Failed to fetch product' },
       { status: 500 }

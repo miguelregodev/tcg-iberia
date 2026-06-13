@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { captureServerError } from '@/lib/observability/sentry';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,6 +47,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(publicProducts);
   } catch (error) {
     console.error('GET /api/products error', error);
+    captureServerError({
+      error,
+      module: 'products_api',
+      request,
+    });
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 
 import { useEffect, useState } from 'react';
+import { trackCheckoutCompleted, trackCheckoutFailed } from '@/lib/analytics/events';
 
 interface Props {
   sessionId: string | null;
@@ -38,37 +39,55 @@ export default function CheckoutSuccessClient({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-      if (!sessionId) {
-        setError('No session ID provided');
-        setLoading(false);
-        return;
-      }
-  
-      fetch(`/api/orders/get-by-session-id?session_id=${sessionId}`)
-        .then(res => res.json())
-        .then(data => setOrderNumber(data.orderNumber));
-  
-      const fetchSessionData = async () => {
-        try {
-          const response = await fetch(`/api/checkout/session?sessionId=${sessionId}`);
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to fetch session data');
-          }
-          const data = (await response.json()) as SessionData;
-          setSessionData(data);
-          console.log('Fetched session data:', data);
-        } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to load order details';
-          console.error('Session fetch error:', err);
-          setError(errorMessage);
-        } finally {
-          setLoading(false);
+    if (!sessionId) {
+      setError('No session ID provided');
+      setLoading(false);
+      return;
+    }
+
+    const fetchOrderAndSession = async () => {
+      let resolvedOrderNumber: string | undefined;
+
+      try {
+        const orderResponse = await fetch(`/api/orders/get-by-session-id?session_id=${sessionId}`);
+        if (orderResponse.ok) {
+          const orderData = await orderResponse.json();
+          resolvedOrderNumber = orderData.orderNumber;
+          setOrderNumber(orderData.orderNumber ?? null);
         }
-      };
-  
-      fetchSessionData();
-    }, [sessionId]);
+
+        const response = await fetch(`/api/checkout/session?sessionId=${sessionId}`);
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to fetch session data');
+        }
+
+        const data = (await response.json()) as SessionData;
+        setSessionData(data);
+
+        if (data.status === 'paid') {
+          trackCheckoutCompleted({
+            orderId: resolvedOrderNumber,
+            amount: data.totalAmount,
+            paymentMethod: 'stripe_checkout',
+          });
+        }
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load order details';
+        console.error('Session fetch error:', err);
+        trackCheckoutFailed({
+          orderId: resolvedOrderNumber,
+          paymentMethod: 'stripe_checkout',
+          reason: errorMessage,
+        });
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderAndSession();
+  }, [sessionId]);
 
 return (
     <>

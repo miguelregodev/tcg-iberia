@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { CompleteYourPurchase } from './CompleteYourPurchase';
+import { trackProductViewed } from '@/lib/analytics/events';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -82,6 +83,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const isLastUnits = product.stock > 0 && product.stock <= 5;
   const isSoldOut = product.stock === 0;
   const hasHitCards = product.hitCards && product.hitCards.length > 0;
+
+  useEffect(() => {
+    trackProductViewed({
+      productId: product.id,
+      productName: product.name,
+      category: product.type ?? 'unknown',
+      price: Number(product.price),
+    });
+  }, [product.id, product.name, product.type, product.price]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-8 md:py-16">

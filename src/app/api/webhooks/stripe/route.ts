@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { sendOrderEmails } from '@/lib/email';
+import { captureServerError } from '@/lib/observability/sentry';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
@@ -35,6 +36,11 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
+    captureServerError({
+      error: err,
+      module: 'stripe_webhook_signature',
+      request,
+    });
     return NextResponse.json(
       { error: 'Webhook signature verification failed' },
       { status: 400 }
@@ -120,9 +126,25 @@ export async function POST(request: NextRequest) {
             });
           } catch (mailErr) {
             console.error('[webhook] sendOrderEmails failed', mailErr);
+            captureServerError({
+              error: mailErr,
+              module: 'background_order_email',
+              request,
+              orderId: order.id,
+              userEmail: order.email,
+            });
           }
         } catch (err) {
           console.error('Prisma create failed', err);
+          captureServerError({
+            error: err,
+            module: 'stripe_webhook_db_create_order',
+            request,
+            userEmail: metadata.email,
+            extra: {
+              stripeSessionId: session.id,
+            },
+          });
         }
       } else {
         console.warn('Missing customer data for order creation:', { session: session.id, metadata });
@@ -132,6 +154,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Webhook processing error:', error);
+    captureServerError({
+      error,
+      module: 'stripe_webhook_processing',
+      request,
+    });
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
