@@ -24,7 +24,7 @@
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.31",
     "next-image-export-optimizer": "^1.18.7",
-    "nodemailer": "^8.0.11",
+    "nodemailer": "^7.0.13",
     "posthog-js": "^1.386.6",
     "posthog-node": "^5.37.0",
     "prisma": "^5.7.1",
@@ -35,7 +35,6 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.10.5",
-    "@types/nodemailer": "^8.0.1",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",
