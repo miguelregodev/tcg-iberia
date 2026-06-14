@@ -43,3 +43,21 @@ export type ApiResponse<T> = {
   data?: T;
   error?: string;
 };
+
+export type UserRole = 'USER' | 'ADMIN';
+
+export type UserProfile = {
+  id: string;
+  fullName: string | null;
+  email: string;
+  phone: string | null;
+  addressLine: string | null;
+  postalCode: string | null;
+  city: string | null;
+  locality: string | null;
+  province: string | null;
+  country: string;
+  image: string | null;
+  role: UserRole;
+  createdAt: Date;
+};

@@ -1,14 +1,16 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import * as Sentry from '@sentry/nextjs';
 import { trackCheckoutFailed, trackCheckoutStarted, trackUserRegistered } from '@/lib/analytics/events';
 
 export function CheckoutForm() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { items, totalPrice, shippingCost, finalPrice } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,44 @@ export function CheckoutForm() {
     shippingLocality: '',
     shippingProvince: '',
   });
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    let cancelled = false;
+
+    const prefillProfile = async () => {
+      try {
+        const response = await fetch('/api/user/profile', { cache: 'no-store' });
+        if (!response.ok) return;
+
+        const json = await response.json();
+        const profile = json?.data;
+        if (!profile || cancelled) return;
+
+        setFormData((prev) => ({
+          fullName: prev.fullName || profile.fullName || '',
+          email: prev.email || profile.email || session?.user?.email || '',
+          phone: prev.phone || profile.phone || '',
+          shippingAddress: prev.shippingAddress || profile.addressLine || '',
+          shippingPostalCode: prev.shippingPostalCode || profile.postalCode || '',
+          shippingCity: prev.shippingCity || profile.city || '',
+          shippingLocality: prev.shippingLocality || profile.locality || '',
+          shippingProvince: prev.shippingProvince || profile.province || '',
+        }));
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { module: 'checkout', action: 'prefill_profile' },
+        });
+      }
+    };
+
+    prefillProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.email, status]);
 
   if (items.length === 0) {
     return (

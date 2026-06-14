@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { SessionProvider } from "@/components/providers/SessionProvider";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 export const metadata: Metadata = {
@@ -27,10 +28,12 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-white text-black antialiased">
         <PostHogProvider>
-          <CartProvider>
-            <main>{children}</main>
-            <CookieConsentBanner />
-          </CartProvider>
+          <SessionProvider>
+            <CartProvider>
+              <main>{children}</main>
+              <CookieConsentBanner />
+            </CartProvider>
+          </SessionProvider>
         </PostHogProvider>
       </body>
     </html>

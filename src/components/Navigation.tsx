@@ -2,14 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { HamburgerMenu } from './HamburgerMenu';
 import { useCart } from '@/context/CartContext';
 import { ShoppingCartModal } from './ShoppingCartModal';
+import { LoginModal } from './LoginModal';
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const { totalQuantity } = useCart();
+  const { data: session } = useSession();
   const menuWrapperRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click and on Escape.
@@ -80,8 +84,31 @@ export function Navigation() {
             <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
           </Link>
 
-          {/* Shopping Bag - Right */}
-          <div className="absolute right-4">
+          {/* Right side: Login + Shopping Bag */}
+          <div className="absolute right-4 flex items-center gap-1">
+            {/* Login / Account button */}
+            {session?.user ? (
+              <Link
+                href="/mi-cuenta"
+                className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+              >
+                Hola {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}!
+              </Link>
+            ) : (
+              <button
+                onClick={() => setIsLoginOpen(true)}
+                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Iniciar sesión"
+              >
+                <img
+                  src="/images/login.png"
+                  alt="Iniciar sesión"
+                  className="w-6 h-6"
+                />
+              </button>
+            )}
+
+            {/* Shopping Bag */}
             <button
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -104,6 +131,9 @@ export function Navigation() {
 
       {/* Shopping Cart Modal */}
       <ShoppingCartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
+      {/* Login Modal */}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </>
   );
 }
