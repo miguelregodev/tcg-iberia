@@ -158,6 +158,17 @@ body {
   overflow: hidden;
 }
 
+@keyframes favoriteParticle {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(-18px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(-32px) scale(0);
+  }
+}
+
 .shimmer {
   animation: shimmer 2s infinite;
   background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);

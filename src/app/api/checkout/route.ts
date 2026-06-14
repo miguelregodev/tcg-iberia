@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { captureServerError } from '@/lib/observability/sentry';
+import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -131,16 +133,22 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    // Store cart items and customer data in session metadata for webhook processing
-    const sessionMetadata = {
-      items: JSON.stringify(items),
-      ...(customerData && { customerData: JSON.stringify(customerData) }),
-    };
+    // Persist cart snapshot keyed by session id for webhook-driven inventory updates.
+    await db.checkoutSessionCart.upsert({
+      where: { sessionId: session.id },
+      create: {
+        sessionId: session.id,
+        items: items as unknown as Prisma.InputJsonValue,
+      },
+      update: {
+        items: items as unknown as Prisma.InputJsonValue,
+        processedAt: null,
+      },
+    });
 
     return Response.json({ 
       url: session.url,
       sessionId: session.id,
-      metadata: sessionMetadata,
     });
   } catch (error: unknown) {
     console.error('Checkout error:', error);

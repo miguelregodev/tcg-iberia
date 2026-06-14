@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteFromSupabaseStorage } from '@/lib/supabase-storage';
+import * as Sentry from '@sentry/nextjs';
+import { dispatchStockAlertsForProduct } from '@/lib/stock-alerts';
 
 function isAuthenticated(request: NextRequest): boolean {
   const cookie = request.cookies.get('tcg_admin_auth');
@@ -18,6 +20,16 @@ export async function PUT(
 
   try {
     const body = await request.json();
+    const previous = await db.product.findUnique({
+      where: { id },
+      select: { id: true, stock: true },
+    });
+
+    if (!previous) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    const nextStock = parseInt(body.stock);
     const product = await db.product.update({
       where: { id },
       data: {
@@ -27,13 +39,32 @@ export async function PUT(
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         notes: body.notes || null,
         type: body.type || null,
-        stock: parseInt(body.stock),
+        stock: nextStock,
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
         priority: body.priority !== undefined ? parseInt(body.priority) : undefined,
         visible: body.visible,
       },
     });
+
+    // Trigger alerts only when product transitions from out-of-stock to available.
+    if (previous.stock === 0 && nextStock > 0) {
+      try {
+        await dispatchStockAlertsForProduct(product.id);
+      } catch (error) {
+        Sentry.captureException(error, {
+          tags: {
+            module: 'admin_products_api',
+            action: 'dispatch_stock_alerts',
+          },
+          extra: {
+            productId: product.id,
+            previousStock: previous.stock,
+            nextStock,
+          },
+        });
+      }
+    }
 
     return NextResponse.json(product);
   } catch (error) {

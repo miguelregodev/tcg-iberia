@@ -37,6 +37,18 @@ export interface OrderEmailPayload {
   };
 }
 
+export interface StockAlertEmailPayload {
+  to: string;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string | null;
+    price: number;
+    discountPercentage?: number | null;
+  };
+}
+
 // --- Branding ---
 const BRAND = {
   primary: '#DC2626', // red-500 from tailwind.config.ts
@@ -364,6 +376,88 @@ function buildAdminText(payload: OrderEmailPayload): string {
   ].join('\n');
 }
 
+function buildStockAlertHtml(payload: StockAlertEmailPayload): string {
+  const finalPrice = payload.product.discountPercentage
+    ? payload.product.price * (1 - payload.product.discountPercentage / 100)
+    : payload.product.price;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const productUrl = `${appUrl}/product/${payload.product.slug}`;
+
+  const imageBlock = payload.product.imageUrl
+    ? `
+      <tr>
+        <td style="padding:0 32px 0 32px;">
+          <img src="${escapeHtml(payload.product.imageUrl)}" alt="${escapeHtml(payload.product.name)}" style="display:block;width:100%;max-width:220px;height:auto;margin:0 auto;border-radius:12px;border:1px solid ${BRAND.border};background:${BRAND.bg};" />
+        </td>
+      </tr>
+      <tr><td style="height:20px;"></td></tr>`
+    : '';
+
+  const discountBlock = payload.product.discountPercentage
+    ? `
+      <div style="margin-top:6px;font-size:13px;color:${BRAND.textMuted};">
+        Antes: <span style="text-decoration:line-through;">${formatCurrency(payload.product.price)}</span>
+        <span style="display:inline-block;margin-left:8px;padding:2px 8px;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:999px;font-weight:600;">-${escapeHtml(payload.product.discountPercentage)}%</span>
+      </div>`
+    : '';
+
+  const content = `
+    <tr>
+      <td style="padding:32px 32px 20px 32px;">
+        <p style="margin:0 0 12px 0;font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${BRAND.text};">
+          ¡Buenas noticias!
+        </p>
+        <p style="margin:0;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${BRAND.text};">
+          El producto que estabas esperando ya vuelve a estar en stock.
+        </p>
+      </td>
+    </tr>
+    ${imageBlock}
+    <tr>
+      <td style="padding:0 32px 0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:16px 18px;background:${BRAND.white};">
+              <div style="font-family:${FONT_STACK};font-size:18px;font-weight:700;color:${BRAND.text};line-height:1.3;">${escapeHtml(payload.product.name)}</div>
+              <div style="margin-top:8px;font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${BRAND.primary};">${formatCurrency(finalPrice)}</div>
+              ${discountBlock}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr><td style="height:24px;"></td></tr>
+    <tr>
+      <td align="center" style="padding:0 32px 32px 32px;">
+        <a href="${escapeHtml(productUrl)}" style="display:inline-block;padding:12px 22px;background:${BRAND.primary};color:${BRAND.white};font-family:${FONT_STACK};font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">Ver producto</a>
+      </td>
+    </tr>
+  `;
+
+  return htmlShell('¡Tu producto vuelve a estar disponible!', content);
+}
+
+function buildStockAlertText(payload: StockAlertEmailPayload): string {
+  const finalPrice = payload.product.discountPercentage
+    ? payload.product.price * (1 - payload.product.discountPercentage / 100)
+    : payload.product.price;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const productUrl = `${appUrl}/product/${payload.product.slug}`;
+
+  return [
+    '¡Tu producto vuelve a estar disponible!',
+    '',
+    'El producto que estabas esperando ya vuelve a estar en stock.',
+    '',
+    `Producto: ${payload.product.name}`,
+    `Precio: ${formatCurrency(finalPrice)}`,
+    `Enlace: ${productUrl}`,
+    '',
+    'TCG Iberia',
+  ].join('\n');
+}
+
 // --- Public API ---
 
 export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void> {
@@ -399,5 +493,20 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
     if (r.status === 'rejected') {
       console.error(`[email] ${i === 0 ? 'customer' : 'admin'} send failed`, r.reason);
     }
+  });
+}
+
+export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) return;
+
+  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+
+  await transporter.sendMail({
+    from,
+    to: payload.to,
+    subject: '¡Tu producto vuelve a estar disponible!',
+    html: buildStockAlertHtml(payload),
+    text: buildStockAlertText(payload),
   });
 }

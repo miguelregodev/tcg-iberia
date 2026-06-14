@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { CompleteYourPurchase } from './CompleteYourPurchase';
+import { FavoriteButton } from './FavoriteButton';
+import { StockAlertButton } from './StockAlertButton';
 import { trackProductViewed } from '@/lib/analytics/events';
 
 interface ProductDetailClientProps {
@@ -251,28 +253,46 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 </a>
               )}
 
-              <button
-                onClick={handleAddToCart}
-                disabled={isSoldOut || maxAddable === 0}
-                className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
-                  isSoldOut || maxAddable === 0
-                    ? 'bg-gray-400 cursor-not-allowed text-gray-200'
-                    : addedToCart
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                }`}
-              >
-                <img
-                  src="/images/add-to-cart.png"
-                  alt="Add to Cart"
-                  className="w-5 h-5"
+              <div className="flex items-stretch gap-3">
+                {isSoldOut ? (
+                  <StockAlertButton
+                    productId={product.id}
+                    productName={product.name}
+                    productCategory={product.type ?? undefined}
+                    productPrice={finalPrice}
+                    className="flex-1"
+                  />
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={maxAddable === 0}
+                    className={`btn flex-1 text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
+                      maxAddable === 0
+                        ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                        : addedToCart
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
+                  >
+                    <img
+                      src="/images/add-to-cart.png"
+                      alt="Add to Cart"
+                      className="w-5 h-5"
+                    />
+                    {addedToCart
+                      ? '\u2713 A\u00f1adido al carrito'
+                      : 'A\u00f1adir al carrito'}
+                  </button>
+                )}
+
+                <FavoriteButton
+                  productId={product.id}
+                  productName={product.name}
+                  productCategory={product.type ?? undefined}
+                  productPrice={finalPrice}
+                  className="w-14 h-auto"
                 />
-                {isSoldOut
-                  ? 'Agotado'
-                  : addedToCart
-                  ? '\u2713 A\u00f1adido al carrito'
-                  : 'A\u00f1adir al carrito'}
-              </button>
+              </div>
             </div>
 
             {/* Shipping Info */}

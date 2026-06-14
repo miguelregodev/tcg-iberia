@@ -63,6 +63,10 @@ export function trackUserLoggedIn(payload: Properties = {}) {
   trackEvent('user_logged_in', payload);
 }
 
+export function trackUserLoggedOut(payload: Properties = {}) {
+  trackEvent('user_logged_out', payload);
+}
+
 export function trackUserRegistered(payload: Properties = {}) {
   trackEvent('user_registered', payload);
 }
@@ -73,4 +77,20 @@ export function trackCategoryViewed(payload: Properties) {
 
 export function trackCollectionViewed(payload: Properties) {
   trackEvent('collection_viewed', payload);
+}
+
+export function trackFavoriteAdded(payload: ProductEventPayload) {
+  trackEvent('favorite_added', payload);
+}
+
+export function trackFavoriteRemoved(payload: ProductEventPayload) {
+  trackEvent('favorite_removed', payload);
+}
+
+export function trackStockAlertCreated(payload: ProductEventPayload & { emailDomain?: string }) {
+  trackEvent('stock_alert_created', payload);
+}
+
+export function trackStockAlertRemoved(payload: ProductEventPayload & { emailDomain?: string }) {
+  trackEvent('stock_alert_removed', payload);
 }
