@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { captureServerError } from '@/lib/observability/sentry';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -29,7 +30,6 @@ interface CustomerData {
 interface CheckoutBody {
   items: CheckoutItem[];
   customerData?: CustomerData;
-  shippingCost?: number;
 }
 
 interface LineItem {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { items, customerData, shippingCost } = body as CheckoutBody;
+    const { items, customerData } = body as CheckoutBody;
     customerEmail = customerData?.email;
 
     if (!items || items.length === 0) {
@@ -85,12 +85,19 @@ export async function POST(request: NextRequest) {
     // Get the origin for redirect URLs
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+    // Build shipping using shared business logic so client and server stay aligned.
+    const subtotal = calculateSubtotal(
+      items.map((item) => ({
+        price: item.price,
+        quantity: item.quantity,
+        discountPercentage: item.discountPercentage,
+      }))
+    );
+    const shippingState = getFreeShippingState(subtotal);
+
     // Build a Stripe shipping rate so the cost is added to the session total
     // and shown to the customer on Stripe Checkout.
-    const shippingAmountCents = Math.max(
-      0,
-      Math.round(((shippingCost ?? 0) as number) * 100)
-    );
+    const shippingAmountCents = Math.max(0, Math.round(shippingState.shippingCost * 100));
     const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] =
       [
         {

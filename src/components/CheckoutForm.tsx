@@ -1,12 +1,14 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import * as Sentry from '@sentry/nextjs';
 import { trackCheckoutFailed, trackCheckoutStarted, trackUserRegistered } from '@/lib/analytics/events';
+import { FreeShippingProgress } from './FreeShippingProgress';
+import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export function CheckoutForm() {
     shippingLocality: '',
     shippingProvince: '',
   });
+  const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -352,6 +355,19 @@ export function CheckoutForm() {
         <div className="md:col-span-1">
           <div className="bg-white rounded-lg shadow-md p-8 sticky top-20">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen del Pedido</h2>
+
+            <FreeShippingProgress
+              state={freeShippingState}
+              context="checkout"
+              showBar={false}
+              className="mb-4"
+            />
+
+            <p className={`mb-4 text-sm font-semibold ${freeShippingState.qualified ? 'text-green-700' : 'text-gray-700'}`}>
+              {freeShippingState.qualified
+                ? 'Envío gratuito aplicado.'
+                : 'Tu pedido no cumple todavía los requisitos para envío gratuito.'}
+            </p>
 
             <div className="space-y-4 mb-6 max-h-96 overflow-auto">
               {items.map(item => {

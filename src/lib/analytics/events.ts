@@ -16,6 +16,14 @@ export type CheckoutEventPayload = {
   paymentMethod?: string;
 };
 
+export type FreeShippingPayload = {
+  cartValue: number;
+  threshold: number;
+  remainingAmount?: number;
+  percentage?: number;
+  context?: 'cart' | 'mini_cart' | 'checkout';
+};
+
 function withCommonProperties(properties: Properties = {}): Properties {
   const page = typeof window !== 'undefined' ? window.location.pathname : 'server';
   return {
@@ -93,4 +101,12 @@ export function trackStockAlertCreated(payload: ProductEventPayload & { emailDom
 
 export function trackStockAlertRemoved(payload: ProductEventPayload & { emailDomain?: string }) {
   trackEvent('stock_alert_removed', payload);
+}
+
+export function trackFreeShippingProgressViewed(payload: FreeShippingPayload) {
+  trackEvent('free_shipping_progress_viewed', payload);
+}
+
+export function trackFreeShippingQualified(payload: FreeShippingPayload) {
+  trackEvent('free_shipping_qualified', payload);
 }

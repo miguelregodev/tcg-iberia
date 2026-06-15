@@ -1,8 +1,10 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FreeShippingProgress } from './FreeShippingProgress';
+import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 
 interface ShoppingCartModalProps {
   isOpen: boolean;
@@ -14,6 +16,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
   const { items, totalPrice, shippingCost, finalPrice, removeFromCart, updateQuantity } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
 
   if (!isOpen) return null;
 
@@ -97,6 +100,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
               </div>
             ) : (
               <>
+                <FreeShippingProgress
+                  state={freeShippingState}
+                  context="mini_cart"
+                  className="mb-6"
+                />
+
                 {/* Items List */}
                 <div className="space-y-4 mb-6">
                   {items.map(item => {
