@@ -1,5 +1,9 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { captureServerError } from '@/lib/observability/sentry';
+
+const VALID_ORDER_STATUS = ['PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'] as const;
+type OrderStatus = (typeof VALID_ORDER_STATUS)[number];
 
 function isAuthenticated(request: NextRequest): boolean {
   const cookie = request.cookies.get('tcg_admin_auth');
@@ -58,6 +62,63 @@ export async function GET(request: NextRequest) {
     console.error('GET /api/admin/orders error', error);
     return NextResponse.json(
       { error: 'Failed to fetch orders' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!isAuthenticated(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = (await request.json()) as { orderId?: string; status?: string };
+    const orderId = body.orderId?.trim();
+    const status = body.status as OrderStatus | undefined;
+
+    if (!orderId) {
+      return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
+    }
+
+    if (!status || !VALID_ORDER_STATUS.includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+
+    const updated = await db.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        id: updated.id,
+        orderNumber: updated.orderNumber,
+        fullName: updated.fullName,
+        email: updated.email,
+        phone: updated.phone,
+        shippingAddress: updated.shippingAddress,
+        shippingPostalCode: updated.shippingPostalCode,
+        shippingCity: updated.shippingCity,
+        shippingLocality: updated.shippingLocality,
+        shippingProvince: updated.shippingProvince,
+        totalAmount: parseFloat(updated.totalAmount.toString()),
+        status: updated.status,
+        stripeSessionId: updated.stripeSessionId,
+        items: updated.items,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      },
+    });
+  } catch (error) {
+    captureServerError({
+      error,
+      module: 'admin_orders_patch_api',
+      request,
+    });
+    return NextResponse.json(
+      { error: 'Failed to update order status' },
       { status: 500 },
     );
   }

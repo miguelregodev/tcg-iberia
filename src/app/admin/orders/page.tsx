@@ -79,6 +79,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +116,52 @@ export default function AdminOrdersPage() {
       else next.add(id);
       return next;
     });
+  };
+
+  const handleStatusChange = async (orderId: string, nextStatus: OrderStatus) => {
+    if (!data) return;
+
+    const previous = data.orders.find((o) => o.id === orderId)?.status;
+    if (!previous || previous === nextStatus) return;
+
+    setUpdatingOrderId(orderId);
+    setError(null);
+
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        orders: prev.orders.map((order) =>
+          order.id === orderId ? { ...order, status: nextStatus } : order,
+        ),
+      };
+    });
+
+    try {
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: nextStatus }),
+      });
+
+      if (!res.ok) {
+        const json = (await res.json()) as { error?: string };
+        throw new Error(json.error ?? 'No se pudo actualizar el estado del pedido.');
+      }
+    } catch (err) {
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          orders: prev.orders.map((order) =>
+            order.id === orderId ? { ...order, status: previous } : order,
+          ),
+        };
+      });
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el estado del pedido.');
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   const orders = data?.orders ?? [];
@@ -285,11 +332,32 @@ export default function AdminOrdersPage() {
                               {currency.format(order.totalAmount)}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <span
-                                className={`inline-block px-2.5 py-1 rounded-full border text-xs font-semibold ${statusStyle.className}`}
-                              >
-                                {statusStyle.label}
-                              </span>
+                              <div className="flex flex-col items-center gap-2">
+                                <span
+                                  className={`inline-block px-2.5 py-1 rounded-full border text-xs font-semibold ${statusStyle.className}`}
+                                >
+                                  {statusStyle.label}
+                                </span>
+                                <select
+                                  value={order.status}
+                                  disabled={updatingOrderId === order.id}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) =>
+                                    handleStatusChange(
+                                      order.id,
+                                      e.target.value as OrderStatus,
+                                    )
+                                  }
+                                  className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                                  aria-label={`Cambiar estado del pedido ${order.orderNumber}`}
+                                >
+                                  {Object.entries(STATUS_STYLES).map(([value, style]) => (
+                                    <option key={value} value={value}>
+                                      {style.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                             </td>
                           </tr>
                           {isOpen && (

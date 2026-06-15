@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      // Some proxies/browsers can request Next assets relative to nested routes.
+      { source: '/admin/_next/:path*', destination: '/_next/:path*' },
+      { source: '/mi-cuenta/_next/:path*', destination: '/_next/:path*' },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

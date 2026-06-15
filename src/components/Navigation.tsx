@@ -10,6 +10,9 @@ import { useCart } from '@/context/CartContext';
 import { ShoppingCartModal } from './ShoppingCartModal';
 import { LoginModal } from './LoginModal';
 import { trackEvent } from '@/lib/analytics/events';
+import { FreeShippingProgress } from './FreeShippingProgress';
+import { getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { useMemo } from 'react';
 
 const ACCOUNT_LINKS = [
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
@@ -22,11 +25,12 @@ export function Navigation() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const { totalQuantity } = useCart();
+  const { totalQuantity, totalPrice } = useCart();
   const { data: session } = useSession();
   const router = useRouter();
   const menuWrapperRef = useRef<HTMLDivElement>(null);
   const accountWrapperRef = useRef<HTMLDivElement>(null);
+  const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
 
   // Close hamburger on outside click / Escape.
   useEffect(() => {
@@ -213,6 +217,18 @@ export function Navigation() {
           </div>
         </div>
       </nav>
+
+      {/* Free Shipping Progress Banner */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="container-custom px-4 py-1.5">
+          <FreeShippingProgress
+            state={freeShippingState}
+            context="cart"
+            emptyCart={totalQuantity === 0}
+            className={totalQuantity === 0 ? '!bg-transparent !border-0 !p-0' : '!bg-transparent !border-0 !p-0'}
+          />
+        </div>
+      </div>
 
       {/* Shopping Cart Modal */}
       <ShoppingCartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />

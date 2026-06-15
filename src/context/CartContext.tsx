@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { Product } from '@/types';
 import { trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
+import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 
 export interface CartItem {
   product: Product;
@@ -21,28 +22,30 @@ interface CartContextType {
   clearCart: () => void;
 }
 
-const SHIPPING_COST = 6.95;
-const FREE_SHIPPING_THRESHOLD = 200;
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalQuantity = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
 
-  const totalPrice = items.reduce((sum, item) => {
-    const price = item.product.discountPercentage
-      ? Number(item.product.price) * (1 - Number(item.product.discountPercentage) / 100)
-      : Number(item.product.price);
-    return sum + price * item.quantity;
-  }, 0);
+  const totalPrice = useMemo(
+    () =>
+      calculateSubtotal(
+        items.map((item) => ({
+          price: Number(item.product.price),
+          quantity: item.quantity,
+          discountPercentage: item.product.discountPercentage,
+        }))
+      ),
+    [items]
+  );
 
-  const shippingCost =
-  totalPrice >= FREE_SHIPPING_THRESHOLD
-    ? 0
-    : SHIPPING_COST;
-
+  const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
+  const shippingCost = freeShippingState.shippingCost;
   const finalPrice = totalPrice + shippingCost;
 
   const addToCart = useCallback((product: Product, quantity: number) => {
