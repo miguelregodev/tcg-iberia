@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         notes: body.notes || null,
         type: body.type || null,
+        releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,
         stock: parseInt(body.stock),
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',

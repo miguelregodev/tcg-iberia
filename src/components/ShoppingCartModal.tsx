@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FreeShippingProgress } from './FreeShippingProgress';
 import { getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { formatReleaseDate, getProductInventoryState, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
 
 interface ShoppingCartModalProps {
   isOpen: boolean;
@@ -113,8 +114,14 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                       ? Number(item.product.price) * (1 - Number(item.product.discountPercentage) / 100)
                       : Number(item.product.price);
                     const itemTotal = finalPrice * item.quantity;
+                    const inventoryState = getProductInventoryState({
+                      stock: item.product.stock,
+                      releaseDate: item.product.releaseDate,
+                    });
+                    const releaseDate = formatReleaseDate(item.product.releaseDate);
                     const stock = Math.max(0, Number(item.product.stock) || 0);
-                    const atMax = item.quantity >= stock;
+                    const quantityLimit = getProductQuantityLimit(inventoryState);
+                    const atMax = quantityLimit !== null && item.quantity >= quantityLimit;
 
                     return (
                       <div
@@ -137,6 +144,16 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                           <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
                             {item.product.name}
                           </h3>
+                          <p className={`text-xs font-semibold mb-1 ${
+                            inventoryState.isPreorder ? 'text-blue-700' : 'text-gray-600'
+                          }`}>
+                            {getProductStatusLabel(inventoryState)}
+                          </p>
+                          {inventoryState.isPreorder && releaseDate ? (
+                            <p className="text-xs text-gray-500 mb-1">
+                              Lanzamiento: {releaseDate}
+                            </p>
+                          ) : null}
                           <p className="text-sm text-gray-600 mb-2">
                             {finalPrice.toFixed(2)}€ / ud
                           </p>

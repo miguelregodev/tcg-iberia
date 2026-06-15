@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       orderNumber: order.orderNumber,
+      items: order.items,
     });
   } catch (error) {
     captureServerError({

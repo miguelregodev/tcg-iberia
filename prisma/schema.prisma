@@ -70,6 +70,7 @@ model Product {
   discountPercentage   Decimal? @db.Decimal(5, 2)
   notes                String?  @db.Text
   type                 String?  @db.VarChar(100)
+  releaseDate          DateTime?
   stock                Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
   language             Language @default(ENGLISH)
@@ -86,6 +87,7 @@ model Product {
   @@index([slug])
   @@index([language])
   @@index([priority])
+  @@index([releaseDate])
   @@index([favoriteCount])  // supports sorting by popularity
 }
 

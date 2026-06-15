@@ -1,3 +1,5 @@
+import type { ProductInventoryStatus } from '@/lib/products/state';
+
 export type Product = {
   id: string;
   name: string;
@@ -7,14 +9,18 @@ export type Product = {
   discountPercentage: number | null;
   notes: string | null;
   type: string | null;
+  releaseDate: string | null;
   stock: number;
   imageUrl: string | null;
   language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
   priority: number;
   visible: boolean;
   available: boolean;
-  createdAt: String;
-  updatedAt: String;
+  canPurchase: boolean;
+  isPreorder: boolean;
+  inventoryStatus: ProductInventoryStatus;
+  createdAt: string;
+  updatedAt: string;
   hitCards?: HitCard[];
 };
 

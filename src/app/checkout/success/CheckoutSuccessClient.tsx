@@ -12,11 +12,14 @@ interface Props {
 
 
 interface LineItem {
+  id?: string;
   name: string;
   quantity: number;
   price: number;
   subtotal: number;
   image?: string | null;
+  releaseDate?: string | null;
+  isPreorder?: boolean;
 }
 
 interface SessionData {
@@ -187,6 +190,16 @@ return (
                         <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
                           {item.name}
                         </h3>
+                        {item.isPreorder ? (
+                          <p className="text-xs font-semibold text-blue-700 mb-1">
+                            Reserva
+                          </p>
+                        ) : null}
+                        {item.isPreorder && item.releaseDate ? (
+                          <p className="text-xs text-gray-500 mb-1">
+                            Lanzamiento: {new Date(item.releaseDate).toLocaleDateString('es-ES')}
+                          </p>
+                        ) : null}
                         <p className="text-sm text-gray-600">
                           {item.price.toFixed(2)}€ × {item.quantity} unit{item.quantity !== 1 ? 's' : ''}
                         </p>
@@ -201,6 +214,14 @@ return (
                     </div>
                   ))}
                 </div>
+
+                {sessionData.lineItems.some((i) => i.isPreorder) && (
+                  <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 space-y-2">
+                    <p className="font-bold">⚠️ Este pedido incluye productos en preventa.</p>
+                    <p>Al realizar la reserva, garantizas tu unidad antes del lanzamiento oficial. Los artículos serán enviados una vez estén disponibles y hayan sido recibidos por TCG Iberia de nuestros distribuidores.</p>
+                    <p>Si el pedido contiene productos en stock y productos en preventa, todo el pedido se enviará conjuntamente cuando los artículos en preventa estén disponibles. Las fechas de lanzamiento pueden variar por causas ajenas a TCG Iberia.</p>
+                  </div>
+                )}
 
                 {/* Order Total */}
                 <div className="border-t border-gray-200 pt-6 bg-gray-50 rounded-lg p-4">

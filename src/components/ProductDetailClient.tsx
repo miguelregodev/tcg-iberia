@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { CompleteYourPurchase } from './CompleteYourPurchase';
 import { FavoriteButton } from './FavoriteButton';
 import { StockAlertButton } from './StockAlertButton';
-import { trackProductViewed } from '@/lib/analytics/events';
+import { trackPreorderViewed, trackProductViewed } from '@/lib/analytics/events';
+import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -28,24 +30,31 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [addedToCart, setAddedToCart] = useState(false);
   const { addToCart, items } = useCart();
   const flagInfo = getLanguageFlag(product.language);
+  const inventoryState = getProductInventoryState({
+    stock: product.stock,
+    releaseDate: product.releaseDate,
+  });
+  const releaseDate = formatReleaseDate(product.releaseDate);
 
   // How many of this product are already in the cart.
   const inCartQuantity =
     items.find((it) => it.product.id === product.id)?.quantity ?? 0;
-  // Max additional units the user can add right now.
-  const maxAddable = Math.max(0, product.stock - inCartQuantity);
-  const reachedMax = quantity >= maxAddable;
+  const quantityLimit = getProductQuantityLimit(inventoryState);
+  const maxAddable = quantityLimit === null
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, quantityLimit - inCartQuantity);
+  const reachedMax = quantityLimit !== null && quantity >= maxAddable;
 
   // Clamp the selected quantity if cart contents change and shrink the limit.
   useEffect(() => {
-    if (maxAddable === 0) {
+    if (quantityLimit !== null && maxAddable === 0) {
       if (quantity !== 1) setQuantity(1);
       return;
     }
-    if (quantity > maxAddable) {
+    if (quantityLimit !== null && quantity > maxAddable) {
       setQuantity(maxAddable);
     }
-  }, [maxAddable, quantity]);
+  }, [maxAddable, quantity, quantityLimit]);
 
   const finalPrice = product.discountPercentage
     ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
@@ -60,8 +69,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const decrementQuantity = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
 
   const handleAddToCart = () => {
-    if (maxAddable === 0) return;
-    const safeQty = Math.min(quantity, maxAddable);
+    if (!inventoryState.canPurchase) return;
+    const safeQty = quantityLimit === null ? quantity : Math.min(quantity, maxAddable);
     addToCart(product, safeQty);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
@@ -81,9 +90,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         .filter(note => note.length > 0)
     : [];
 
-  const isAvailable = product.stock > 5;
-  const isLastUnits = product.stock > 0 && product.stock <= 5;
-  const isSoldOut = product.stock === 0;
+  const isSoldOut = inventoryState.isOutOfStock;
   const hasHitCards = product.hitCards && product.hitCards.length > 0;
 
   useEffect(() => {
@@ -92,8 +99,26 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       productName: product.name,
       category: product.type ?? 'unknown',
       price: Number(product.price),
+      releaseDate: product.releaseDate ?? undefined,
     });
-  }, [product.id, product.name, product.type, product.price]);
+  }, [product.id, product.name, product.type, product.price, product.releaseDate]);
+
+  useEffect(() => {
+    if (!inventoryState.isPreorder || !product.releaseDate) return;
+
+    try {
+      trackPreorderViewed({
+        productId: product.id,
+        productName: product.name,
+        releaseDate: product.releaseDate,
+      });
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { module: 'product-detail', action: 'track-preorder-viewed' },
+        extra: { productId: product.id },
+      });
+    }
+  }, [inventoryState.isPreorder, product.id, product.name, product.releaseDate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-8 md:py-16">
@@ -129,7 +154,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </div>
                   )}
 
-                  {isLastUnits && (
+                  {inventoryState.isLowStock && (
                     <div className="absolute bottom-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
                       Últimas unidades
                     </div>
@@ -143,25 +168,29 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           <div className="flex flex-col">
             {/* Badge Section */}
             <div className="mb-6">
-              {isSoldOut ? (
-                <span className="inline-block bg-gray-300 text-gray-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Agotado
-                </span>
-              ) : isLastUnits ? (
-                <span className="inline-block bg-orange-100 text-orange-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Últimas unidades
-                </span>
-              ) : (
-                <span className="inline-block bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm">
-                  Disponible
-                </span>
-              )}
+              <span className={`inline-block px-4 py-2 rounded-full font-semibold text-sm ${
+                inventoryState.status === 'preorder'
+                  ? 'bg-blue-100 text-blue-700'
+                  : inventoryState.status === 'available'
+                  ? 'bg-green-100 text-green-700'
+                  : inventoryState.status === 'low_stock'
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-gray-300 text-gray-700'
+              }`}>
+                {getProductStatusLabel(inventoryState)}
+              </span>
             </div>
 
             {/* Title */}
             <h1 className="text-3xl lg:text-4xl font-bold text-black mb-2 leading-tight">
               {product.name}
             </h1>
+
+            {inventoryState.isPreorder && releaseDate ? (
+              <p className="text-sm font-semibold text-blue-700 mb-4">
+                Lanzamiento: {releaseDate}
+              </p>
+            ) : null}
 
             <br></br>
 
@@ -221,7 +250,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <button
                   type="button"
                   onClick={decrementQuantity}
-                  disabled={isSoldOut || quantity <= 1}
+                  disabled={!inventoryState.canPurchase || quantity <= 1}
                   aria-label="Reducir cantidad"
                   className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
@@ -233,7 +262,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <button
                   type="button"
                   onClick={incrementQuantity}
-                  disabled={isSoldOut || reachedMax}
+                  disabled={!inventoryState.canPurchase || reachedMax}
                   aria-label="Aumentar cantidad"
                   className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
@@ -265,9 +294,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 ) : (
                   <button
                     onClick={handleAddToCart}
-                    disabled={maxAddable === 0}
+                    disabled={!inventoryState.canPurchase || (quantityLimit !== null && maxAddable === 0)}
                     className={`btn flex-1 text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
-                      maxAddable === 0
+                      !inventoryState.canPurchase || (quantityLimit !== null && maxAddable === 0)
                         ? 'bg-gray-400 cursor-not-allowed text-gray-200'
                         : addedToCart
                         ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -281,7 +310,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     />
                     {addedToCart
                       ? '\u2713 A\u00f1adido al carrito'
-                      : 'A\u00f1adir al carrito'}
+                      : getProductPurchaseLabel(inventoryState)}
                   </button>
                 )}
 

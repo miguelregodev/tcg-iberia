@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { captureServerError } from '@/lib/observability/sentry';
+import { db } from '@/lib/db';
+import { isOrderItemSnapshot, OrderItemSnapshot } from '@/lib/orders/items';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -31,8 +33,16 @@ export async function GET(request: NextRequest) {
 
     // Format the response with line item details
     const lineItems = session.line_items?.data || [];
+    const persistedCart = await db.checkoutSessionCart.findUnique({
+      where: { sessionId },
+      select: { items: true },
+    });
+    const orderItems = Array.isArray(persistedCart?.items)
+      ? (persistedCart.items.filter(isOrderItemSnapshot) as unknown as OrderItemSnapshot[])
+      : [];
 
-    const formattedLineItems = lineItems.map((item) => ({
+    const formattedLineItems = lineItems.map((item, index) => ({
+      id: orderItems[index]?.id,
       name: item.description || 'Product',
       quantity: item.quantity || 0,
       price: ((item.amount_subtotal || 0) / item.quantity!) / 100, // Convert from cents
@@ -40,6 +50,8 @@ export async function GET(request: NextRequest) {
       image: item.price?.product && typeof item.price.product === 'object' 
         ? (item.price.product as any).images?.[0] 
         : null,
+      releaseDate: orderItems[index]?.releaseDate ?? null,
+      isPreorder: orderItems[index]?.isPreorder ?? false,
     }));
 
     return NextResponse.json({

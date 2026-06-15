@@ -192,7 +192,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
 
   if (loading) {
     return (
-      <section id="catalog" className="section">
+      <section id="catalog" className="section bg-white">
         <div className="container-custom">
           <div className="h-64" aria-busy="true" />
         </div>
@@ -202,7 +202,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
 
   if (products.length === 0) {
     return (
-      <section id="catalog" className="section">
+      <section id="catalog" className="section bg-white">
         <div className="container-custom">
           <p className="text-center text-gray-600">No products available</p>
         </div>
@@ -211,7 +211,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
   }
 
   return (
-    <section id="catalog" className="section">
+    <section id="catalog" className="section bg-white">
       <div className="container-custom">
         <div className="relative">
           <button

@@ -26,6 +26,12 @@ const currency = new Intl.NumberFormat('es-ES', {
   currency: 'EUR',
 });
 
+const dateFormatter = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,6 +314,9 @@ export default function AdminProducts() {
                       Stock
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
+                      Lanzamiento
+                    </th>
+                    <th className="px-4 py-3 text-center font-semibold">
                       Prio.
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
@@ -322,7 +331,7 @@ export default function AdminProducts() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-4 py-12 text-center text-gray-500"
                       >
                         Cargando...
@@ -331,7 +340,7 @@ export default function AdminProducts() {
                   ) : pageItems.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-4 py-12 text-center text-gray-500"
                       >
                         No hay productos.
@@ -413,6 +422,11 @@ export default function AdminProducts() {
                             >
                               {product.stock}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600 text-xs whitespace-nowrap">
+                            {product.releaseDate
+                              ? dateFormatter.format(new Date(product.releaseDate))
+                              : '—'}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">
                             {product.priority}

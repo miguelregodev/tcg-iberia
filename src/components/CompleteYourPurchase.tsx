@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
+import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
 
 const SCROLL_STEP = 300;
 const ANIMATION_MS = 400;
@@ -29,12 +30,17 @@ function SuggestionCard({ product }: { product: Product }) {
   const { addToCart, items } = useCart();
   const [justAdded, setJustAdded] = useState(false);
   const flagInfo = getLanguageFlag(product.language);
+  const inventoryState = getProductInventoryState({
+    stock: product.stock,
+    releaseDate: product.releaseDate,
+  });
+  const releaseDate = formatReleaseDate(product.releaseDate);
 
   const inCartQuantity =
     items.find((it) => it.product.id === product.id)?.quantity ?? 0;
-  const stock = Math.max(0, Number(product.stock) || 0);
-  const reachedMax = inCartQuantity >= stock;
-  const isSoldOut = stock === 0;
+  const quantityLimit = getProductQuantityLimit(inventoryState);
+  const reachedMax = quantityLimit !== null && inCartQuantity >= quantityLimit;
+  const isSoldOut = !inventoryState.canPurchase;
 
   const finalPrice = product.discountPercentage
     ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
@@ -56,7 +62,7 @@ function SuggestionCard({ product }: { product: Product }) {
     ? 'Sin más stock'
     : justAdded
     ? '\u2713 Añadido'
-    : 'Añadir al carrito';
+    : getProductPurchaseLabel(inventoryState);
 
   return (
     <div className="group flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all overflow-hidden w-full h-full">
@@ -89,6 +95,11 @@ function SuggestionCard({ product }: { product: Product }) {
           <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-red-600 transition-colors h-10">
             {product.name}
           </h3>
+          {inventoryState.isPreorder && releaseDate ? (
+            <p className="text-xs font-semibold text-gray-600">
+              Lanzamiento: {releaseDate}
+            </p>
+          ) : null}
           <div className="flex items-baseline gap-2 h-7">
             <span className="text-lg font-bold text-black">
               {finalPrice.toFixed(2)}€
@@ -102,6 +113,17 @@ function SuggestionCard({ product }: { product: Product }) {
         </div>
       </Link>
       <div className="px-4 pb-4">
+        <p className={`mb-2 text-xs font-semibold ${
+          inventoryState.status === 'preorder'
+            ? 'text-blue-700'
+            : inventoryState.status === 'available'
+            ? 'text-green-600'
+            : inventoryState.status === 'low_stock'
+            ? 'text-orange-600'
+            : 'text-red-600'
+        }`}>
+          {getProductStatusLabel(inventoryState)}
+        </p>
         <button
           type="button"
           onClick={handleAdd}

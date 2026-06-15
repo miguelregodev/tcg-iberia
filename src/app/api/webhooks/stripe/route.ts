@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { sendOrderEmails } from '@/lib/email';
 import { captureServerError } from '@/lib/observability/sentry';
+import { captureServerEvent } from '@/lib/analytics/posthog-server';
+import { isOrderItemSnapshot, OrderItemSnapshot } from '@/lib/orders/items';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
@@ -26,17 +28,12 @@ interface PersistedCheckoutItem {
   quantity: number;
   price: number;
   discountPercentage?: number;
+  releaseDate?: string | null;
+  isPreorder?: boolean;
 }
 
 function isPersistedCheckoutItem(value: unknown): value is PersistedCheckoutItem {
-  if (!value || typeof value !== 'object') return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.id === 'string' &&
-    typeof item.name === 'string' &&
-    typeof item.quantity === 'number' &&
-    typeof item.price === 'number'
-  );
+  return isOrderItemSnapshot(value);
 }
 
 export async function POST(request: NextRequest) {
@@ -90,7 +87,7 @@ export async function POST(request: NextRequest) {
       if (!Array.isArray(rawItems) || rawItems.length === 0 || !rawItems.every(isPersistedCheckoutItem)) {
         throw new Error(`Persisted cart is invalid for session ${session.id}`);
       }
-      const items = rawItems;
+      const items = rawItems as OrderItemSnapshot[];
 
       const totalAmount = (session.amount_total || 0) / 100;
       const customerEmail = (metadata.email || session.customer_email || '').toLowerCase();
@@ -129,6 +126,10 @@ export async function POST(request: NextRequest) {
           for (const item of items) {
             if (!item.id || !item.quantity || item.quantity <= 0) {
               throw new Error(`Invalid item payload in checkout cart for session ${session.id}`);
+            }
+
+            if (item.isPreorder) {
+              continue;
             }
 
             const updateStock = await tx.product.updateMany({
@@ -206,6 +207,21 @@ export async function POST(request: NextRequest) {
       }
 
       if (orderCreated && orderRecord) {
+        const preorderItems = items.filter(
+          (item) => item.isPreorder && typeof item.releaseDate === 'string',
+        );
+
+        await Promise.all(
+          preorderItems.map((item) =>
+            captureServerEvent(customerEmail || session.id, 'preorder_purchased', {
+              productId: item.id,
+              productName: item.name,
+              orderId: orderRecord?.id,
+              releaseDate: item.releaseDate,
+            }),
+          ),
+        );
+
         try {
           await sendOrderEmails({
             orderNumber: orderRecord.orderNumber,

@@ -8,6 +8,7 @@ export type ProductEventPayload = {
   productName?: string;
   category?: string;
   price?: number;
+  releaseDate?: string;
 };
 
 export type CheckoutEventPayload = {
@@ -22,6 +23,13 @@ export type FreeShippingPayload = {
   remainingAmount?: number;
   percentage?: number;
   context?: 'cart' | 'mini_cart' | 'checkout';
+};
+
+export type PreorderEventPayload = {
+  productId: string;
+  productName: string;
+  releaseDate: string;
+  orderId?: string;
 };
 
 function withCommonProperties(properties: Properties = {}): Properties {
@@ -109,4 +117,12 @@ export function trackFreeShippingProgressViewed(payload: FreeShippingPayload) {
 
 export function trackFreeShippingQualified(payload: FreeShippingPayload) {
   trackEvent('free_shipping_qualified', payload);
+}
+
+export function trackPreorderViewed(payload: PreorderEventPayload) {
+  trackEvent('preorder_viewed', payload);
+}
+
+export function trackPreorderAddedToCart(payload: PreorderEventPayload) {
+  trackEvent('preorder_added_to_cart', payload);
 }
