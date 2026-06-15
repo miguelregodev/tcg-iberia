@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { ProductDetailClient } from '@/components/ProductDetailClient';
+import { publicProductWithHitCardsSelect, serializePublicProduct } from '@/lib/products/serialization';
 
 export async function generateMetadata({
   params,
@@ -36,11 +37,7 @@ export default async function ProductDetail({
 
   const product = await db.product.findUnique({
     where: { slug },
-    include: {
-      hitCards: {
-        orderBy: { createdAt: 'desc' },
-      },
-    },
+    select: publicProductWithHitCardsSelect,
   });
 
   if (!product || !product.visible) {
@@ -68,23 +65,7 @@ export default async function ProductDetail({
     );
   }
 
-  const serializedProduct = {
-    ...product,
-    price: Number(product.price),
-    discountPercentage: product.discountPercentage
-      ? Number(product.discountPercentage)
-      : null,
-    language: product.language,
-    available: product.stock > 0,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-    hitCards: product.hitCards.map(card => ({
-      ...card,
-      marketPrice: Number(card.marketPrice),
-      createdAt: card.createdAt.toISOString(),
-      updatedAt: card.updatedAt.toISOString(),
-    })),
-  };
+  const serializedProduct = serializePublicProduct(product);
 
   return (
     <>

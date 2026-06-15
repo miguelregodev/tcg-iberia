@@ -148,6 +148,7 @@ export function Navigation() {
                   aria-expanded={isAccountOpen}
                 >
                   <img src="/images/login.png" alt="Mi cuenta" className="w-6 h-6" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 border border-white rounded-full" />
                 </button>
 
                 {isAccountOpen && (

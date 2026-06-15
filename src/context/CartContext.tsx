@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { Product } from '@/types';
-import { trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
+import { trackPreorderAddedToCart, trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { getProductInventoryState, getProductQuantityLimit } from '@/lib/products/state';
 
 export interface CartItem {
   product: Product;
@@ -50,11 +51,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((product: Product, quantity: number) => {
     setItems(prevItems => {
+      const state = getProductInventoryState({
+        stock: product.stock,
+        releaseDate: product.releaseDate,
+      });
       const stock = Math.max(0, Number(product.stock) || 0);
+      const quantityLimit = getProductQuantityLimit(state);
       const existingItem = prevItems.find(item => item.product.id === product.id);
       if (existingItem) {
         const desired = existingItem.quantity + quantity;
-        const capped = Math.min(stock, Math.max(1, desired));
+        const capped = quantityLimit === null
+          ? Math.max(1, desired)
+          : Math.min(stock, Math.max(1, desired));
         if (capped === existingItem.quantity) return prevItems;
         return prevItems.map(item =>
           item.product.id === product.id
@@ -62,7 +70,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : item
         );
       }
-      const initialQty = Math.min(stock, Math.max(1, quantity));
+      const initialQty = quantityLimit === null
+        ? Math.max(1, quantity)
+        : Math.min(stock, Math.max(1, quantity));
       if (initialQty <= 0) return prevItems;
 
       trackProductAddedToCart({
@@ -70,7 +80,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         productName: product.name,
         category: product.type ?? 'unknown',
         price: Number(product.price),
+        releaseDate: product.releaseDate ?? undefined,
       });
+
+      if (state.isPreorder && product.releaseDate) {
+        trackPreorderAddedToCart({
+          productId: product.id,
+          productName: product.name,
+          releaseDate: product.releaseDate,
+        });
+      }
 
       return [...prevItems, { product, quantity: initialQty }];
     });
@@ -99,8 +118,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(prevItems =>
       prevItems.map(item => {
         if (item.product.id !== productId) return item;
+        const state = getProductInventoryState({
+          stock: item.product.stock,
+          releaseDate: item.product.releaseDate,
+        });
         const stock = Math.max(0, Number(item.product.stock) || 0);
-        const capped = Math.min(stock, quantity);
+        const quantityLimit = getProductQuantityLimit(state);
+        const capped = quantityLimit === null ? quantity : Math.min(stock, quantity);
         return { ...item, quantity: capped };
       })
     );

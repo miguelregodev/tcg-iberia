@@ -4,6 +4,7 @@ import { captureServerError } from '@/lib/observability/sentry';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { isOrderItemSnapshot } from '@/lib/orders/items';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -14,6 +15,8 @@ interface CheckoutItem {
   price: number;
   discountPercentage?: number;
   imageUrl?: string;
+  releaseDate?: string | null;
+  isPreorder?: boolean;
 }
 
 interface CustomerData {
@@ -56,6 +59,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'No items in cart' },
         { status: 400 }
+      );
+    }
+
+    if (!items.every(isOrderItemSnapshot)) {
+      return NextResponse.json(
+        { error: 'Invalid checkout items' },
+        { status: 400 },
       );
     }
 

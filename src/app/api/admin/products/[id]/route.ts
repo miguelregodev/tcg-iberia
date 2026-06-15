@@ -39,6 +39,7 @@ export async function PUT(
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         notes: body.notes || null,
         type: body.type || null,
+        releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,
         stock: nextStock,
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',

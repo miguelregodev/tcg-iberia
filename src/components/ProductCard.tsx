@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Product } from '@/types';
+import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } from '@/lib/products/state';
 
 function getLanguageFlag(language: string): { path: string; name: string } {
   const flags: Record<string, { path: string; name: string }> = {
@@ -13,6 +14,11 @@ function getLanguageFlag(language: string): { path: string; name: string } {
 
 export function ProductCard({ product }: { product: Product }) {
   const flagInfo = getLanguageFlag(product.language);
+  const inventoryState = getProductInventoryState({
+    stock: product.stock,
+    releaseDate: product.releaseDate,
+  });
+  const releaseDate = formatReleaseDate(product.releaseDate);
   return (
     <Link href={`/product/${product.slug}`}>
       <div className="card card-hover cursor-pointer group">
@@ -58,15 +64,25 @@ export function ProductCard({ product }: { product: Product }) {
         <p className="text-sm text-gray-500 mb-4 line-clamp-2">
           {product.description}
         </p>
+
+        {inventoryState.isPreorder && releaseDate ? (
+          <p className="text-xs font-semibold text-gray-600 mb-4">
+            Lanzamiento: {releaseDate}
+          </p>
+        ) : null}
         
         <div className="flex justify-between items-center">
-          {product.stock > 5 ? (
-            <span className="text-green-600 text-sm font-semibold">Disponible</span>
-          ) : product.stock > 0 ? (
-            <span className="text-orange-600 text-sm font-semibold">Últimas unidades</span>
-          ) : (
-            <span className="text-red-600 text-sm font-semibold">Agotado</span>
-          )}
+          <span className={`text-sm font-semibold ${
+            inventoryState.status === 'preorder'
+              ? 'text-blue-700'
+              : inventoryState.status === 'available'
+              ? 'text-green-600'
+              : inventoryState.status === 'low_stock'
+              ? 'text-orange-600'
+              : 'text-red-600'
+          }`}>
+            {getProductStatusLabel(inventoryState)}
+          </span>
         </div>
       </div>
     </Link>

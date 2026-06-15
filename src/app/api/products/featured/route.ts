@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { publicProductSelect, serializePublicProduct } from '@/lib/products/serialization';
 
 export async function GET() {
   try {
@@ -14,24 +15,11 @@ export async function GET() {
     const products = await db.product.findMany({
       where,
       orderBy: { priority: 'asc' },
+      take: 12,
+      select: publicProductSelect,
     });
 
-    const publicProducts = products.map((p: typeof products[0]) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: parseFloat(p.price.toString()),
-      discountPercentage: p.discountPercentage ? parseFloat(p.discountPercentage.toString()) : null,
-      stock: p.stock,
-      imageUrl: p.imageUrl,
-      language: p.language,
-      priority: p.priority,
-      available: p.stock > 0,
-      description: p.description,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      type: p.type,
-    }));
+    const publicProducts = products.map(serializePublicProduct);
 
     return NextResponse.json(publicProducts);
   } catch (error) {

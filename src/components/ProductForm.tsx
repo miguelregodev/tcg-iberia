@@ -81,6 +81,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     discountPercentage: product?.discountPercentage ?? '',
     notes: product?.notes || '',
     type: product?.type || '',
+    releaseDate: product?.releaseDate ? product.releaseDate.slice(0, 10) : '',
     stock: product?.stock ?? '',
     imageUrl: product?.imageUrl || '',
     language: product?.language || 'ENGLISH',
@@ -184,6 +185,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
               : parseFloat(String(formData.discountPercentage)),
           notes: formData.notes || null,
           type: formData.type || null,
+          releaseDate: formData.releaseDate || null,
           stock: parseInt(String(formData.stock), 10),
           imageUrl: formData.imageUrl || null,
           language: formData.language,
@@ -305,6 +307,20 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
                   </select>
                 </Field>
               </div>
+
+              <Field
+                label="Fecha de lanzamiento"
+                hint="Opcional. Si es futura, el producto se mostrará como reserva."
+              >
+                <input
+                  type="date"
+                  name="releaseDate"
+                  value={formData.releaseDate}
+                  onChange={handleChange}
+                  className={inputClass}
+                  disabled={loading}
+                />
+              </Field>
             </FormSection>
 
             <FormSection

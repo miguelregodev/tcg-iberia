@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { publicProductSelect, serializePublicProduct } from '@/lib/products/serialization';
 
 // Fisher–Yates shuffle (in-place).
 function shuffle<T>(arr: T[]): T[] {
@@ -22,36 +23,17 @@ export async function GET(request: NextRequest) {
 
     const where: any = {
       visible: true,
-      stock: { gt: 0 },
+      OR: [{ stock: { gt: 0 } }, { releaseDate: { gt: new Date() } }],
     };
     if (excludeId) {
       where.id = { not: excludeId };
     }
 
-    const products = await db.product.findMany({ where });
+    const products = await db.product.findMany({ where, select: publicProductSelect });
 
     const shuffled = shuffle([...products]).slice(0, limit);
 
-    const publicProducts = shuffled.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: parseFloat(p.price.toString()),
-      discountPercentage: p.discountPercentage
-        ? parseFloat(p.discountPercentage.toString())
-        : null,
-      stock: p.stock,
-      imageUrl: p.imageUrl,
-      language: p.language,
-      priority: p.priority,
-      available: p.stock > 0,
-      description: p.description,
-      notes: p.notes,
-      visible: p.visible,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      type: p.type,
-    }));
+    const publicProducts = shuffled.map(serializePublicProduct);
 
     return NextResponse.json(publicProducts);
   } catch (error) {

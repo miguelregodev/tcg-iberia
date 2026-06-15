@@ -9,6 +9,8 @@ import * as Sentry from '@sentry/nextjs';
 import { trackCheckoutFailed, trackCheckoutStarted, trackUserRegistered } from '@/lib/analytics/events';
 import { FreeShippingProgress } from './FreeShippingProgress';
 import { getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { createOrderItemSnapshot } from '@/lib/orders/items';
+import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } from '@/lib/products/state';
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -109,16 +111,7 @@ export function CheckoutForm() {
       }
 
       // Prepare checkout items
-      const checkoutItems = items.map((item) => ({
-        id: item.product.id,
-        name: item.product.name,
-        quantity: item.quantity,
-        price: Number(item.product.price),
-        discountPercentage: item.product.discountPercentage
-          ? Number(item.product.discountPercentage)
-          : undefined,
-        imageUrl: item.product.imageUrl || undefined,
-      }));
+      const checkoutItems = items.map((item) => createOrderItemSnapshot(item.product, item.quantity));
 
       // Create Stripe checkout session with customer data
       const response = await fetch('/api/checkout', {
@@ -363,12 +356,6 @@ export function CheckoutForm() {
               className="mb-4"
             />
 
-            <p className={`mb-4 text-sm font-semibold ${freeShippingState.qualified ? 'text-green-700' : 'text-gray-700'}`}>
-              {freeShippingState.qualified
-                ? 'Envío gratuito aplicado.'
-                : 'Tu pedido no cumple todavía los requisitos para envío gratuito.'}
-            </p>
-
             <div className="space-y-4 mb-6 max-h-96 overflow-auto">
               {items.map(item => {
                 const finalPrice = item.product.discountPercentage
@@ -382,6 +369,21 @@ export function CheckoutForm() {
                       <p className="font-semibold text-gray-900 line-clamp-2">
                         {item.product.name}
                       </p>
+                      <p className={`text-xs font-semibold ${
+                        item.product.isPreorder ? 'text-blue-700' : 'text-gray-500'
+                      }`}>
+                        {getProductStatusLabel(
+                          getProductInventoryState({
+                            stock: item.product.stock,
+                            releaseDate: item.product.releaseDate,
+                          }),
+                        )}
+                      </p>
+                      {item.product.isPreorder && item.product.releaseDate ? (
+                        <p className="text-xs text-gray-500">
+                          Lanzamiento: {formatReleaseDate(item.product.releaseDate)}
+                        </p>
+                      ) : null}
                       <p className="text-gray-600">x{item.quantity}</p>
                     </div>
                     <p className="font-semibold text-gray-900">
@@ -391,6 +393,14 @@ export function CheckoutForm() {
                 );
               })}
             </div>
+
+            {items.some((i) => i.product.isPreorder) && (
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 space-y-2">
+                <p className="font-bold">⚠️ Este pedido incluye productos en preventa.</p>
+                <p>Al realizar la reserva, garantizas tu unidad antes del lanzamiento oficial. Los artículos serán enviados una vez estén disponibles y hayan sido recibidos por TCG Iberia de nuestros distribuidores.</p>
+                <p>Si el pedido contiene productos en stock y productos en preventa, todo el pedido se enviará conjuntamente cuando los artículos en preventa estén disponibles. Las fechas de lanzamiento pueden variar por causas ajenas a TCG Iberia.</p>
+              </div>
+            )}
 
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <div className="flex justify-between text-sm text-gray-700">

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { captureServerError } from '@/lib/observability/sentry';
+import { publicProductSelect, serializePublicProduct } from '@/lib/products/serialization';
 
 export async function GET(
   request: Request,
@@ -13,6 +14,7 @@ export async function GET(
     slug = resolvedParams.slug;
     const product = await db.product.findUnique({
       where: { slug },
+      select: publicProductSelect,
     });
 
     if (!product || !product.visible) {
@@ -22,18 +24,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      description: product.description,
-      price: parseFloat(product.price.toString()),
-      discountPercentage: product.discountPercentage ? parseFloat(product.discountPercentage.toString()) : null,
-      notes: product.notes,
-      stock: product.stock,
-      imageUrl: product.imageUrl,
-      available: product.stock > 0,
-    });
+    return NextResponse.json(serializePublicProduct(product));
   } catch (error) {
     captureServerError({
       error,

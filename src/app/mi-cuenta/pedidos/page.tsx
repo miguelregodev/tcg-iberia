@@ -11,6 +11,8 @@ interface OrderItem {
   quantity: number;
   price: number;
   discountPercentage?: number;
+  releaseDate?: string | null;
+  isPreorder?: boolean;
 }
 
 interface Order {
@@ -157,6 +159,16 @@ export default function PedidosPage() {
                         <div key={idx} className="flex justify-between items-start text-sm bg-white p-3 rounded-lg">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900">{item.name}</p>
+                            {item.isPreorder ? (
+                              <p className="text-xs font-semibold text-blue-700 mt-1">
+                                Reserva
+                              </p>
+                            ) : null}
+                            {item.isPreorder && item.releaseDate ? (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Lanzamiento: {new Date(item.releaseDate).toLocaleDateString('es-ES')}
+                              </p>
+                            ) : null}
                             <p className="text-xs text-gray-500 mt-1">
                               Cantidad: <span className="font-semibold">{item.quantity}</span>
                             </p>
