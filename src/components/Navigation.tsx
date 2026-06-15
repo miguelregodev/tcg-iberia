@@ -2,21 +2,33 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 import { HamburgerMenu } from './HamburgerMenu';
 import { useCart } from '@/context/CartContext';
 import { ShoppingCartModal } from './ShoppingCartModal';
 import { LoginModal } from './LoginModal';
+import { trackEvent } from '@/lib/analytics/events';
+
+const ACCOUNT_LINKS = [
+  { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
+  { href: '/mi-cuenta/favoritos', label: 'Favoritos', icon: '❤️' },
+  { href: '/mi-cuenta/alertas-stock', label: 'Alertas de Stock', icon: '🔔' },
+];
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const { totalQuantity } = useCart();
   const { data: session } = useSession();
+  const router = useRouter();
   const menuWrapperRef = useRef<HTMLDivElement>(null);
+  const accountWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click and on Escape.
+  // Close hamburger on outside click / Escape.
   useEffect(() => {
     if (!isMenuOpen) return;
 
@@ -39,6 +51,42 @@ export function Navigation() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isMenuOpen]);
+
+  // Close account dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!isAccountOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (accountWrapperRef.current && target && !accountWrapperRef.current.contains(target)) {
+        setIsAccountOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAccountOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAccountOpen]);
+
+  const handleLogout = async () => {
+    setIsAccountOpen(false);
+    try {
+      trackEvent('user_logged_out', {});
+      await signOut({ redirect: false });
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      Sentry.captureException(err, { tags: { module: 'auth', action: 'logout' } });
+    }
+  };
 
   return (
     <>
@@ -84,27 +132,64 @@ export function Navigation() {
             <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
           </Link>
 
-          {/* Right side: Login + Shopping Bag */}
+          {/* Right side: Login / Account + Shopping Bag */}
           <div className="absolute right-4 flex items-center gap-1">
             {/* Login / Account button */}
             {session?.user ? (
-              <Link
-                href="/mi-cuenta"
-                className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
-              >
-                Hola {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}!
-              </Link>
+              <div ref={accountWrapperRef} className="relative">
+                <button
+                  onClick={() => setIsAccountOpen((v) => !v)}
+                  className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Mi cuenta"
+                  aria-expanded={isAccountOpen}
+                >
+                  <img src="/images/login.png" alt="Mi cuenta" className="w-6 h-6" />
+                </button>
+
+                {isAccountOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                    {/* User header */}
+                    <div className="px-4 py-3 bg-red-600 text-white">
+                      <p className="text-xs opacity-80">Mi cuenta</p>
+                      <p className="font-bold text-sm truncate">
+                        {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}
+                      </p>
+                    </div>
+
+                    {/* Links */}
+                    <nav className="p-1">
+                      {ACCOUNT_LINKS.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsAccountOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        >
+                          <span>{item.icon}</span>
+                          {item.label}
+                        </Link>
+                      ))}
+
+                      <hr className="my-1 border-gray-100" />
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                      >
+                        <span>🚪</span>
+                        Cerrar Sesión
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 onClick={() => setIsLoginOpen(true)}
                 className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Iniciar sesión"
               >
-                <img
-                  src="/images/login.png"
-                  alt="Iniciar sesión"
-                  className="w-6 h-6"
-                />
+                <img src="/images/login.png" alt="Iniciar sesión" className="w-6 h-6" />
               </button>
             )}
 
