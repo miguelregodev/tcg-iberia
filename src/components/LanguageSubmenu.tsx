@@ -16,10 +16,19 @@ const LANGUAGES: { value: Language; label: string; flag: string }[] = [
   { value: 'SPANISH', label: 'Spanish', flag: '/images/spain.png' },
 ];
 
+const CATEGORY_LANGUAGES: Record<string, Language[]> = {
+  'booster-bundles': ['ENGLISH', 'SPANISH'],
+  'etbs': ['ENGLISH', 'SPANISH'],
+};
+
 export function LanguageSubmenu({ category, onClose }: LanguageSubmenuProps) {
+  const allowed = CATEGORY_LANGUAGES[category];
+  const languages = allowed
+    ? LANGUAGES.filter((l) => allowed.includes(l.value))
+    : LANGUAGES;
   return (
     <div className="ml-4 mt-1 mb-2 pl-4 pr-2 py-2 space-y-0.5 border-l-2 border-red-300/70 bg-gradient-to-r from-red-50/40 to-transparent rounded-r-lg">
-      {LANGUAGES.map((lang, index) => (
+      {languages.map((lang, index) => (
         <div
           key={lang.value}
           className="animate-menu-item"
