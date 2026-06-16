@@ -37,8 +37,8 @@ export function TrustSection() {
       <div className="container-custom px-4 relative z-10 py-12 md:py-20">
         {/* Header */}
         <div className="text-center mb-10 md:mb-14">
-          <h2 className="font-airstrike text-3xl md:text-5xl lg:text-6xl uppercase tracking-wider leading-tight">
-            ¿Por qué TCG Iberia?
+          <h2 className="font-airstrike text-3xl md:text-5xl lg:text-6xl tracking-wider leading-tight">
+            ¿por que tcg iberia?
           </h2>
           <p className="mt-3 text-gray-300 text-base md:text-lg max-w-2xl mx-auto">
             Calidad garantizada, envío de confianza y soporte cercano para todos

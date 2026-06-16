@@ -19,7 +19,7 @@ export default async function BoosterPacksPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="Booster Packs"
+        title="booster packs"
         productType="pack"
         language={language}
         eyebrow="Sobres individuales"

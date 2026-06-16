@@ -19,6 +19,8 @@ interface ProductListPageProps {
   language?: Language;
   subtitle?: string;
   eyebrow?: string;
+  /** Restrict which language filter pills are shown. Defaults to all four. */
+  allowedLanguages?: Language[];
 }
 
 const LANGUAGE_LABELS: Record<Language, string> = {
@@ -43,6 +45,7 @@ export function ProductListPage({
   language,
   subtitle,
   eyebrow,
+  allowedLanguages,
 }: ProductListPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +152,7 @@ export function ProductListPage({
               <span className="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
                 {eyebrow ?? 'Catálogo'}
               </span>
-              <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl uppercase tracking-wider leading-tight">
+              <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl tracking-wider leading-tight">
                 {title}
               </h1>
               <p className="mt-2 text-gray-300 text-base md:text-lg max-w-2xl">
@@ -171,7 +174,7 @@ export function ProductListPage({
             >
               Todos los idiomas
             </Link>
-            {LANGUAGES.map((lang) => {
+            {(allowedLanguages ?? LANGUAGES).map((lang) => {
               const active = language === lang;
               return (
                 <Link

@@ -14,8 +14,8 @@ export function Recent() {
         <span className="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
           Recién llegado
         </span>
-        <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl uppercase tracking-wider leading-tight">
-          Últimas Novedades
+        <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl tracking-wider leading-tight">
+          ultimas novedades
         </h1>
         <p className="mt-2 text-gray-300 text-sm md:text-base max-w-2xl">
           Descubre los últimos productos añadidos al catálogo.
