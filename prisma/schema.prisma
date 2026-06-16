@@ -39,6 +39,19 @@ enum NotificationChannel {
   TELEGRAM
 }
 
+enum AbandonedCartStatus {
+  ACTIVE
+  ABANDONED
+  RECOVERED
+  COMPLETED
+}
+
+enum RecoveryEmailStatus {
+  NONE
+  SENT
+  FAILED
+}
+
 /// Product model represents a TCG/Pokemon card product in the catalog
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)
@@ -214,6 +227,7 @@ model User {
   favorites     Favorite[]
   orders        Order[]   // soft link — orders are also identified by email
   stockAlerts   StockAlert[]
+  abandonedCarts AbandonedCart[]
 
   @@index([email])
 }
@@ -307,4 +321,50 @@ model CheckoutSessionCart {
   processedAt DateTime?
 
   @@index([createdAt])
+}
+
+/// Abandoned shopping cart — tracks carts that were not completed.
+/// Supports both registered users (userId) and guests (guestEmail).
+/// Used for recovery email campaigns.
+///
+/// Lifecycle:
+///   ACTIVE     → cart has items, user is still potentially active
+///   ABANDONED  → delay elapsed, recovery email sent (if email available)
+///   RECOVERED  → user clicked recovery link and returned to checkout
+///   COMPLETED  → Stripe payment succeeded for this cart
+model AbandonedCart {
+  id                     String              @id @default(cuid())
+  /// Client-generated UUID stored in localStorage. Acts as the cart's identity
+  /// key across the anonymous ↔ authenticated boundary.
+  sessionKey             String              @unique @db.VarChar(255)
+  userId                 String?
+  guestEmail             String?             @db.VarChar(255)
+  status                 AbandonedCartStatus @default(ACTIVE)
+  /// JSON snapshot: CartItemSnapshot[]
+  items                  Json
+  totalAmount            Decimal             @db.Decimal(12, 2)
+  lastActivityAt         DateTime            @default(now())
+  /// Cryptographically random token used in recovery links. 64 hex chars.
+  recoveryToken          String?             @unique @db.VarChar(128)
+  recoveryTokenExpiresAt DateTime?
+  recoveryEmailStatus    RecoveryEmailStatus @default(NONE)
+  recoveryEmailSentAt    DateTime?
+  recoveredAt            DateTime?
+  completedAt            DateTime?
+  /// Stripe checkout session id — set when user starts checkout so the
+  /// webhook can mark the cart as COMPLETED on payment success.
+  stripeSessionId        String?             @db.VarChar(500)
+
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  user                   User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([sessionKey])
+  @@index([userId])
+  @@index([guestEmail])
+  @@index([status])
+  @@index([lastActivityAt])
+  @@index([recoveryToken])
+  @@index([stripeSessionId])
 }

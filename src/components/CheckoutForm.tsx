@@ -15,7 +15,7 @@ import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } fr
 export function CheckoutForm() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, totalPrice, shippingCost, finalPrice } = useCart();
+  const { items, totalPrice, shippingCost, finalPrice, cartSessionKey } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,6 +123,7 @@ export function CheckoutForm() {
           items: checkoutItems,
           customerData: formData,
           shippingCost,
+          cartSessionKey,
         }),
       });
 
@@ -213,6 +214,16 @@ export function CheckoutForm() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
+                      onBlur={(e) => {
+                        const email = e.target.value.trim();
+                        if (email.includes('@') && cartSessionKey) {
+                          fetch('/api/cart/associate-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sessionKey: cartSessionKey, email }),
+                          }).catch(() => {/* silent */});
+                        }
+                      }}
                       placeholder="tu@email.com"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
                       required

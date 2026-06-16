@@ -49,6 +49,22 @@ export interface StockAlertEmailPayload {
   };
 }
 
+export interface CartRecoveryItem {
+  name: string;
+  quantity: number;
+  price: number;
+  discountPercentage?: number | null;
+  imageUrl?: string | null;
+}
+
+export interface CartRecoveryEmailPayload {
+  to: string;
+  firstName?: string;
+  items: CartRecoveryItem[];
+  totalAmount: number;
+  recoveryUrl: string;
+}
+
 // --- Branding ---
 const BRAND = {
   primary: '#DC2626', // red-500 from tailwind.config.ts
@@ -458,6 +474,110 @@ function buildStockAlertText(payload: StockAlertEmailPayload): string {
   ].join('\n');
 }
 
+// --- Cart Recovery email ---
+
+function cartRecoveryItemsTableHtml(items: CartRecoveryItem[]): string {
+  const rows = items
+    .map((item, i) => {
+      const discount = item.discountPercentage ?? 0;
+      const unit = item.price * (1 - discount / 100);
+      const subtotal = unit * item.quantity;
+      const isLast = i === items.length - 1;
+      const border = isLast ? '' : `border-bottom:1px solid ${BRAND.border};`;
+
+      const imageBlock = item.imageUrl
+        ? `<td style="padding:12px 12px 12px 0;${border}width:64px;vertical-align:top;">
+             <img src="${escapeHtml(item.imageUrl)}" alt="" style="width:56px;height:56px;object-fit:contain;border-radius:8px;background:${BRAND.bg};border:1px solid ${BRAND.border};" />
+           </td>`
+        : '';
+
+      const discountBadge =
+        discount > 0
+          ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:999px;font-size:11px;font-weight:600;">-${escapeHtml(discount)}%</span>`
+          : '';
+
+      return `<tr>
+        ${imageBlock}
+        <td style="padding:12px 0;${border}font-family:${FONT_STACK};vertical-align:top;">
+          <div style="font-size:14px;font-weight:600;color:${BRAND.text};line-height:1.3;">${escapeHtml(item.name)}${discountBadge}</div>
+          <div style="font-size:12px;color:${BRAND.textMuted};margin-top:4px;">${escapeHtml(item.quantity)} &times; ${formatCurrency(unit)}</div>
+        </td>
+        <td align="right" style="padding:12px 0;${border}font-family:${FONT_STACK};font-size:14px;font-weight:600;color:${BRAND.text};white-space:nowrap;vertical-align:top;">${formatCurrency(subtotal)}</td>
+      </tr>`;
+    })
+    .join('');
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">${rows}</table>`;
+}
+
+function buildCartRecoveryHtml(payload: CartRecoveryEmailPayload): string {
+  const greeting = payload.firstName
+    ? `Hola <strong>${escapeHtml(payload.firstName)}</strong>,`
+    : 'Hola,';
+
+  const content = `
+    <tr>
+      <td style="padding:32px;">
+        <p style="margin:0 0 8px 0;font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${BRAND.text};">
+          ${greeting}
+        </p>
+        <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${BRAND.text};">
+          Los productos que seleccionaste siguen esperándote. ¿Nos faltó algo?
+        </p>
+
+        <!-- Items -->
+        <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Tu carrito</div>
+        ${cartRecoveryItemsTableHtml(payload.items)}
+        ${totalRowHtml(payload.totalAmount)}
+
+        <!-- CTA -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;">
+          <tr>
+            <td align="center">
+              <a href="${escapeHtml(payload.recoveryUrl)}"
+                 style="display:inline-block;padding:14px 32px;background:${BRAND.primary};color:${BRAND.white};font-family:${FONT_STACK};font-size:16px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:0.01em;">
+                Finalizar compra
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:13px;line-height:1.6;color:${BRAND.textMuted};text-align:center;">
+          Si el botón no funciona, copia este enlace en tu navegador:<br/>
+          <a href="${escapeHtml(payload.recoveryUrl)}" style="color:${BRAND.primary};word-break:break-all;">${escapeHtml(payload.recoveryUrl)}</a>
+        </p>
+        <p style="margin:24px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.text};">
+          Un saludo,<br/>
+          <strong>El equipo de TCG Iberia</strong>
+        </p>
+      </td>
+    </tr>
+  `;
+
+  return htmlShell('Has olvidado algunos productos en tu carrito', content);
+}
+
+function buildCartRecoveryText(payload: CartRecoveryEmailPayload): string {
+  const lines = payload.items.map((item) => {
+    const unit = item.price * (1 - (item.discountPercentage ?? 0) / 100);
+    return `  - ${item.name}  x${item.quantity}  ${formatCurrency(unit * item.quantity)}`;
+  });
+  return [
+    payload.firstName ? `Hola ${payload.firstName},` : 'Hola,',
+    '',
+    'Los productos que seleccionaste siguen esperándote.',
+    '',
+    'Tu carrito:',
+    ...lines,
+    '',
+    `Total: ${formatCurrency(payload.totalAmount)}`,
+    '',
+    `Finalizar compra: ${payload.recoveryUrl}`,
+    '',
+    'El equipo de TCG Iberia',
+  ].join('\n');
+}
+
 // --- Public API ---
 
 export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void> {
@@ -493,6 +613,21 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
     if (r.status === 'rejected') {
       console.error(`[email] ${i === 0 ? 'customer' : 'admin'} send failed`, r.reason);
     }
+  });
+}
+
+export async function sendCartRecoveryEmail(payload: CartRecoveryEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) return;
+
+  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+
+  await transporter.sendMail({
+    from,
+    to: payload.to,
+    subject: 'Has olvidado algunos productos en tu carrito',
+    html: buildCartRecoveryHtml(payload),
+    text: buildCartRecoveryText(payload),
   });
 }
 

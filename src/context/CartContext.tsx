@@ -1,10 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo, useEffect, useRef } from 'react';
 import { Product } from '@/types';
 import { trackPreorderAddedToCart, trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { getProductInventoryState, getProductQuantityLimit } from '@/lib/products/state';
+import { CartItemSnapshot } from '@/lib/abandoned-cart/tracker';
 
 export interface CartItem {
   product: Product;
@@ -17,6 +18,7 @@ interface CartContextType {
   totalPrice: number;
   shippingCost: number;
   finalPrice: number;
+  cartSessionKey: string;
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -27,6 +29,57 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Stable, client-generated UUID that identifies this cart session across page
+  // loads. Stored in localStorage so the same key survives refreshes.
+  const [cartSessionKey] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const stored = localStorage.getItem('cart-session-key');
+      if (stored) return stored;
+      const key = crypto.randomUUID();
+      localStorage.setItem('cart-session-key', key);
+      return key;
+    } catch {
+      return '';
+    }
+  });
+
+  // Debounce ref — cleared/reset on each cart mutation.
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Fire-and-forget sync to the abandoned-cart API. 2-second debounce. */
+  const scheduleSyncRef = useRef<(nextItems: CartItem[], nextTotal: number) => void>(() => {});
+
+  useEffect(() => {
+    scheduleSyncRef.current = (nextItems: CartItem[], nextTotal: number) => {
+      if (!cartSessionKey) return;
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = setTimeout(async () => {
+        try {
+          const snapshots: CartItemSnapshot[] = nextItems.map((ci) => ({
+            id: ci.product.id,
+            name: ci.product.name,
+            quantity: ci.quantity,
+            price: Number(ci.product.price),
+            discountPercentage: ci.product.discountPercentage ?? null,
+            imageUrl: ci.product.imageUrl ?? null,
+          }));
+          await fetch('/api/cart/activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionKey: cartSessionKey,
+              items: snapshots,
+              totalAmount: nextTotal,
+            }),
+          });
+        } catch {
+          // Silent — cart sync is best-effort and must never break the UI.
+        }
+      }, 2000);
+    };
+  }, [cartSessionKey]);
 
   const totalQuantity = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -64,11 +117,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
           ? Math.max(1, desired)
           : Math.min(stock, Math.max(1, desired));
         if (capped === existingItem.quantity) return prevItems;
-        return prevItems.map(item =>
+        const next = prevItems.map(item =>
           item.product.id === product.id
             ? { ...item, quantity: capped }
             : item
         );
+        const total = calculateSubtotal(next.map(i => ({ price: Number(i.product.price), quantity: i.quantity, discountPercentage: i.product.discountPercentage })));
+        scheduleSyncRef.current(next, total);
+        return next;
       }
       const initialQty = quantityLimit === null
         ? Math.max(1, quantity)
@@ -91,7 +147,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      return [...prevItems, { product, quantity: initialQty }];
+      const next = [...prevItems, { product, quantity: initialQty }];
+      const total = calculateSubtotal(next.map(i => ({ price: Number(i.product.price), quantity: i.quantity, discountPercentage: i.product.discountPercentage })));
+      scheduleSyncRef.current(next, total);
+      return next;
     });
   }, []);
 
@@ -106,7 +165,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
           price: Number(removed.product.price),
         });
       }
-      return prevItems.filter(item => item.product.id !== productId);
+      const next = prevItems.filter(item => item.product.id !== productId);
+      const total = calculateSubtotal(next.map(i => ({ price: Number(i.product.price), quantity: i.quantity, discountPercentage: i.product.discountPercentage })));
+      scheduleSyncRef.current(next, total);
+      return next;
     });
   }, []);
 
@@ -115,8 +177,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
-    setItems(prevItems =>
-      prevItems.map(item => {
+    setItems(prevItems => {
+      const next = prevItems.map(item => {
         if (item.product.id !== productId) return item;
         const state = getProductInventoryState({
           stock: item.product.stock,
@@ -126,12 +188,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const quantityLimit = getProductQuantityLimit(state);
         const capped = quantityLimit === null ? quantity : Math.min(stock, quantity);
         return { ...item, quantity: capped };
-      })
-    );
+      });
+      const total = calculateSubtotal(next.map(i => ({ price: Number(i.product.price), quantity: i.quantity, discountPercentage: i.product.discountPercentage })));
+      scheduleSyncRef.current(next, total);
+      return next;
+    });
   }, [removeFromCart]);
 
   const clearCart = useCallback(() => {
     setItems([]);
+    scheduleSyncRef.current([], 0);
   }, []);
 
   const value: CartContextType = {
@@ -140,6 +206,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     totalPrice,
     shippingCost,
     finalPrice,
+    cartSessionKey,
     addToCart,
     removeFromCart,
     updateQuantity,

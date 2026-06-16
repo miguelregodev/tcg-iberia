@@ -126,3 +126,32 @@ export function trackPreorderViewed(payload: PreorderEventPayload) {
 export function trackPreorderAddedToCart(payload: PreorderEventPayload) {
   trackEvent('preorder_added_to_cart', payload);
 }
+
+// --- Abandoned cart ---
+
+export type AbandonedCartEventPayload = {
+  cartId?: string;
+  productCount?: number;
+  cartValue?: number;
+};
+
+export type AbandonedCartConversionPayload = {
+  recoveredRevenue?: number;
+  productCount?: number;
+};
+
+export function trackCartAbandoned(payload: AbandonedCartEventPayload) {
+  trackEvent('cart_abandoned', payload);
+}
+
+export function trackAbandonedCartEmailSent(payload: AbandonedCartEventPayload) {
+  trackEvent('abandoned_cart_email_sent', payload);
+}
+
+export function trackAbandonedCartRecovered(payload: AbandonedCartEventPayload & { orderId?: string }) {
+  trackEvent('abandoned_cart_recovered', payload);
+}
+
+export function trackAbandonedCartConversion(payload: AbandonedCartConversionPayload) {
+  trackEvent('abandoned_cart_conversion', payload);
+}

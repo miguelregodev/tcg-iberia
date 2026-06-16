@@ -6,6 +6,7 @@ import { sendOrderEmails } from '@/lib/email';
 import { captureServerError } from '@/lib/observability/sentry';
 import { captureServerEvent } from '@/lib/analytics/posthog-server';
 import { isOrderItemSnapshot, OrderItemSnapshot } from '@/lib/orders/items';
+import { markCartCompletedByStripeSession } from '@/lib/abandoned-cart/tracker';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
@@ -207,6 +208,27 @@ export async function POST(request: NextRequest) {
       }
 
       if (orderCreated && orderRecord) {
+        // Mark the abandoned cart as COMPLETED so no recovery emails are sent.
+        // Also fire recovery analytics if the cart was previously RECOVERED.
+        const abandonedCart = await db.abandonedCart.findFirst({
+          where: { stripeSessionId: session.id },
+          select: { id: true, status: true },
+        });
+        if (abandonedCart && abandonedCart.status === 'RECOVERED') {
+          await captureServerEvent(customerEmail || session.id, 'abandoned_cart_recovered', {
+            cartId: abandonedCart.id,
+            orderId: orderRecord.id,
+            cartValue: totalAmount,
+          });
+          await captureServerEvent(customerEmail || session.id, 'abandoned_cart_conversion', {
+            recoveredRevenue: totalAmount,
+            productCount: items.reduce((s, i) => s + i.quantity, 0),
+          });
+        }
+        markCartCompletedByStripeSession(session.id).catch((err) =>
+          captureServerError({ error: err, module: 'stripe_webhook_complete_cart' }),
+        );
+
         const preorderItems = items.filter(
           (item) => item.isPreorder && typeof item.releaseDate === 'string',
         );

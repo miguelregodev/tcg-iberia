@@ -14,6 +14,7 @@ interface Props {
 const NAV_ITEMS = [
   { href: '/mi-cuenta/datos-personales', label: 'Datos Personales', icon: '👤' },
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
+  { href: '/mi-cuenta/carritos-pendientes', label: 'Carritos pendientes', icon: '🛒' },
   { href: '/mi-cuenta/favoritos', label: 'Favoritos', icon: '❤️' },
   { href: '/mi-cuenta/alertas-stock', label: 'Alertas de Stock', icon: '🔔' },
 ];

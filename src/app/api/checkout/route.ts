@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { isOrderItemSnapshot } from '@/lib/orders/items';
+import { linkStripeSession, associateGuestEmail } from '@/lib/abandoned-cart/tracker';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -33,6 +34,7 @@ interface CustomerData {
 interface CheckoutBody {
   items: CheckoutItem[];
   customerData?: CustomerData;
+  cartSessionKey?: string;
 }
 
 interface LineItem {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { items, customerData } = body as CheckoutBody;
+    const { items, customerData, cartSessionKey } = body as CheckoutBody;
     customerEmail = customerData?.email;
 
     if (!items || items.length === 0) {
@@ -162,6 +164,15 @@ export async function POST(request: NextRequest) {
         processedAt: null,
       },
     });
+
+    // Link the Stripe session to the abandoned-cart record so the webhook
+    // can mark it as COMPLETED on successful payment.
+    if (cartSessionKey && typeof cartSessionKey === 'string') {
+      if (customerData?.email) {
+        await associateGuestEmail(cartSessionKey, customerData.email).catch(() => {/* non-critical */});
+      }
+      await linkStripeSession(cartSessionKey, session.id).catch(() => {/* non-critical */});
+    }
 
     return Response.json({ 
       url: session.url,
