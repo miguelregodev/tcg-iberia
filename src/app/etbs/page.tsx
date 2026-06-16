@@ -7,14 +7,14 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: "Booster Bundles - TCG Iberia",
-  description: "Booster bundles Pokémon TCG en inglés y español",
+  title: "Elite Trainer Boxes - TCG Iberia",
+  description: "Elite Trainer Boxes de Pokémon TCG en inglés y español",
 };
 
 const ALLOWED_LANGUAGES = ['ENGLISH', 'SPANISH'] as const;
 type AllowedLanguage = (typeof ALLOWED_LANGUAGES)[number];
 
-export default async function BoosterBundlesPage({ searchParams }: PageProps) {
+export default async function EliteTrainerBoxesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const raw = params.language as string | undefined;
   const language = raw && (ALLOWED_LANGUAGES as readonly string[]).includes(raw)
@@ -25,11 +25,11 @@ export default async function BoosterBundlesPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="Booster Bundles"
-        productType="bundle"
+        title="elite trainer boxes"
+        productType="elite trainer box"
         language={language}
-        eyebrow="Packs de varios sobres"
-        subtitle="Bundles que combinan varios sobres en un solo pack — la forma más cómoda de empezar tu colección."
+        eyebrow="Sets de entrenador"
+        subtitle="Todo lo que necesitas para jugar como un profesional. Incluye sobres, accesorios y cartas promo exclusivas."
         allowedLanguages={['ENGLISH', 'SPANISH']}
       />
       <Footer />

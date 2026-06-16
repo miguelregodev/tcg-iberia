@@ -19,7 +19,7 @@ export default async function BoosterBoxesPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="Booster Boxes"
+        title="booster boxes"
         productType="booster box"
         language={language}
         eyebrow="Cajas de expansión"
