@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { db } from '@/lib/db';
 import { publicProductSelect, serializePublicProduct } from '@/lib/products/serialization';
 import { Preorders } from './Preorders';
@@ -7,6 +8,7 @@ import { ProductCard } from './ProductCard';
 const CAROUSEL_THRESHOLD = 4;
 
 export async function PreordersSection() {
+  noStore();
   const products = await db.product.findMany({
     where: {
       visible: true,
