@@ -19,10 +19,11 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { key: 'home', label: 'Inicio', href: '/' },
-  { key: 'booster-boxes', label: 'Booster Boxes', category: 'booster-boxes' },
-  { key: 'booster-packs', label: 'Booster Packs', category: 'booster-packs' },
+  { key: 'booster-boxes', label: 'Cajas Selladas', category: 'booster-boxes' },
+  { key: 'booster-packs', label: 'Sobres', category: 'booster-packs' },
   { key: 'booster-bundles', label: 'Booster Bundles', category: 'booster-bundles' },
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
+  { key: 'releases-calendar', label: 'Calendario de Lanzamientos', href: '/releases-calendar' },
 ];
 
 function ChevronIcon({ open }: { open: boolean }) {
