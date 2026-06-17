@@ -9,7 +9,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
 
   // Use JWT for Credentials provider (stateless); database sessions for OAuth
-  session: { strategy: 'jwt' },
+  session: {
+    strategy: 'jwt',
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours — must match session maxAge
+  },
 
   pages: {
     signIn: '/',        // redirect here on unauthenticated, modal handles the UI

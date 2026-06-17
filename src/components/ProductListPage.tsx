@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Product } from '@/types';
-import { ProductCard } from './ProductCard';
+import { ProductGridInfinite } from './ProductGridInfinite';
+import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
@@ -114,11 +115,9 @@ export function ProductListPage({
     });
   }, [loading, productType, title, language, products.length]);
 
-  const counts = useMemo(() => {
-    return {
-      total: products.length,
-    };
-  }, [products]);
+  const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
+    total: products.length,
+  });
 
   // Build language-pill href, preserving the current path.
   const buildLangHref = (lang: Language | null) => {
@@ -247,11 +246,12 @@ export function ProductListPage({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <ProductGridInfinite
+              products={products}
+              visibleCount={visibleCount}
+              sentinelRef={sentinelRef}
+              hasMore={hasMore}
+            />
           )}
         </div>
       </section>

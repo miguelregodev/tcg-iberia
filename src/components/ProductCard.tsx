@@ -20,10 +20,10 @@ export function ProductCard({ product }: { product: Product }) {
   });
   const releaseDate = formatReleaseDate(product.releaseDate);
   return (
-    <Link href={`/product/${product.slug}`}>
-      <div className="card card-hover cursor-pointer group">
+    <Link href={`/product/${product.slug}`} className="h-full">
+      <div className="card card-hover cursor-pointer group h-full flex flex-col">
         {product.imageUrl && (
-          <div className="mb-4 h-64 bg-gray-100 rounded-lg overflow-hidden relative">
+          <div className="mb-4 h-64 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
             <img
               src={product.imageUrl}
               alt={product.name}
@@ -40,7 +40,7 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         
-        <h3 className="text-lg font-semibold mb-2 group-hover:text-red-600">
+        <h3 className="text-lg font-semibold mb-2 group-hover:text-red-600 line-clamp-2 min-h-[3.5rem]">
           {product.name}
         </h3>
         
@@ -65,24 +65,26 @@ export function ProductCard({ product }: { product: Product }) {
           {product.description}
         </p>
 
-        {inventoryState.isPreorder && releaseDate ? (
-          <p className="text-xs font-semibold text-gray-600 mb-4">
-            Lanzamiento: {releaseDate}
-          </p>
-        ) : null}
-        
-        <div className="flex justify-between items-center">
-          <span className={`text-sm font-semibold ${
-            inventoryState.status === 'preorder'
-              ? 'text-blue-700'
-              : inventoryState.status === 'available'
-              ? 'text-green-600'
-              : inventoryState.status === 'low_stock'
-              ? 'text-orange-600'
-              : 'text-red-600'
-          }`}>
-            {getProductStatusLabel(inventoryState)}
-          </span>
+        <div className="mt-auto flex flex-col gap-2">
+          {inventoryState.isPreorder && releaseDate ? (
+            <p className="text-xs font-semibold text-gray-600">
+              Lanzamiento: {releaseDate}
+            </p>
+          ) : null}
+          
+          <div className="flex justify-between items-center">
+            <span className={`text-sm font-semibold ${
+              inventoryState.status === 'preorder'
+                ? 'text-blue-700'
+                : inventoryState.status === 'available'
+                ? 'text-green-600'
+                : inventoryState.status === 'low_stock'
+                ? 'text-orange-600'
+                : 'text-red-600'
+            }`}>
+              {getProductStatusLabel(inventoryState)}
+            </span>
+          </div>
         </div>
       </div>
     </Link>

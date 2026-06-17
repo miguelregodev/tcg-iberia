@@ -37,6 +37,7 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [duplicatingProduct, setDuplicatingProduct] = useState<Product | null>(null);
 
   const [search, setSearch] = useState('');
   const [languageFilter, setLanguageFilter] = useState('');
@@ -115,6 +116,16 @@ export default function AdminProducts() {
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
+    setDuplicatingProduct(null);
+    setShowForm(true);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleDuplicate = (product: Product) => {
+    setDuplicatingProduct(product);
+    setEditingProduct(null);
     setShowForm(true);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -124,6 +135,7 @@ export default function AdminProducts() {
   const handleFormSuccess = () => {
     setShowForm(false);
     setEditingProduct(null);
+    setDuplicatingProduct(null);
     fetchProducts();
   };
 
@@ -156,6 +168,7 @@ export default function AdminProducts() {
                   onClick={() => {
                     setShowForm(false);
                     setEditingProduct(null);
+                    setDuplicatingProduct(null);
                   }}
                   className="btn btn-secondary"
                 >
@@ -173,6 +186,7 @@ export default function AdminProducts() {
             <div className="mb-8">
               <ProductForm
                 product={editingProduct || undefined}
+                initialData={duplicatingProduct || undefined}
                 onSuccess={handleFormSuccess}
               />
             </div>
@@ -449,6 +463,13 @@ export default function AdminProducts() {
                                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                               >
                                 Editar
+                              </button>
+                              <button
+                                onClick={() => handleDuplicate(product)}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                title="Crear una copia de este producto"
+                              >
+                                Duplicar
                               </button>
                               <button
                                 onClick={() => handleDelete(product.id)}
