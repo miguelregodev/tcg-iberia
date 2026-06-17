@@ -5,7 +5,10 @@ import { Preorders } from './Preorders';
 import { PreorderProductCarousel } from './PreorderProductCarousel';
 import { ProductCard } from './ProductCard';
 
-const CAROUSEL_THRESHOLD = 4;
+/** On desktop (≥ lg) the carousel activates when there are more than 4 products. */
+const DESKTOP_CAROUSEL_THRESHOLD = 4;
+/** On mobile (< lg) the carousel activates when there is more than 1 product. */
+const MOBILE_CAROUSEL_THRESHOLD = 1;
 
 export async function PreordersSection() {
   noStore();
@@ -22,23 +25,46 @@ export async function PreordersSection() {
   if (products.length === 0) return null;
 
   const serialized = products.map(serializePublicProduct);
+  const count = serialized.length;
+
+  const showCarouselMobile = count > MOBILE_CAROUSEL_THRESHOLD;
+  const showCarouselDesktop = count > DESKTOP_CAROUSEL_THRESHOLD;
+
+  const ProductGrid = (
+    <section className="py-12 bg-white">
+      <div className="container-custom px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {serialized.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <>
       <Preorders />
-      {serialized.length > CAROUSEL_THRESHOLD ? (
+
+      {/* Both thresholds met → carousel everywhere */}
+      {showCarouselMobile && showCarouselDesktop && (
         <PreorderProductCarousel />
-      ) : (
-        <section className="py-12 bg-white">
-          <div className="container-custom px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {serialized.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </section>
       )}
+
+      {/* Only mobile threshold met → carousel on mobile, grid on desktop */}
+      {showCarouselMobile && !showCarouselDesktop && (
+        <>
+          <div className="block lg:hidden">
+            <PreorderProductCarousel />
+          </div>
+          <div className="hidden lg:block">
+            {ProductGrid}
+          </div>
+        </>
+      )}
+
+      {/* Neither threshold met → grid everywhere */}
+      {!showCarouselMobile && ProductGrid}
     </>
   );
 }

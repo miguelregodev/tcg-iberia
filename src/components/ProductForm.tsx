@@ -7,6 +7,8 @@ import { HitCardForm } from './HitCardForm';
 
 interface ProductFormProps {
   product?: Product;
+  /** Pre-fills the form for a brand-new product (duplication). Has no effect when `product` is provided. */
+  initialData?: Partial<Product>;
   onSuccess: () => void;
 }
 
@@ -73,20 +75,22 @@ function Field({
 const inputClass =
   'w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500';
 
-export function ProductForm({ product, onSuccess }: ProductFormProps) {
+export function ProductForm({ product, initialData, onSuccess }: ProductFormProps) {
+  // When duplicating, `product` is undefined but `initialData` carries the source values.
+  const seed = product ?? initialData;
   const [formData, setFormData] = useState({
-    name: product?.name || '',
-    description: product?.description || '',
-    price: product?.price ?? '',
-    discountPercentage: product?.discountPercentage ?? '',
-    notes: product?.notes || '',
-    type: product?.type || '',
-    releaseDate: product?.releaseDate ? product.releaseDate.slice(0, 10) : '',
-    stock: product?.stock ?? '',
-    imageUrl: product?.imageUrl || '',
-    language: product?.language || 'ENGLISH',
-    priority: product?.priority ?? 999,
-    visible: product?.visible ?? true,
+    name: seed?.name || '',
+    description: seed?.description || '',
+    price: seed?.price ?? '',
+    discountPercentage: seed?.discountPercentage ?? '',
+    notes: seed?.notes || '',
+    type: seed?.type || '',
+    releaseDate: seed?.releaseDate ? seed.releaseDate.slice(0, 10) : '',
+    stock: seed?.stock ?? '',
+    imageUrl: seed?.imageUrl || '',
+    language: seed?.language || 'ENGLISH',
+    priority: seed?.priority ?? 999,
+    visible: seed?.visible ?? true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,11 +228,13 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       {/* Header banner */}
       <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-xl shadow-lg p-6 text-white">
         <h2 className="text-2xl font-bold tracking-tight">
-          {product ? 'Editar producto' : 'Nuevo producto'}
+          {product ? 'Editar producto' : initialData ? 'Duplicar producto' : 'Nuevo producto'}
         </h2>
         <p className="text-red-100 text-sm mt-1">
           {product
             ? 'Modifica los detalles y guarda los cambios.'
+            : initialData
+            ? 'Revisa y ajusta los datos copiados antes de guardar el nuevo producto.'
             : 'Rellena los campos para añadir un nuevo producto al catálogo.'}
         </p>
       </div>

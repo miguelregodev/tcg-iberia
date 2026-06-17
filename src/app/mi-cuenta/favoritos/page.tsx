@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { trackFavoriteRemoved } from '@/lib/analytics/events';
+import { useCart } from '@/context/CartContext';
+import type { Product } from '@/types';
 
 interface FavoriteProduct {
   id: string;
@@ -49,6 +51,36 @@ export default function FavoritosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [addedToCart, setAddedToCart] = useState<string | null>(null);
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (product: FavoriteProduct) => {
+    const cartProduct: Product = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: '',
+      price: Number(product.price),
+      discountPercentage: product.discountPercentage ? Number(product.discountPercentage) : null,
+      notes: null,
+      type: product.type,
+      releaseDate: null,
+      stock: product.stock,
+      imageUrl: product.imageUrl,
+      language: 'SPANISH',
+      priority: 0,
+      visible: product.visible,
+      available: product.stock > 0,
+      canPurchase: product.stock > 0,
+      isPreorder: false,
+      inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'available',
+      createdAt: '',
+      updatedAt: '',
+    };
+    addToCart(cartProduct, 1);
+    setAddedToCart(product.id);
+    setTimeout(() => setAddedToCart(null), 1500);
+  };
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -198,6 +230,21 @@ export default function FavoritosPage() {
                       >
                         Ver producto
                       </Link>
+                      <button
+                        onClick={() => handleAddToCart(product)}
+                        disabled={product.stock === 0}
+                        aria-label={`Añadir ${product.name} al carrito`}
+                        title={product.stock === 0 ? 'Agotado' : 'Añadir al carrito'}
+                        className="p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      >
+                        {addedToCart === product.id ? (
+                          <svg viewBox="0 0 24 24" className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        ) : (
+                          <img src="/images/add-to-cart.png" alt="Añadir al carrito" className="w-5 h-5" />
+                        )}
+                      </button>
                       <button
                         onClick={() => handleRemoveFavorite(product)}
                         disabled={removing === product.id}
