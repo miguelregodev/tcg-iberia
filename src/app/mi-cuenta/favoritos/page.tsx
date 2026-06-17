@@ -73,7 +73,7 @@ export default function FavoritosPage() {
       available: product.stock > 0,
       canPurchase: product.stock > 0,
       isPreorder: false,
-      inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'in_stock',
+      inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'available',
       createdAt: '',
       updatedAt: '',
     };
