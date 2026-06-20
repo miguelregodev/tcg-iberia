@@ -39,6 +39,22 @@ enum NotificationChannel {
   TELEGRAM
 }
 
+/// AnnouncementBanner model stores rotating announcement messages shown site-wide below the navigation.
+/// Administrators manage banners from the Admin Panel (/admin/banners).
+/// Only banners with enabled=true are served to the storefront.
+/// Banners are displayed in ascending displayOrder order.
+model AnnouncementBanner {
+  id           String   @id @default(cuid())
+  text         String   @db.VarChar(500)
+  enabled      Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([displayOrder])
+}
+
 /// Product model represents a TCG/Pokemon card product in the catalog
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)

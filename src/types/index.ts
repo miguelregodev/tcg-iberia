@@ -50,6 +50,17 @@ export type ApiResponse<T> = {
   error?: string;
 };
 
+export type AnnouncementBanner = {
+  id: string;
+  text: string;
+  enabled: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AnnouncementBannerInput = Omit<AnnouncementBanner, 'id' | 'createdAt' | 'updatedAt'>;
+
 export type UserRole = 'USER' | 'ADMIN';
 
 export type UserProfile = {

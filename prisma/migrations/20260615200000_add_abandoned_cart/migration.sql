@@ -1,0 +1,1 @@
+-- Migration applied directly to database; file created for tracking purposes

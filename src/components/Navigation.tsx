@@ -13,6 +13,7 @@ import { trackEvent } from '@/lib/analytics/events';
 import { FreeShippingProgress } from './FreeShippingProgress';
 import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { useMemo } from 'react';
+import { AnnouncementBannerBar } from './AnnouncementBannerBar';
 
 const ACCOUNT_LINKS = [
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
@@ -219,17 +220,21 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Free Shipping Progress Banner */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container-custom px-4 py-1.5">
-          <FreeShippingProgress
-            state={freeShippingState}
-            context="cart"
-            emptyCart={totalQuantity === 0}
-            className={totalQuantity === 0 ? '!bg-transparent !border-0 !p-0' : '!bg-transparent !border-0 !p-0'}
-          />
+      {/* Dynamic Announcement Banner — always visible when banners exist */}
+      <AnnouncementBannerBar />
+
+      {/* Free Shipping Progress Banner — only visible when cart has items */}
+      {totalQuantity > 0 && (
+        <div className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="container-custom px-4 py-1.5">
+            <FreeShippingProgress
+              state={freeShippingState}
+              context="cart"
+              className="!bg-transparent !border-0 !p-0"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Shopping Cart Modal */}
       <ShoppingCartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
