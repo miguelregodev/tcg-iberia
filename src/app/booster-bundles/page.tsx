@@ -25,7 +25,7 @@ export default async function BoosterBundlesPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="Booster Bundles"
+        title="booster bundles"
         productType="bundle"
         language={language}
         eyebrow="Packs de varios sobres"

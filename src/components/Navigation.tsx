@@ -14,6 +14,7 @@ import { FreeShippingProgress } from './FreeShippingProgress';
 import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { useMemo } from 'react';
 import { AnnouncementBannerBar } from './AnnouncementBannerBar';
+import { SearchPanel, type SearchPanelHandle } from './SearchPanel';
 
 const ACCOUNT_LINKS = [
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
@@ -26,12 +27,24 @@ export function Navigation() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { totalQuantity, totalPrice } = useCart();
   const { data: session } = useSession();
   const router = useRouter();
   const menuWrapperRef = useRef<HTMLDivElement>(null);
   const accountWrapperRef = useRef<HTMLDivElement>(null);
+  const searchPanelRef = useRef<SearchPanelHandle>(null);
   const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
+
+  // Focus the search input the moment the panel opens (waits a tick so the
+  // entrance transition does not steal the focus animation).
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const handle = window.requestAnimationFrame(() => {
+      searchPanelRef.current?.focusInput();
+    });
+    return () => window.cancelAnimationFrame(handle);
+  }, [isSearchOpen]);
 
   // Close hamburger on outside click / Escape.
   useEffect(() => {
@@ -137,8 +150,26 @@ export function Navigation() {
             <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
           </Link>
 
-          {/* Right side: Login / Account + Shopping Bag */}
+          {/* Right side: Search + Login / Account + Shopping Bag */}
           <div className="absolute right-4 flex items-center gap-1">
+            {/* Search toggle */}
+            <button
+              type="button"
+              data-search-trigger
+              onClick={() => setIsSearchOpen((v) => !v)}
+              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={isSearchOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'}
+              aria-expanded={isSearchOpen}
+              aria-controls="global-search-panel"
+            >
+              <img
+                src="/images/search.png"
+                alt=""
+                aria-hidden="true"
+                className="w-6 h-6"
+              />
+            </button>
+
             {/* Login / Account button */}
             {session?.user ? (
               <div ref={accountWrapperRef} className="relative">
@@ -222,6 +253,15 @@ export function Navigation() {
 
       {/* Dynamic Announcement Banner — always visible when banners exist */}
       <AnnouncementBannerBar />
+
+      {/* Global Search Panel — appears below the banner, above all page content */}
+      <div id="global-search-panel">
+        <SearchPanel
+          ref={searchPanelRef}
+          open={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      </div>
 
       {/* Free Shipping Progress Banner — only visible when cart has items */}
       {totalQuantity > 0 && (

@@ -105,6 +105,13 @@ model Product {
   @@index([priority])
   @@index([releaseDate])
   @@index([favoriteCount])  // supports sorting by popularity
+  // NOTE: Additional Postgres-native indexes exist for the search feature and
+  // are managed via raw SQL in migration `20260621223000_add_product_search_indexes`:
+  //   - pg_trgm extension (required for substring ILIKE acceleration)
+  //   - GIN trigram indexes on (name), (type) WHERE type IS NOT NULL, (description)
+  //   - Composite B-tree (visible, priority) for the catalog access path
+  // They are intentionally not declared here because Prisma's
+  // postgresqlExtensions / ops preview features are not enabled.
 }
 
 /// HitCard model represents promotional/best hit cards associated with a product

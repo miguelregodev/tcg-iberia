@@ -24,6 +24,7 @@ export default async function BoosterBoxesPage({ searchParams }: PageProps) {
         language={language}
         eyebrow="Cajas de expansión"
         subtitle="Cajas selladas con todos los sobres de la expansión. La opción preferida por coleccionistas serios."
+        allowedLanguages={['JAPANESE', 'KOREAN']}
       />
       <Footer />
     </>
