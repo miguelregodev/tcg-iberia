@@ -110,38 +110,58 @@ export function Navigation() {
     <>
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="container-custom px-4 py-4 flex justify-center items-center relative">
-          {/* Hamburger Menu - Left */}
-          <div ref={menuWrapperRef} className="absolute left-4">
+          {/* Left side: Hamburger + Mobile Search */}
+          <div className="absolute left-4 flex items-center gap-1">
+            <div ref={menuWrapperRef} className="relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors group"
+                aria-label="Toggle menu"
+                aria-expanded={isMenuOpen}
+              >
+                <span className="sr-only">Toggle menu</span>
+                <span
+                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
+                    isMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-2'
+                  }`}
+                />
+                <span
+                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
+                    isMenuOpen ? 'opacity-0 scale-x-0' : 'opacity-100 scale-x-100'
+                  }`}
+                />
+                <span
+                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
+                    isMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-2'
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown panel — anchored under the hamburger button */}
+              {isMenuOpen && (
+                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80">
+                  <HamburgerMenu onClose={() => setIsMenuOpen(false)} />
+                </div>
+              )}
+            </div>
+
+            {/* Search toggle — visible on mobile only */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors group"
-              aria-label="Toggle menu"
-              aria-expanded={isMenuOpen}
+              type="button"
+              data-search-trigger
+              onClick={() => setIsSearchOpen((v) => !v)}
+              className="md:hidden relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={isSearchOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'}
+              aria-expanded={isSearchOpen}
+              aria-controls="global-search-panel"
             >
-              <span className="sr-only">Toggle menu</span>
-              <span
-                className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
-                  isMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-2'
-                }`}
-              />
-              <span
-                className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
-                  isMenuOpen ? 'opacity-0 scale-x-0' : 'opacity-100 scale-x-100'
-                }`}
-              />
-              <span
-                className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
-                  isMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-2'
-                }`}
+              <img
+                src="/images/search.png"
+                alt=""
+                aria-hidden="true"
+                className="w-6 h-6"
               />
             </button>
-
-            {/* Dropdown panel — anchored under the hamburger button */}
-            {isMenuOpen && (
-              <div className="absolute left-0 top-full mt-2 w-72 sm:w-80">
-                <HamburgerMenu onClose={() => setIsMenuOpen(false)} />
-              </div>
-            )}
           </div>
 
           {/* Centered Logo & Brand */}
@@ -152,12 +172,12 @@ export function Navigation() {
 
           {/* Right side: Search + Login / Account + Shopping Bag */}
           <div className="absolute right-4 flex items-center gap-1">
-            {/* Search toggle */}
+            {/* Search toggle — hidden on mobile (shown on left side instead) */}
             <button
               type="button"
               data-search-trigger
               onClick={() => setIsSearchOpen((v) => !v)}
-              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="hidden md:flex relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label={isSearchOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'}
               aria-expanded={isSearchOpen}
               aria-controls="global-search-panel"
