@@ -187,6 +187,7 @@ export default function AdminProducts() {
               <ProductForm
                 product={editingProduct || undefined}
                 initialData={duplicatingProduct || undefined}
+                isDuplicate={!!duplicatingProduct}
                 onSuccess={handleFormSuccess}
               />
             </div>
@@ -328,6 +329,9 @@ export default function AdminProducts() {
                       Stock
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
+                      Stock Sin Plástico
+                    </th>
+                    <th className="px-4 py-3 text-center font-semibold">
                       Lanzamiento
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
@@ -345,7 +349,7 @@ export default function AdminProducts() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-4 py-12 text-center text-gray-500"
                       >
                         Cargando...
@@ -354,7 +358,7 @@ export default function AdminProducts() {
                   ) : pageItems.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-4 py-12 text-center text-gray-500"
                       >
                         No hay productos.
@@ -436,6 +440,23 @@ export default function AdminProducts() {
                             >
                               {product.stock}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {product.noShrinkPrice != null ? (
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  product.noShrinkStock === 0
+                                    ? 'bg-red-100 text-red-700'
+                                    : product.noShrinkStock <= 5
+                                    ? 'bg-orange-100 text-orange-700'
+                                    : 'bg-green-100 text-green-700'
+                                }`}
+                              >
+                                {product.noShrinkStock}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600 text-xs whitespace-nowrap">
                             {product.releaseDate

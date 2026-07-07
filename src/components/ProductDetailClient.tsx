@@ -28,17 +28,36 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [variant, setVariant] = useState<'shrink' | 'noshrink'>('shrink');
   const { addToCart, items } = useCart();
   const flagInfo = getLanguageFlag(product.language);
-  const inventoryState = getProductInventoryState({
-    stock: product.stock,
-    releaseDate: product.releaseDate,
-  });
   const releaseDate = formatReleaseDate(product.releaseDate);
 
-  // How many of this product are already in the cart.
+  const hasNoShrink = product.noShrinkPrice != null;
+
+  // Build the effective product object for the current variant.
+  // The no-shrink variant gets a virtual ID (suffix) so it lives as a
+  // separate cart line item — independent quantity, independent price, independent stock.
+  const variantProduct = hasNoShrink && variant === 'noshrink'
+    ? { ...product, id: `${product.id}_noshrink`, price: Number(product.noShrinkPrice!), discountPercentage: null, stock: product.noShrinkStock }
+    : product;
+
+  // Derive inventory state from the active variant's stock so all stock
+  // validation (button disabled, quantity limits, low-stock badge) reflects
+  // the correct variant.
+  const inventoryState = getProductInventoryState({
+    stock: variantProduct.stock,
+    releaseDate: product.releaseDate,
+  });
+
+  // Active price depends on variant selection
+  const activeBasePrice = variantProduct.price;
+  // Discount only applies to the shrink variant
+  const activeDiscount = variantProduct.discountPercentage;
+
+  // How many of THIS variant are already in the cart.
   const inCartQuantity =
-    items.find((it) => it.product.id === product.id)?.quantity ?? 0;
+    items.find((it) => it.product.id === variantProduct.id)?.quantity ?? 0;
   const quantityLimit = getProductQuantityLimit(inventoryState);
   const maxAddable = quantityLimit === null
     ? Number.POSITIVE_INFINITY
@@ -56,12 +75,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     }
   }, [maxAddable, quantity, quantityLimit]);
 
-  const finalPrice = product.discountPercentage
-    ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
-    : Number(product.price);
+  const finalPrice = activeDiscount
+    ? activeBasePrice * (1 - Number(activeDiscount) / 100)
+    : activeBasePrice;
 
-  const savingsAmount = product.discountPercentage
-    ? (Number(product.price) - finalPrice).toFixed(2)
+  const savingsAmount = activeDiscount
+    ? (activeBasePrice - finalPrice).toFixed(2)
     : null;
 
   const incrementQuantity = () =>
@@ -71,7 +90,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const handleAddToCart = () => {
     if (!inventoryState.canPurchase) return;
     const safeQty = quantityLimit === null ? quantity : Math.min(quantity, maxAddable);
-    addToCart(product, safeQty);
+    addToCart(variantProduct, safeQty);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
@@ -90,7 +109,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         .filter(note => note.length > 0)
     : [];
 
-  const isSoldOut = inventoryState.isOutOfStock;
+  // StockAlertButton is for the base (shrink) product — don't show it for
+  // the noshrink variant when it runs out; instead show a disabled add-to-cart.
+  const isSoldOut = variant === 'shrink' && inventoryState.isOutOfStock;
   const hasHitCards = product.hitCards && product.hitCards.length > 0;
 
   useEffect(() => {
@@ -194,16 +215,48 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             <br></br>
 
+            {/* Variant selector — only when product has a no-shrink price */}
+            {hasNoShrink && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Formato
+                </p>
+                <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setVariant('shrink')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      variant === 'shrink'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Con Plástico — {Number(product.price).toFixed(2)}€
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVariant('noshrink')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+                      variant === 'noshrink'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Sin Plástico — {Number(product.noShrinkPrice).toFixed(2)}€
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Price Section */}
               <div className="flex items-baseline gap-4">
                 <span className="text-4xl font-bold text-black-600">
                   {finalPrice.toFixed(2)}€
                 </span>
-                {product.discountPercentage && (
+                {activeDiscount && (
                   <div className="flex flex-col gap-1">
                     <span className="text-lg text-gray-400 line-through">
-                      {Number(product.price).toFixed(2)}€
+                      {activeBasePrice.toFixed(2)}€
                     </span>
                     <span className="text-sm font-semibold text-red-600">
                       Ahorras {savingsAmount}€

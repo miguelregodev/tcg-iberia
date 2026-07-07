@@ -369,16 +369,28 @@ export function CheckoutForm() {
                       <p className="font-semibold text-gray-900 line-clamp-2">
                         {item.product.name}
                       </p>
-                      <p className={`text-xs font-semibold ${
-                        item.product.isPreorder ? 'text-blue-700' : 'text-gray-500'
-                      }`}>
-                        {getProductStatusLabel(
-                          getProductInventoryState({
-                            stock: item.product.stock,
-                            releaseDate: item.product.releaseDate,
-                          }),
-                        )}
-                      </p>
+                      {(item.product.id.endsWith('_noshrink') || item.product.noShrinkPrice != null) && (
+                        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${
+                          item.product.id.endsWith('_noshrink')
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {item.product.id.endsWith('_noshrink') ? 'Sin Plástico' : 'Con Plástico'}
+                        </span>
+                      )}
+                      {(() => {
+                        const state = getProductInventoryState({
+                          stock: item.product.stock,
+                          releaseDate: item.product.releaseDate,
+                        });
+                        return !state.isLowStock ? (
+                          <p className={`text-xs font-semibold ${
+                            state.isPreorder ? 'text-blue-700' : 'text-gray-500'
+                          }`}>
+                            {getProductStatusLabel(state)}
+                          </p>
+                        ) : null;
+                      })()}
                       {item.product.isPreorder && item.product.releaseDate ? (
                         <p className="text-xs text-gray-500">
                           Lanzamiento: {formatReleaseDate(item.product.releaseDate)}

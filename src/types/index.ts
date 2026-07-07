@@ -7,10 +7,12 @@ export type Product = {
   description: string;
   price: number;
   discountPercentage: number | null;
+  noShrinkPrice: number | null;
   notes: string | null;
   type: string | null;
   releaseDate: string | null;
   stock: number;
+  noShrinkStock: number;
   imageUrl: string | null;
   language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
   priority: number;

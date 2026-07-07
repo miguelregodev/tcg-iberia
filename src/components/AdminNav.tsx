@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: '/admin/orders', label: 'Pedidos' },
   { href: '/admin/products', label: 'Productos' },
   { href: '/admin/banners', label: 'Banners' },
+  { href: '/admin/price-import', label: 'Precios' },
 ];
 
 export function AdminNav() {
