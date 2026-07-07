@@ -11,10 +11,12 @@ export const publicProductSelect = {
   description: true,
   price: true,
   discountPercentage: true,
+  noShrinkPrice: true,
   notes: true,
   type: true,
   releaseDate: true,
   stock: true,
+  noShrinkStock: true,
   imageUrl: true,
   language: true,
   priority: true,
@@ -39,10 +41,12 @@ type ProductCoreShape = {
   description: string;
   price: { toString(): string };
   discountPercentage: { toString(): string } | null;
+  noShrinkPrice: { toString(): string } | null;
   notes: string | null;
   type: string | null;
   releaseDate: Date | null;
   stock: number;
+  noShrinkStock: number;
   imageUrl: string | null;
   language: Product['language'];
   priority: number;
@@ -85,10 +89,12 @@ export function serializePublicProduct(
     discountPercentage: product.discountPercentage
       ? Number(product.discountPercentage)
       : null,
+    noShrinkPrice: product.noShrinkPrice ? Number(product.noShrinkPrice) : null,
     notes: product.notes,
     type: product.type,
     releaseDate: inventoryState.releaseDate,
     stock: product.stock,
+    noShrinkStock: product.noShrinkStock,
     imageUrl: product.imageUrl,
     language: product.language,
     priority: product.priority,

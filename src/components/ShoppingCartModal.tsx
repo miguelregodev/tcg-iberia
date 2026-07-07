@@ -144,6 +144,16 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                           <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
                             {item.product.name}
                           </h3>
+                          {/* Variant badge */}
+                          {(item.product.id.endsWith('_noshrink') || item.product.noShrinkPrice != null) && (
+                            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${
+                              item.product.id.endsWith('_noshrink')
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {item.product.id.endsWith('_noshrink') ? 'Sin Plástico' : 'Con Plástico'}
+                            </span>
+                          )}
                           <p className={`text-xs font-semibold mb-1 ${
                             inventoryState.isPreorder ? 'text-blue-700' : 'text-gray-600'
                           }`}>

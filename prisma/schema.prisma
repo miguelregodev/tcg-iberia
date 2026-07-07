@@ -84,10 +84,12 @@ model Product {
   description          String   @db.Text
   price                Decimal  @db.Decimal(10, 2)
   discountPercentage   Decimal? @db.Decimal(5, 2)
+  noShrinkPrice        Decimal? @db.Decimal(10, 2)
   notes                String?  @db.Text
   type                 String?  @db.VarChar(100)
   releaseDate          DateTime?
   stock                Int      @default(0)
+  noShrinkStock        Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
   language             Language @default(ENGLISH)
   priority             Int      @default(999)
@@ -98,6 +100,7 @@ model Product {
   hitCards             HitCard[]
   favorites            Favorite[]
   stockAlerts          StockAlert[]
+  priceMappings        PriceMapping[]
 
   @@index([visible])
   @@index([slug])
@@ -112,6 +115,21 @@ model Product {
   //   - Composite B-tree (visible, priority) for the catalog access path
   // They are intentionally not declared here because Prisma's
   // postgresqlExtensions / ops preview features are not enabled.
+}
+
+/// PriceMapping stores permanent manual mappings from imported Google Sheets product
+/// names to catalog product IDs. Once an administrator assigns a mapping, future imports
+/// automatically resolve that name without requiring manual re-assignment.
+model PriceMapping {
+  id           String   @id @default(cuid())
+  importedName String   @unique @db.VarChar(500)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([importedName])
+  @@index([productId])
 }
 
 /// HitCard model represents promotional/best hit cards associated with a product

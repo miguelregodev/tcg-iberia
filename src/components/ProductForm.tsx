@@ -7,9 +7,12 @@ import { HitCardForm } from './HitCardForm';
 
 interface ProductFormProps {
   product?: Product;
-  /** Pre-fills the form for a brand-new product (duplication). Has no effect when `product` is provided. */
+  /** Pre-fills the form fields. Use together with `isDuplicate` to show duplication UI. */
   initialData?: Partial<Product>;
-  onSuccess: () => void;
+  /** When true, shows "Duplicar producto" header. Defaults to false. */
+  isDuplicate?: boolean;
+  /** Called after a successful save. Receives the saved product when creating or updating. */
+  onSuccess: (savedProduct?: Product) => void;
 }
 
 const PRODUCT_TYPES = [
@@ -75,7 +78,7 @@ function Field({
 const inputClass =
   'w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500';
 
-export function ProductForm({ product, initialData, onSuccess }: ProductFormProps) {
+export function ProductForm({ product, initialData, isDuplicate = false, onSuccess }: ProductFormProps) {
   // When duplicating, `product` is undefined but `initialData` carries the source values.
   const seed = product ?? initialData;
   const [formData, setFormData] = useState({
@@ -83,6 +86,8 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
     description: seed?.description || '',
     price: seed?.price ?? '',
     discountPercentage: seed?.discountPercentage ?? '',
+    noShrinkPrice: seed?.noShrinkPrice ?? '',
+    noShrinkStock: seed?.noShrinkStock ?? 0,
     notes: seed?.notes || '',
     type: seed?.type || '',
     releaseDate: seed?.releaseDate ? seed.releaseDate.slice(0, 10) : '',
@@ -187,6 +192,11 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
             formData.discountPercentage === null
               ? null
               : parseFloat(String(formData.discountPercentage)),
+          noShrinkPrice:
+            formData.noShrinkPrice === '' || formData.noShrinkPrice === null
+              ? null
+              : parseFloat(String(formData.noShrinkPrice)),
+          noShrinkStock: formData.noShrinkPrice ? parseInt(String(formData.noShrinkStock), 10) || 0 : 0,
           notes: formData.notes || null,
           type: formData.type || null,
           releaseDate: formData.releaseDate || null,
@@ -199,7 +209,8 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
       });
 
       if (response.ok) {
-        onSuccess();
+        const savedProduct: Product = await response.json();
+        onSuccess(savedProduct);
       } else {
         const data = await response.json();
         setError(data.error || 'No se pudo guardar el producto');
@@ -228,12 +239,12 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
       {/* Header banner */}
       <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-xl shadow-lg p-6 text-white">
         <h2 className="text-2xl font-bold tracking-tight">
-          {product ? 'Editar producto' : initialData ? 'Duplicar producto' : 'Nuevo producto'}
+          {product ? 'Editar producto' : isDuplicate ? 'Duplicar producto' : 'Nuevo producto'}
         </h2>
         <p className="text-red-100 text-sm mt-1">
           {product
             ? 'Modifica los detalles y guarda los cambios.'
-            : initialData
+            : isDuplicate
             ? 'Revisa y ajusta los datos copiados antes de guardar el nuevo producto.'
             : 'Rellena los campos para añadir un nuevo producto al catálogo.'}
         </p>
@@ -334,7 +345,7 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
               description="Configura el precio público, descuentos y disponibilidad."
             >
               <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Precio (€)" required>
+                <Field label="Precio con plástico (€)" required>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                       €
@@ -353,6 +364,27 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
                     />
                   </div>
                 </Field>
+                <Field label="Precio sin plástico (€)" hint="Opcional. Permite selección de variante en detalle de producto.">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                      €
+                    </span>
+                    <input
+                      type="number"
+                      name="noShrinkPrice"
+                      value={formData.noShrinkPrice}
+                      onChange={handleChange}
+                      step="0.01"
+                      min="0"
+                      placeholder="Opcional"
+                      className={inputClass + ' pl-7'}
+                      disabled={loading}
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <Field label="Descuento (%)" hint="Opcional. 0 - 100.">
                   <div className="relative">
                     <input
@@ -387,7 +419,7 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
                 )}
 
               <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Stock" required>
+                <Field label="Stock con plástico" required>
                   <input
                     type="number"
                     name="stock"
@@ -416,6 +448,21 @@ export function ProductForm({ product, initialData, onSuccess }: ProductFormProp
                   />
                 </Field>
               </div>
+
+              {formData.noShrinkPrice !== '' && formData.noShrinkPrice !== null && (
+                <Field label="Stock sin plástico" hint="Unidades disponibles del formato sin plástico.">
+                  <input
+                    type="number"
+                    name="noShrinkStock"
+                    value={formData.noShrinkStock}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="0"
+                    className={inputClass}
+                    disabled={loading}
+                  />
+                </Field>
+              )}
             </FormSection>
 
             <FormSection
