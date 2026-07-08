@@ -5,11 +5,24 @@ import { AdminNav } from '@/components/AdminNav';
 import { PriceUpdateModal, type ModalRow } from '@/components/PriceUpdateModal';
 import { ProductAutocomplete, type CatalogProduct } from '@/components/ProductAutocomplete';
 import { ProductForm } from '@/components/ProductForm';
+import { PriceHistoryChart } from '@/components/PriceHistoryChart';
 import { convertJpyToEur, computeSellingPrice } from '@/lib/price-import/currency';
 import type { ImportedRow } from '@/app/api/admin/price-import/sheets/route';
 import type { Product } from '@/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type PriceVariant = 'SHRINK' | 'NO_SHRINK';
+
+/** `${sheetProductName}:${variant}` — matches the server-side history key. */
+function historyKey(sheetProductName: string, variant: PriceVariant): string {
+  return `${sheetProductName}:${variant}`;
+}
+
+/** Left → Shrink, Right → No Shrink. Mirrors the sheets parser convention. */
+function variantFromSourceGroup(group: 'left' | 'right'): PriceVariant {
+  return group === 'left' ? 'SHRINK' : 'NO_SHRINK';
+}
 
 interface TableRow extends ImportedRow {
   /** Client-side unique key for React rendering */
@@ -89,6 +102,18 @@ export default function PriceImportPage() {
 
   const [savingMappingKey, setSavingMappingKey] = useState<string | null>(null);
 
+  /**
+   * Keys `${productId}:${variant}` for which the just-imported purchase price
+   * is the all-time historical minimum. Populated from the response of the
+   * history-recording endpoint after every successful import.
+   */
+  const [historicalMinKeys, setHistoricalMinKeys] = useState<Set<string>>(new Set());
+  /**
+   * Bumped after every successful import so the price-history chart re-fetches
+   * its currently-selected series (in case today's data was just added).
+   */
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
   // ── Load product catalog once ───────────────────────────────────────────────
   useEffect(() => {
     fetch('/api/admin/products')
@@ -106,6 +131,54 @@ export default function PriceImportPage() {
     }, 4000);
   }, []);
 
+  /**
+   * Persist the imported prices into the historical database and refresh the
+   * per-variant "historical minimum" flags used to render the star icon.
+   *
+   * ALL imported rows are persisted (matched or not) — history is keyed by the
+   * imported sheet name, so the historical price series stays intact even for
+   * rows that have not yet been linked to a catalog product.
+   */
+  const recordHistoryForRows = useCallback(
+    async (tableRows: TableRow[], rate: number) => {
+      const entries = tableRows
+        .filter((r) => r.importedName && r.jpyPrice > 0)
+        .map((r) => ({
+          catalogProductId: r.matchedProductId ?? null,
+          variant: variantFromSourceGroup(r.sourceGroup),
+          sheetProductName: r.importedName,
+          priceJpy: r.jpyPrice,
+        }));
+
+      if (entries.length === 0) {
+        setHistoricalMinKeys(new Set());
+        setHistoryRefreshKey((k) => k + 1);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/price-import/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exchangeRate: rate, entries }),
+        });
+        if (!res.ok) return; // Non-fatal: keep table interactive.
+
+        const data = (await res.json()) as {
+          results: Array<{ key: string; isHistoricalMin: boolean }>;
+        };
+        const mins = new Set(
+          data.results.filter((r) => r.isHistoricalMin).map((r) => r.key)
+        );
+        setHistoricalMinKeys(mins);
+        setHistoryRefreshKey((k) => k + 1);
+      } catch {
+        // Non-fatal — leave existing star state as-is.
+      }
+    },
+    []
+  );
+
   // ── Import handler ──────────────────────────────────────────────────────────
   const handleImport = async () => {
     const url = sheetsUrl.trim();
@@ -117,6 +190,7 @@ export default function PriceImportPage() {
     setLoading(true);
     setImportError(null);
     setRows([]);
+    setHistoricalMinKeys(new Set());
 
     try {
       // Fetch exchange rate and sheet data in parallel
@@ -156,6 +230,10 @@ export default function PriceImportPage() {
 
       if (tableRows.length === 0) {
         setImportError('No se encontraron productos en las filas 15–52 del documento.');
+      } else {
+        // Record historical prices for matched rows and update star icons.
+        // Fire-and-forget: import UI stays usable even if history save fails.
+        void recordHistoryForRows(tableRows, rateData.rate);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido durante la importación.';
@@ -453,10 +531,13 @@ export default function PriceImportPage() {
                       Precio JPY
                     </th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                      Coste EUR
+                      Precio compra (EUR)
                     </th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                       P. sugerido (+25%)
+                    </th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      PVP actual
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                       Producto en catálogo
@@ -474,6 +555,14 @@ export default function PriceImportPage() {
                     const eurCost = exchangeRate ? convertJpyToEur(row.jpyPrice, exchangeRate) : null;
                     const suggested = eurCost ? computeSellingPrice(eurCost, 25) : null;
                     const isAssigning = savingMappingKey === row.key;
+
+                    // Star indicator: matches the (sheetProductName, variant)
+                    // key emitted by the history API — works for both matched
+                    // and unmatched rows since history is keyed by imported name.
+                    const rowVariant = variantFromSourceGroup(row.sourceGroup);
+                    const isHistoricalMin = historicalMinKeys.has(
+                      historyKey(row.importedName, rowVariant)
+                    );
 
                     return (
                       <tr
@@ -497,14 +586,35 @@ export default function PriceImportPage() {
                           {jpyFmt.format(row.jpyPrice)}
                         </td>
 
-                        {/* EUR cost */}
+                        {/* Purchase price EUR (JPY → EUR, pre-margin) — star = all-time historical minimum */}
                         <td className="px-4 py-3 text-right font-mono text-blue-700 whitespace-nowrap">
-                          {eurCost !== null ? eur.format(eurCost) : '—'}
+                          <span className="inline-flex items-center gap-1.5 justify-end">
+                            {isHistoricalMin && (
+                              <span
+                                className="text-amber-400 text-base leading-none"
+                                title="Mínimo histórico de precio de compra para esta variante"
+                                aria-label="Mínimo histórico"
+                              >
+                                ★
+                              </span>
+                            )}
+                            <span>{eurCost !== null ? eur.format(eurCost) : '—'}</span>
+                          </span>
                         </td>
 
                         {/* Suggested price */}
                         <td className="px-4 py-3 text-right font-mono font-semibold text-gray-800 whitespace-nowrap">
                           {suggested !== null ? eur.format(suggested) : '—'}
+                        </td>
+
+                        {/* Actual PVP price in catalog */}
+                        <td className="px-4 py-3 text-right font-mono text-green-700 whitespace-nowrap">
+                          {row.matchedProductId
+                            ? (() => {
+                                const matchedProduct = products.find((p) => p.id === row.matchedProductId);
+                                return matchedProduct?.price ? eur.format(matchedProduct.price) : '—';
+                              })()
+                            : '—'}
                         </td>
 
                         {/* Catalog product / autocomplete */}
@@ -586,6 +696,11 @@ export default function PriceImportPage() {
             </div>
           </div>
         )}
+
+        {/* Historical price chart — independent of the import table; always visible */}
+        <div className="mt-8">
+          <PriceHistoryChart refreshKey={historyRefreshKey} />
+        </div>
       </div>
 
       {/* Price update modal */}

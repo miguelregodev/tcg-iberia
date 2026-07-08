@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 export interface CatalogProduct {
   id: string;
   name: string;
+  price?: number;
 }
 
 interface ProductAutocompleteProps {
