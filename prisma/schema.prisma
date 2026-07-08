@@ -39,6 +39,14 @@ enum NotificationChannel {
   TELEGRAM
 }
 
+/// Product variant distinguishing between shrink-wrapped and no-shrink versions
+/// of the same underlying catalog product. Used to keep independent price histories
+/// per variant (the left/right sections of the Google Sheets import).
+enum ProductVariant {
+  SHRINK
+  NO_SHRINK
+}
+
 /// AnnouncementBanner model stores rotating announcement messages shown site-wide below the navigation.
 /// Administrators manage banners from the Admin Panel (/admin/banners).
 /// Only banners with enabled=true are served to the storefront.
@@ -101,6 +109,7 @@ model Product {
   favorites            Favorite[]
   stockAlerts          StockAlert[]
   priceMappings        PriceMapping[]
+  priceHistory         PriceHistory[]
 
   @@index([visible])
   @@index([slug])
@@ -130,6 +139,51 @@ model PriceMapping {
 
   @@index([importedName])
   @@index([productId])
+}
+
+/// PriceHistory records the imported purchase price (converted JPY → EUR, before margin)
+/// for every imported sheet product on each import day, regardless of whether the imported
+/// row was matched to a catalog product. Independent histories are kept per product
+/// variant (SHRINK / NO_SHRINK), so the Shrink and No-Shrink versions of the same
+/// product never share data points.
+///
+/// Deduplication:
+/// - A UNIQUE (sheetProductName, variant, importDate) constraint guarantees at most one
+///   record per imported-name/variant/day. Multiple imports on the same calendar day
+///   upsert the existing row so the "last import of the day wins".
+///
+/// Historical-minimum lookups:
+/// - The composite index on (sheetProductName, variant, purchasePriceEur) supports
+///   fast MIN() queries used to detect when today's price is the all-time low.
+///
+/// Chart queries:
+/// - The (sheetProductName, variant, importDate) index supports ordered range scans
+///   used by the historical price chart.
+///
+/// Catalog association:
+/// - `catalogProductId` is optional. When an imported name is (or was) mapped to a
+///   catalog product, the FK is populated so admins can trace history back. If the
+///   catalog product is later deleted, the FK is set to NULL so the historical series
+///   remains intact.
+model PriceHistory {
+  id                String         @id @default(cuid())
+  catalogProductId  String?
+  variant           ProductVariant
+  sheetProductName  String         @db.VarChar(500)
+  importDate        DateTime       @db.Date
+  importTimestamp   DateTime       @default(now())
+  priceJpy          Decimal        @db.Decimal(12, 2)
+  exchangeRate      Decimal        @db.Decimal(18, 10)
+  purchasePriceEur  Decimal        @db.Decimal(12, 4)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  catalogProduct    Product?       @relation(fields: [catalogProductId], references: [id], onDelete: SetNull)
+
+  @@unique([sheetProductName, variant, importDate])
+  @@index([sheetProductName, variant, importDate])
+  @@index([sheetProductName, variant, purchasePriceEur])
+  @@index([catalogProductId])
 }
 
 /// HitCard model represents promotional/best hit cards associated with a product
