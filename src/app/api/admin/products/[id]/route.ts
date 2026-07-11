@@ -38,6 +38,18 @@ export async function PUT(
         price: parseFloat(body.price),
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         noShrinkPrice: body.noShrinkPrice ? parseFloat(body.noShrinkPrice) : null,
+        b2bPrice:
+          body.b2bPrice === undefined
+            ? undefined
+            : body.b2bPrice === null || body.b2bPrice === ''
+              ? null
+              : parseFloat(body.b2bPrice),
+        b2bPriceNoShrink:
+          body.b2bPriceNoShrink === undefined
+            ? undefined
+            : body.b2bPriceNoShrink === null || body.b2bPriceNoShrink === ''
+              ? null
+              : parseFloat(body.b2bPriceNoShrink),
         notes: body.notes || null,
         type: body.type || null,
         releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,

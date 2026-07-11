@@ -93,6 +93,12 @@ model Product {
   price                Decimal  @db.Decimal(10, 2)
   discountPercentage   Decimal? @db.Decimal(5, 2)
   noShrinkPrice        Decimal? @db.Decimal(10, 2)
+  /// Optional wholesale price for authenticated B2B customers (SHRINK variant).
+  /// When present, replaces the public `price` for logged-in active B2B users.
+  b2bPrice             Decimal? @db.Decimal(10, 2)
+  /// Optional wholesale price for the NO_SHRINK variant. Same visibility rules
+  /// as `b2bPrice`.
+  b2bPriceNoShrink     Decimal? @db.Decimal(10, 2)
   notes                String?  @db.Text
   type                 String?  @db.VarChar(100)
   releaseDate          DateTime?
@@ -401,5 +407,222 @@ model CheckoutSessionCart {
   createdAt  DateTime  @default(now())
   processedAt DateTime?
 
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B2B (Wholesale) Module
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum B2bRequestStatus {
+  PENDING     // Request submitted, waiting for admin review
+  APPROVED    // Admin approved, customer created, activation email sent
+  REJECTED    // Admin rejected the request
+}
+
+enum B2bCustomerStatus {
+  PENDING     // Approved but hasn't set password yet
+  ACTIVE      // Fully activated and can log in
+  DISABLED    // Admin-disabled — auth succeeds but access is refused
+}
+
+enum B2bActivity {
+  ONLINE_STORE
+  VENDING_MACHINE
+  PHYSICAL_STORE
+  DISTRIBUTOR
+  OTHER
+}
+
+enum B2bOrderStatus {
+  PENDING     // Newly submitted, awaiting admin acceptance
+  ACCEPTED    // Admin accepted → invoice generated, awaiting payment
+  PAID        // Invoice paid → order will be prepared / shipped
+  CANCELLED   // Cancelled by customer or admin (only while not yet PAID)
+  REJECTED    // Admin rejected the request
+}
+
+/// A B2B account request submitted from the public site. Contains the email
+/// captured at request time plus (optionally) the admin-collected company
+/// documentation reviewed after the customer replies to the docs-request
+/// email. When approved, a `B2bCustomer` row is created and this request is
+/// marked APPROVED with a back-reference in `customerId`.
+model B2bRequest {
+  id                  String            @id @default(cuid())
+  email               String            @db.VarChar(255)
+  status              B2bRequestStatus  @default(PENDING)
+
+  // Admin-collected documentation (all optional until Approve)
+  companyName         String?           @db.VarChar(255)
+  vatNumber           String?           @db.VarChar(64)
+  modelo036Verified   Boolean           @default(false)
+  activity            B2bActivity?
+  activityOther       String?           @db.VarChar(255)
+  shippingAddress     String?           @db.Text
+  billingAddress      String?           @db.Text
+  contactName         String?           @db.VarChar(255)
+  nationalId          String?           @db.VarChar(64)  // DNI/NIE/Passport
+  phone               String?           @db.VarChar(30)
+  website             String?           @db.VarChar(500)
+  estimatedVolume     String?           @db.VarChar(255)
+  preferredLanguages  String?           @db.VarChar(255)
+  notes               String?           @db.Text
+
+  reviewedAt          DateTime?
+  reviewedByEmail     String?           @db.VarChar(255)
+  rejectionReason     String?           @db.Text
+
+  customerId          String?           @unique  // Populated after APPROVED
+  customer            B2bCustomer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
+
+/// A B2B customer account. Sessions and activation tokens are related here.
+/// `passwordHash` is null until the customer completes activation via the
+/// emailed link. Only ACTIVE customers may access wholesale pricing.
+model B2bCustomer {
+  id                 String              @id @default(cuid())
+  email              String              @unique @db.VarChar(255)
+  passwordHash       String?             @db.VarChar(255)   // null until activation
+  status             B2bCustomerStatus   @default(PENDING)
+
+  // Snapshot of the approved company information (editable by admins).
+  companyName        String              @db.VarChar(255)
+  vatNumber          String              @db.VarChar(64)
+  activity           B2bActivity
+  activityOther      String?             @db.VarChar(255)
+  shippingAddress    String              @db.Text
+  billingAddress     String?             @db.Text
+  contactName        String              @db.VarChar(255)
+  nationalId         String?             @db.VarChar(64)
+  phone              String              @db.VarChar(30)
+  website            String?             @db.VarChar(500)
+  estimatedVolume    String?             @db.VarChar(255)
+  preferredLanguages String?             @db.VarChar(255)
+  notes              String?             @db.Text
+
+  lastLoginAt        DateTime?
+  disabledAt         DateTime?
+  activatedAt        DateTime?
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  request            B2bRequest?
+  sessions           B2bSession[]
+  activationTokens   B2bActivationToken[]
+  loginAudits        B2bLoginAudit[]
+  orders             B2bOrder[]
+
+  @@index([status])
+  @@index([email])
+  @@index([vatNumber])
+}
+
+/// A persistent B2B session token. The raw token lives only in the customer's
+/// HttpOnly cookie; the DB stores a SHA-256 hash so a DB dump cannot be used
+/// to forge sessions.
+model B2bSession {
+  id           String       @id @default(cuid())
+  customerId   String
+  tokenHash    String       @unique @db.VarChar(128)  // hex SHA-256 of the raw token
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+  lastSeenAt   DateTime     @default(now())
+  userAgent    String?      @db.VarChar(500)
+  ipAddress    String?      @db.VarChar(64)
+
+  customer     B2bCustomer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
+/// One-time activation / password-reset token. Stored hashed. Expires after
+/// a reasonable window (see B2B_ACTIVATION_TOKEN_TTL_HOURS in code).
+model B2bActivationToken {
+  id           String       @id @default(cuid())
+  customerId   String
+  tokenHash    String       @unique @db.VarChar(128)  // hex SHA-256 of the raw token
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime     @default(now())
+
+  customer     B2bCustomer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
+/// Login audit trail. Used to power rate limiting and give admins visibility
+/// into unusual login patterns.
+model B2bLoginAudit {
+  id          String       @id @default(cuid())
+  customerId  String?
+  email       String       @db.VarChar(255)
+  success     Boolean
+  reason      String?      @db.VarChar(120)  // 'invalid_password', 'disabled', 'not_activated', 'ok', 'rate_limited', 'unknown_email'
+  ipAddress   String?      @db.VarChar(64)
+  userAgent   String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now())
+
+  customer    B2bCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+/// A B2B (wholesale) order request.
+///
+/// Lifecycle:
+///   PENDING   -> ACCEPTED (admin) -> PAID (admin, when the invoice is settled)
+///             -> REJECTED (admin)
+///             -> CANCELLED (customer or admin, only while status is
+///                          PENDING or ACCEPTED -- PAID orders cannot be
+///                          cancelled)
+///
+/// items is a JSON snapshot at request time so future price/name changes
+/// don't rewrite historical invoices. Each element has the shape:
+///   { productId, name, variant: 'SHRINK'|'NO_SHRINK', quantity, unitPriceEur, lineTotal }
+///
+/// Money columns are stored net of VAT:
+///   - subtotal   = sum of line totals (pre-tax)
+///   - ivaAmount  = 21% of subtotal (Spanish B2B rate)
+///   - total      = subtotal + ivaAmount
+///
+/// Invoice numbers are generated on ACCEPTANCE and are legally required to
+/// be sequential per Spanish tax law -- see getNextB2bInvoiceSequence() in
+/// src/lib/b2b/order-numbers.ts (Sequence row with name = 'B2B_INVOICE').
+model B2bOrder {
+  id             String          @id @default(cuid())
+  customerId     String
+  orderNumber    String          @unique @db.VarChar(50)
+  status         B2bOrderStatus  @default(PENDING)
+  items          Json
+  subtotal       Decimal         @db.Decimal(12, 2)
+  ivaAmount      Decimal         @db.Decimal(12, 2)
+  total          Decimal         @db.Decimal(12, 2)
+  invoiceNumber  String?         @unique @db.VarChar(50)
+  invoicedAt     DateTime?
+  acceptedAt     DateTime?
+  rejectedAt     DateTime?
+  paidAt         DateTime?
+  cancelledAt    DateTime?
+  cancelledBy    String?         @db.VarChar(120)  // 'customer' | 'admin:<email>'
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  customer       B2bCustomer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId])
+  @@index([status])
   @@index([createdAt])
 }

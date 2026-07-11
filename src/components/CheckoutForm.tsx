@@ -425,9 +425,9 @@ export function CheckoutForm() {
                   {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
                 </span>
               </div>
-              <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
+              <div className="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total:</span>
-                <span className="text-red-600">{finalPrice.toFixed(2)}€</span>
+                <span className="text-red-600 text-sm">{finalPrice.toFixed(2)}€</span>
               </div>
             </div>
           </div>

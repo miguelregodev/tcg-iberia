@@ -88,10 +88,81 @@ export function snapToRetailPrice(price: number): number {
   return euros + 1.95; // 96–99 cents → next euro .95
 }
 
+/** Default profit margins used by the admin price update modal for each variant. */
+export const DEFAULT_PRICE_VARIANT_MARGINS = {
+  shrink: 25,
+  noShrink: 20,
+  b2b: 15,
+  b2bNoShrink: 12,
+} as const;
+
+export type PriceVariantKey = keyof typeof DEFAULT_PRICE_VARIANT_MARGINS;
+
+export interface VariantPriceBreakdown {
+  finalPrice: number;
+  benefit: number;
+  marginPercent: number;
+  marginComponents: {
+    costMarginPercent: number;
+    vatPercent: number;
+    profitMarginPercent: number;
+  };
+}
+
+export interface VariantPriceBreakdownMap {
+  shrink: VariantPriceBreakdown;
+  noShrink: VariantPriceBreakdown;
+  b2b: VariantPriceBreakdown;
+  b2bNoShrink: VariantPriceBreakdown;
+}
+
+function buildVariantBreakdown(eurCost: number, marginPercent: number): VariantPriceBreakdown {
+  const taxInclusiveBase = eurCost * COST_MARGIN_FACTOR * VAT_FACTOR;
+  const raw = taxInclusiveBase * (1 + marginPercent / 100);
+  const finalPrice = snapToRetailPrice(raw);
+
+  return {
+    finalPrice,
+    benefit: Math.max(0, finalPrice - eurCost),
+    marginPercent,
+    marginComponents: {
+      costMarginPercent: COST_MARGIN_PERCENT,
+      vatPercent: VAT_PERCENT,
+      profitMarginPercent: marginPercent,
+    },
+  };
+}
+
+export function computeVariantPriceBreakdown(
+  eurCost: number,
+  margins: Partial<Record<PriceVariantKey, number>> = {},
+  variantCosts: Partial<Record<PriceVariantKey, number>> = {}
+): VariantPriceBreakdownMap {
+  const variantMargins = { ...DEFAULT_PRICE_VARIANT_MARGINS, ...margins };
+  const resolvedVariantCosts = {
+    shrink: eurCost,
+    noShrink: variantCosts.noShrink ?? eurCost,
+    b2b: eurCost,
+    b2bNoShrink: variantCosts.b2bNoShrink ?? variantCosts.noShrink ?? eurCost,
+  } satisfies Record<PriceVariantKey, number>;
+
+  return {
+    shrink: buildVariantBreakdown(resolvedVariantCosts.shrink, variantMargins.shrink),
+    noShrink: buildVariantBreakdown(resolvedVariantCosts.noShrink, variantMargins.noShrink),
+    b2b: buildVariantBreakdown(resolvedVariantCosts.b2b, variantMargins.b2b),
+    b2bNoShrink: buildVariantBreakdown(
+      resolvedVariantCosts.b2bNoShrink,
+      variantMargins.b2bNoShrink
+    ),
+  };
+}
+
 /** 2.7% operational margin applied to the origin (import) cost before tax. */
+const COST_MARGIN_PERCENT = 2.7;
 const COST_MARGIN_FACTOR = 1.027;
 
 /** 21% VAT applied after the cost margin. */
+const VAT_PERCENT = 21;
 const VAT_FACTOR = 1.21;
 
 /**
@@ -111,4 +182,32 @@ export function computeSellingPrice(eurCost: number, marginPercent: number): num
   const taxInclusiveBase = eurCost * COST_MARGIN_FACTOR * VAT_FACTOR;
   const raw = taxInclusiveBase * (1 + marginPercent / 100);
   return snapToRetailPrice(raw);
+}
+
+/** 2.7% business margin applied to the import cost for B2B pricing. */
+const B2B_BUSINESS_MARGIN = 0.027;
+/** 10% commercial margin for wholesale customers. */
+const B2B_COMMERCIAL_MARGIN = 0.10;
+/** 2% shipping cost recovered through the wholesale price. */
+const B2B_SHIPPING_MARGIN = 0.02;
+
+/** Aggregate multiplier applied to the EUR cost when computing a B2B price. */
+export const B2B_PRICE_MULTIPLIER =
+  1 + B2B_BUSINESS_MARGIN + B2B_COMMERCIAL_MARGIN + B2B_SHIPPING_MARGIN;
+
+/**
+ * Compute the wholesale (B2B) price from the raw imported EUR cost.
+ *
+ * Formula:
+ *     eurCost × (1 + 2.7% business margin + 10% commercial margin + 2% shipping)
+ *   = eurCost × 1.147
+ *
+ * Rounded to 2 decimals (EUR cents). Unlike the retail price, no VAT is added
+ * — wholesale invoices carry VAT separately per Spanish B2B billing rules,
+ * and no ".95 snapping" is performed so the value reflects the true cost
+ * structure exposed to business customers.
+ */
+export function computeB2bPrice(eurCost: number): number {
+  if (!isFinite(eurCost) || eurCost <= 0) return 0;
+  return Math.round(eurCost * B2B_PRICE_MULTIPLIER * 100) / 100;
 }

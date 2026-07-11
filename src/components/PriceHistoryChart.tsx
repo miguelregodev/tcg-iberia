@@ -207,6 +207,19 @@ export function PriceHistoryChart({ refreshKey = 0 }: Props) {
     []
   );
 
+  const toggleDotsVisibility = useCallback(() => {
+    setShowDots((prev) => {
+      const next = !prev;
+      if (!next) {
+        setHiddenProducts(new Set(products.map((product) => product.productId)));
+      } else {
+        setHiddenProducts(new Set());
+      }
+      setHoverState(null);
+      return next;
+    });
+  }, [products]);
+
   // Products actually rendered on the chart (after applying the legend filter).
   const visibleProducts = useMemo(
     () => products.filter((p) => !hiddenProducts.has(p.productId)),
@@ -615,16 +628,16 @@ export function PriceHistoryChart({ refreshKey = 0 }: Props) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowDots((v) => !v)}
+                  onClick={toggleDotsVisibility}
                   className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
                     showDots
                       ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-800'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                   aria-pressed={showDots}
-                  title="Mostrar u ocultar los puntos de cada precio"
+                  title={showDots ? 'Ocultar todos los puntos y series del gráfico' : 'Mostrar los puntos de cada precio'}
                 >
-                  {showDots ? '● Puntos visibles' : '○ Puntos ocultos'}
+                  {showDots ? 'Ocultar puntos' : 'Mostrar puntos'}
                 </button>
                 {hiddenProducts.size > 0 && (
                   <button

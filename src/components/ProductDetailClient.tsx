@@ -9,6 +9,8 @@ import { FavoriteButton } from './FavoriteButton';
 import { StockAlertButton } from './StockAlertButton';
 import { trackPreorderViewed, trackProductViewed } from '@/lib/analytics/events';
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
+import { useB2BSession } from '@/context/B2BSessionContext';
+import { useB2BPrices } from '@/hooks/useB2BPrices';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -26,12 +28,16 @@ function getLanguageFlag(language: string): { path: string; name: string } {
 
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
   const [variant, setVariant] = useState<'shrink' | 'noshrink'>('shrink');
   const { addToCart, items } = useCart();
+  const { isB2B } = useB2BSession();
+  const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);
+  const b2bShrinkPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
+  const b2bNoShrinkPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPriceNoShrink ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
   const releaseDate = formatReleaseDate(product.releaseDate);
+  
 
   const hasNoShrink = product.noShrinkPrice != null;
 
@@ -50,10 +56,14 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     releaseDate: product.releaseDate,
   });
 
-  // Active price depends on variant selection
-  const activeBasePrice = variantProduct.price;
-  // Discount only applies to the shrink variant
-  const activeDiscount = variantProduct.discountPercentage;
+  // Active price depends on variant selection; B2B overrides take priority
+  const activeBasePrice = variant === 'noshrink' && b2bNoShrinkPrice
+    ? b2bNoShrinkPrice
+    : variant === 'shrink' && b2bShrinkPrice
+    ? b2bShrinkPrice
+    : variantProduct.price;
+  // No discount for B2B users
+  const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
 
   // How many of THIS variant are already in the cart.
   const inCartQuantity =
@@ -63,6 +73,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     ? Number.POSITIVE_INFINITY
     : Math.max(0, quantityLimit - inCartQuantity);
   const reachedMax = quantityLimit !== null && quantity >= maxAddable;
+
+  const addToCartDisabled =
+    isB2B ||
+    !inventoryState.canPurchase ||
+    (quantityLimit !== null && maxAddable === 0);
 
   // Clamp the selected quantity if cart contents change and shrink the limit.
   useEffect(() => {
@@ -175,7 +190,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </div>
                   )}
 
-                  {inventoryState.isLowStock && (
+                  {inventoryState.isLowStock && !isB2B && (
                     <div className="absolute bottom-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
                       Últimas unidades
                     </div>
@@ -198,12 +213,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   ? 'bg-orange-100 text-orange-700'
                   : 'bg-gray-300 text-gray-700'
               }`}>
-                {getProductStatusLabel(inventoryState)}
+                {isB2B
+                  ? inventoryState.status === 'preorder'
+                    ? getProductStatusLabel(inventoryState)
+                    : 'Disponible'
+                  : getProductStatusLabel(inventoryState)}
               </span>
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl lg:text-4xl font-bold text-black mb-2 leading-tight">
+            <h1 className="text-2xl lg:text-3xl font-bold text-black mb-2 leading-tight">
               {product.name}
             </h1>
 
@@ -231,7 +250,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Con Plástico — {Number(product.price).toFixed(2)}€
+                    Con Plástico — {(b2bShrinkPrice ?? Number(product.price)).toFixed(2)}€
+                    {b2bShrinkPrice && <span className="ml-1 text-[10px] font-bold bg-red-100 text-red-700 px-1 rounded">B2B</span>}
                   </button>
                   <button
                     type="button"
@@ -242,7 +262,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Sin Plástico — {Number(product.noShrinkPrice).toFixed(2)}€
+                    Sin Plástico — {(b2bNoShrinkPrice ?? Number(product.noShrinkPrice)).toFixed(2)}€
+                    {b2bNoShrinkPrice && <span className="ml-1 text-[10px] font-bold bg-red-100 text-red-700 px-1 rounded">B2B</span>}
                   </button>
                 </div>
               </div>
@@ -250,18 +271,23 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {/* Price Section */}
               <div className="flex items-baseline gap-4">
-                <span className="text-4xl font-bold text-black-600">
+                <span className="text-xl font-bold text-black-600">
                   {finalPrice.toFixed(2)}€
                 </span>
                 {activeDiscount && (
                   <div className="flex flex-col gap-1">
-                    <span className="text-lg text-gray-400 line-through">
+                    <span className="text-xs text-gray-400 line-through">
                       {activeBasePrice.toFixed(2)}€
                     </span>
-                    <span className="text-sm font-semibold text-red-600">
+                    <span className="text-[11px] font-semibold text-red-600">
                       Ahorras {savingsAmount}€
                     </span>
                   </div>
+                )}
+                {isB2B && (b2bShrinkPrice || b2bNoShrinkPrice) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">
+                    Precio B2B
+                  </span>
                 )}
               </div>
 
@@ -345,26 +371,58 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     className="flex-1"
                   />
                 ) : (
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={!inventoryState.canPurchase || (quantityLimit !== null && maxAddable === 0)}
-                    className={`btn flex-1 text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
-                      !inventoryState.canPurchase || (quantityLimit !== null && maxAddable === 0)
-                        ? 'bg-gray-400 cursor-not-allowed text-gray-200'
-                        : addedToCart
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-red-600 hover:bg-red-700 text-white'
-                    }`}
-                  >
-                    <img
-                      src="/images/add-to-cart.png"
-                      alt="Add to Cart"
-                      className="w-5 h-5"
-                    />
-                    {addedToCart
-                      ? '\u2713 A\u00f1adido al carrito'
-                      : getProductPurchaseLabel(inventoryState)}
-                  </button>
+                    <div className="relative flex-1 group">
+                      <button
+                        onClick={handleAddToCart}
+                        disabled={addToCartDisabled}
+                        className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
+                          addToCartDisabled
+                            ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                            : addedToCart
+                              ? 'bg-green-600 hover:bg-green-700 text-white'
+                              : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`}
+                      >
+                        <img
+                          src="/images/add-to-cart.png"
+                          alt="Add to Cart"
+                          className="w-5 h-5"
+                        />
+                        {addedToCart
+                          ? '✓ Añadido al carrito'
+                          : getProductPurchaseLabel(inventoryState)}
+                      </button>
+
+                      {isB2B && (
+                        <div
+                          className="
+                            pointer-events-none
+                            absolute
+                            left-1/2
+                            top-full
+                            z-50
+                            mt-2
+                            w-72
+                            -translate-x-1/2
+                            rounded-lg
+                            bg-gray-900
+                            px-4
+                            py-3
+                            text-sm
+                            text-white
+                            opacity-0
+                            shadow-xl
+                            transition-opacity
+                            duration-200
+                            group-hover:opacity-100
+                          "
+                        >
+                          Para realizar compras como cliente B2B debes acceder al
+                          <span className="font-semibold"> catálogo B2B</span>. Si deseas comprar
+                          como cliente particular, primero cierra tu sesión B2B.
+                        </div>
+                      )}
+                    </div>
                 )}
 
                 <FavoriteButton

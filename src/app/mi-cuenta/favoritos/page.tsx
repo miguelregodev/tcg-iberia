@@ -76,6 +76,8 @@ export default function FavoritosPage() {
       inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'available',
       noShrinkPrice: null,
       noShrinkStock: 0,
+      b2bPrice: null,
+      b2bPriceNoShrink: null,
       createdAt: '',
       updatedAt: '',
     };

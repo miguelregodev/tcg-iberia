@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { B2BSessionProvider } from "@/context/B2BSessionContext";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 export const metadata: Metadata = {
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body className="bg-white text-black antialiased">
         <PostHogProvider>
           <SessionProvider>
-            <CartProvider>
-              <main>{children}</main>
-              <CookieConsentBanner />
-            </CartProvider>
+            <B2BSessionProvider>
+              <CartProvider>
+                <main>{children}</main>
+                <CookieConsentBanner />
+              </CartProvider>
+            </B2BSessionProvider>
           </SessionProvider>
         </PostHogProvider>
       </body>

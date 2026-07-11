@@ -9,6 +9,8 @@ import { HamburgerMenu } from './HamburgerMenu';
 import { useCart } from '@/context/CartContext';
 import { ShoppingCartModal } from './ShoppingCartModal';
 import { LoginModal } from './LoginModal';
+import { B2BModal } from './B2BModal';
+import { useB2BSession } from '@/context/B2BSessionContext';
 import { trackEvent } from '@/lib/analytics/events';
 import { FreeShippingProgress } from './FreeShippingProgress';
 import { getFreeShippingState } from '@/lib/shipping/free-shipping';
@@ -26,10 +28,12 @@ export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isB2BOpen, setIsB2BOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { totalQuantity, totalPrice } = useCart();
   const { data: session } = useSession();
+  const { customer: b2bCustomer, isB2B, logout: logoutB2B } = useB2BSession();
   const router = useRouter();
   const menuWrapperRef = useRef<HTMLDivElement>(null);
   const accountWrapperRef = useRef<HTMLDivElement>(null);
@@ -140,7 +144,10 @@ export function Navigation() {
               {/* Dropdown panel — anchored under the hamburger button */}
               {isMenuOpen && (
                 <div className="absolute left-0 top-full mt-2 w-72 sm:w-80">
-                  <HamburgerMenu onClose={() => setIsMenuOpen(false)} />
+                  <HamburgerMenu
+                    onClose={() => setIsMenuOpen(false)}
+                    onOpenB2B={() => setIsB2BOpen(true)}
+                  />
                 </div>
               )}
             </div>
@@ -191,7 +198,80 @@ export function Navigation() {
             </button>
 
             {/* Login / Account button */}
-            {session?.user ? (
+            {isB2B ? (
+              <div ref={accountWrapperRef} className="relative">
+                <button
+                  onClick={() => setIsAccountOpen((v) => !v)}
+                  className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Cuenta B2B"
+                  aria-expanded={isAccountOpen}
+                >
+                  <img src="/images/login.png" alt="Cuenta B2B" className="w-6 h-6" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 border border-white rounded-full" />
+                </button>
+
+                {isAccountOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                    {/* B2B header */}
+                    <div className="px-4 py-3 bg-red-600 text-white">
+                      <p className="text-[10px] tracking-widest opacity-90 uppercase font-semibold">
+                        Portal mayorista
+                      </p>
+                      <p className="font-bold text-sm truncate">
+                        {b2bCustomer?.companyName ?? 'Cliente B2B'}
+                      </p>
+                      {b2bCustomer?.contactName && (
+                        <p className="text-xs opacity-90 truncate">
+                          {b2bCustomer.contactName}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Links */}
+                    <nav className="p-1">
+                      <Link
+                        href="/mi-cuenta/b2b/perfil"
+                        onClick={() => setIsAccountOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      >
+                        <span>🏢</span>
+                        Mi perfil B2B
+                      </Link>
+                      <Link
+                        href="/mi-cuenta/b2b/pedidos"
+                        onClick={() => setIsAccountOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      >
+                        <span>📦</span>
+                        Mis pedidos B2B
+                      </Link>
+                      <Link
+                        href="/b2b-catalog"
+                        onClick={() => setIsAccountOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      >
+                        <span>🛒</span>
+                        Ir al catálogo
+                      </Link>
+
+                      <hr className="my-1 border-gray-100" />
+
+                      <button
+                        onClick={async () => {
+                          setIsAccountOpen(false);
+                          await logoutB2B();
+                          router.refresh();
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                      >
+                        <span>🚪</span>
+                        Cerrar sesión B2B
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
+            ) : session?.user ? (
               <div ref={accountWrapperRef} className="relative">
                 <button
                   onClick={() => setIsAccountOpen((v) => !v)}
@@ -207,7 +287,7 @@ export function Navigation() {
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
                     {/* User header */}
                     <div className="px-4 py-3 bg-red-600 text-white">
-                      <p className="text-xs opacity-80">Mi cuenta</p>
+                      <p className="text-xs opacity-80">Mi cuenta B2B</p>
                       <p className="font-bold text-sm truncate">
                         {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}
                       </p>
@@ -224,7 +304,7 @@ export function Navigation() {
                         >
                           <span>{item.icon}</span>
                           {item.label}
-                        </Link>
+                        </Link> 
                       ))}
 
                       <hr className="my-1 border-gray-100" />
@@ -301,6 +381,9 @@ export function Navigation() {
 
       {/* Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* B2B Modal (login + request account) */}
+      <B2BModal isOpen={isB2BOpen} onClose={() => setIsB2BOpen(false)} />
     </>
   );
 }

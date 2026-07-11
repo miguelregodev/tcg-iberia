@@ -6,7 +6,12 @@ import { PriceUpdateModal, type ModalRow } from '@/components/PriceUpdateModal';
 import { ProductAutocomplete, type CatalogProduct } from '@/components/ProductAutocomplete';
 import { ProductForm } from '@/components/ProductForm';
 import { PriceHistoryChart } from '@/components/PriceHistoryChart';
-import { convertJpyToEur, computeSellingPrice } from '@/lib/price-import/currency';
+import {
+  convertJpyToEur,
+  computeSellingPrice,
+  computeB2bPrice,
+  type PriceVariantKey,
+} from '@/lib/price-import/currency';
 import type { ImportedRow } from '@/app/api/admin/price-import/sheets/route';
 import type { Product } from '@/types';
 
@@ -36,6 +41,10 @@ interface CreateFromRow {
   importedName: string;
   suggestedPrice: number;
   suggestedNoShrinkPrice: number | null;
+  /** Auto-computed wholesale price for the SHRINK variant of the imported row. */
+  suggestedB2bPrice: number;
+  /** Auto-computed wholesale price for the NO_SHRINK variant (if present). */
+  suggestedB2bPriceNoShrink: number | null;
 }
 
 type NotificationType = 'success' | 'error';
@@ -101,6 +110,7 @@ export default function PriceImportPage() {
   const notifCounter = useRef(0);
 
   const [savingMappingKey, setSavingMappingKey] = useState<string | null>(null);
+  const initialImportTriggered = useRef(false);
 
   /**
    * Keys `${productId}:${variant}` for which the just-imported purchase price
@@ -121,6 +131,13 @@ export default function PriceImportPage() {
       .then((data: CatalogProduct[]) => setProducts(data))
       .catch(() => {/* non-fatal: autocomplete just won't show products */});
   }, []);
+
+  // ── Auto-load the configured sheet when the admin page is opened ─────────
+  useEffect(() => {
+    if (initialImportTriggered.current || !sheetsUrl.trim()) return;
+    initialImportTriggered.current = true;
+    void handleImport();
+  }, [sheetsUrl]);
 
   // ── Toast notifications ─────────────────────────────────────────────────────
   const pushNotification = useCallback((type: NotificationType, message: string) => {
@@ -232,8 +249,9 @@ export default function PriceImportPage() {
         setImportError('No se encontraron productos en las filas 15–52 del documento.');
       } else {
         // Record historical prices for matched rows and update star icons.
-        // Fire-and-forget: import UI stays usable even if history save fails.
-        void recordHistoryForRows(tableRows, rateData.rate);
+        // Await this so the imported sheet data and the chart refresh stay in
+        // sync on the same "Cargar precios" action.
+        await recordHistoryForRows(tableRows, rateData.rate);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido durante la importación.';
@@ -289,14 +307,28 @@ export default function PriceImportPage() {
       if (!exchangeRate) return;
       const eurCost = convertJpyToEur(row.jpyPrice, exchangeRate);
       const suggestedPrice = computeSellingPrice(eurCost, 25);
+      // Whether this row itself is a SHRINK or NO_SHRINK entry drives which
+      // B2B price we auto-fill. Left column → SHRINK, right column → NO_SHRINK
+      // (mirrors the sheets parser convention).
+      const isShrink = row.sourceGroup === 'left';
+      const b2bForThisRow = computeB2bPrice(eurCost);
 
       let suggestedNoShrinkPrice: number | null = null;
+      let suggestedB2bPriceNoShrink: number | null = null;
       if (row.correspondingRightJpyPrice) {
         const rightEurCost = convertJpyToEur(row.correspondingRightJpyPrice, exchangeRate);
         suggestedNoShrinkPrice = computeSellingPrice(rightEurCost, 25);
+        suggestedB2bPriceNoShrink = computeB2bPrice(rightEurCost);
       }
 
-      setCreateFromRow({ rowKey: row.key, importedName: row.importedName, suggestedPrice, suggestedNoShrinkPrice });
+      setCreateFromRow({
+        rowKey: row.key,
+        importedName: row.importedName,
+        suggestedPrice,
+        suggestedNoShrinkPrice,
+        suggestedB2bPrice: isShrink ? b2bForThisRow : (suggestedB2bPriceNoShrink ?? b2bForThisRow),
+        suggestedB2bPriceNoShrink: isShrink ? suggestedB2bPriceNoShrink : b2bForThisRow,
+      });
     },
     [exchangeRate]
   );
@@ -359,6 +391,7 @@ export default function PriceImportPage() {
     setModalRow({
       importedName: row.importedName,
       jpyPrice: row.jpyPrice,
+      correspondingRightJpyPrice: row.correspondingRightJpyPrice,
       matchedProductId: row.matchedProductId,
       matchedProductName: row.matchedProductName,
     });
@@ -366,11 +399,11 @@ export default function PriceImportPage() {
 
   // ── Confirm price update ────────────────────────────────────────────────────
   const handleConfirmPrice = useCallback(
-    async (productId: string, finalPrice: number) => {
+    async (productId: string, prices: Record<PriceVariantKey, number>) => {
       const res = await fetch('/api/admin/price-import/update-price', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, price: finalPrice }),
+        body: JSON.stringify({ productId, prices }),
       });
 
       if (!res.ok) {
@@ -390,7 +423,7 @@ export default function PriceImportPage() {
 
       pushNotification(
         'success',
-        `Precio actualizado: "${updated.name}" → ${eur.format(updated.price)}`
+        `Precios actualizados: "${updated.name}" → ${eur.format(updated.price)}`
       );
       setModalRow(null);
     },
@@ -740,6 +773,8 @@ export default function PriceImportPage() {
                   name: createFromRow.importedName,
                   price: createFromRow.suggestedPrice,
                   noShrinkPrice: createFromRow.suggestedNoShrinkPrice ?? undefined,
+                  b2bPrice: createFromRow.suggestedB2bPrice,
+                  b2bPriceNoShrink: createFromRow.suggestedB2bPriceNoShrink ?? undefined,
                   language: 'JAPANESE',
                 }}
                 onSuccess={handleProductCreated}

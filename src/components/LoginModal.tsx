@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import { trackEvent } from '@/lib/analytics/events';
+import { useB2BSession } from '@/context/B2BSessionContext';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface Props {
 export function LoginModal({ isOpen, onClose }: Props) {
   const router = useRouter();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { isB2B, customer: b2bCustomer, logout: logoutB2B } = useB2BSession();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,8 +66,18 @@ export function LoginModal({ isOpen, onClose }: Props) {
       });
 
       if (result?.error) {
-        setError('Email o contraseña incorrectos.');
-        trackEvent('user_login_failed', { reason: 'invalid_credentials' });
+        // NextAuth surfaces the credentials-provider error message as-is.
+        // We use `b2b_session_active` (see src/lib/auth.ts) to signal the
+        // mutual-exclusion check refused the login.
+        if (result.error === 'b2b_session_active') {
+          setError(
+            'Ya has iniciado sesión como B2B. Cierra la sesión mayorista antes de acceder como cliente.'
+          );
+          trackEvent('user_login_failed', { reason: 'b2b_session_active' });
+        } else {
+          setError('Email o contraseña incorrectos.');
+          trackEvent('user_login_failed', { reason: 'invalid_credentials' });
+        }
       } else {
         trackEvent('user_logged_in', { method: 'email' });
         onClose();
@@ -112,13 +124,33 @@ export function LoginModal({ isOpen, onClose }: Props) {
           Acceder
         </h2>
 
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-            {error}
+        {isB2B ? (
+          <div className="mb-4 px-4 py-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 space-y-2">
+            <p>
+              Estás dentro del portal B2B como{' '}
+              <strong>{b2bCustomer?.companyName ?? 'cliente mayorista'}</strong>. Debes
+              cerrar la sesión mayorista antes de acceder como cliente particular.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                await logoutB2B();
+                onClose();
+              }}
+              className="w-full text-center px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+            >
+              Cerrar sesión B2B
+            </button>
           </div>
-        )}
+        ) : (
+          <>
+            {error && (
+              <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
-        <form onSubmit={handleLogin} className="space-y-4" noValidate>
+            <form onSubmit={handleLogin} className="space-y-4" noValidate>
           <div>
             <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
               Correo electrónico
@@ -179,6 +211,8 @@ export function LoginModal({ isOpen, onClose }: Props) {
             Registrarse
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

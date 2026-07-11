@@ -442,21 +442,17 @@ export default function AdminProducts() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {product.noShrinkPrice != null ? (
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                  product.noShrinkStock === 0
-                                    ? 'bg-red-100 text-red-700'
-                                    : product.noShrinkStock <= 5
-                                    ? 'bg-orange-100 text-orange-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}
-                              >
-                                {product.noShrinkStock}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )}
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                outOfStock
+                                  ? 'bg-red-100 text-red-700'
+                                  : lowStock
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-green-100 text-green-700'
+                              }`}
+                            >
+                              {product.noShrinkStock}
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600 text-xs whitespace-nowrap">
                             {product.releaseDate

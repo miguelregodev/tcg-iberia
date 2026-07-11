@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { LanguageSubmenu } from './LanguageSubmenu';
+import { useB2BSession } from '@/context/B2BSessionContext';
 
 interface HamburgerMenuProps {
   onClose: () => void;
+  /** Trigger opening the B2B modal. Provided by Navigation. */
+  onOpenB2B?: () => void;
 }
 
 type Category = 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
@@ -15,6 +18,8 @@ interface MenuItem {
   label: string;
   href?: string;
   category?: Category;
+  /** Custom action instead of navigation (e.g. open a modal). */
+  action?: 'b2b';
 }
 
 const MENU_ITEMS: MenuItem[] = [
@@ -24,6 +29,7 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'booster-bundles', label: 'Booster Bundles', category: 'booster-bundles' },
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
   { key: 'releases-calendar', label: 'Calendario de Lanzamientos', href: '/releases-calendar' },
+  { key: 'b2b', label: 'B2B', action: 'b2b' },
 ];
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -44,8 +50,9 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-export function HamburgerMenu({ onClose }: HamburgerMenuProps) {
+export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const { isB2B, customer } = useB2BSession();
 
   const toggleSubmenu = (menu: string) => {
     setExpandedMenu(expandedMenu === menu ? null : menu);
@@ -60,6 +67,55 @@ export function HamburgerMenu({ onClose }: HamburgerMenuProps) {
         {MENU_ITEMS.map((item, index) => {
           const isExpanded = expandedMenu === item.key;
           const animationStyle = { animationDelay: `${60 + index * 50}ms` };
+
+          // Action items — either open the B2B modal (anonymous) or, when
+          // already logged in as B2B, act as a shortcut to the wholesale
+          // catalog. The dedicated top-bar dropdown handles profile / orders
+          // / logout, so we keep this item lean.
+          if (item.action === 'b2b') {
+            if (isB2B) {
+              return (
+                <div key={item.key} className="animate-menu-item" style={animationStyle}>
+                  <Link
+                    href="/b2b-catalog"
+                    onClick={onClose}
+                    className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-gray-700 overflow-hidden transition-colors hover:text-red-600"
+                  >
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                    <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
+                      {item.label}
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                        {customer?.companyName ?? 'Mayorista'}
+                      </span>
+                    </span>
+                  </Link>
+                </div>
+              );
+            }
+
+            return (
+              <div key={item.key} className="animate-menu-item" style={animationStyle}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenB2B?.();
+                  }}
+                  className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-gray-700 overflow-hidden transition-colors hover:text-red-600"
+                >
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                  <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
+                    {item.label}
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                      Mayorista
+                    </span>
+                  </span>
+                </button>
+              </div>
+            );
+          }
 
           if (item.href) {
             return (
