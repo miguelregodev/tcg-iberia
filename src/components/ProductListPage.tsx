@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Product } from '@/types';
 import { ProductGridInfinite } from './ProductGridInfinite';
 import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
+import { useB2BSession } from '@/context/B2BSessionContext';
+import { useB2BPrices } from '@/hooks/useB2BPrices';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -97,6 +99,27 @@ export function ProductListPage({
     });
   }, [productType, title, language]);
 
+  // ── B2B catalog filter ────────────────────────────────────────────────
+  //     Wholesale customers only see products that have at least one B2B
+  //     price defined (SHRINK or NO_SHRINK). The public serializer strips
+  //     the b2b* fields so we fetch them via `/api/b2b/prices` — same batched
+  //     endpoint used to swap in prices on ProductCard.
+  const { isB2B } = useB2BSession();
+  const b2bOverrides = useB2BPrices(isB2B ? products.map((p) => p.id) : []);
+  const visibleProducts = useMemo(() => {
+    if (!isB2B) return products;
+    return products.filter((p) => {
+      const o = b2bOverrides.get(p.id);
+      const hasShrink = !!(o?.b2bPrice && o.b2bPrice > 0);
+      const hasNoShrink = !!(o?.b2bPriceNoShrink && o.b2bPriceNoShrink > 0);
+      return hasShrink || hasNoShrink;
+    });
+  }, [isB2B, products, b2bOverrides]);
+
+  // Wait for the overrides to arrive before showing "empty" — otherwise the
+  // page would flicker "no products" for B2B users on first render.
+  const b2bLoading = isB2B && b2bOverrides.size === 0 && products.length > 0;
+
   useEffect(() => {
     if (loading) return;
 
@@ -104,19 +127,19 @@ export function ProductListPage({
       category: productType,
       collection: title,
       language: language ?? 'ALL',
-      results: products.length,
+      results: visibleProducts.length,
     });
 
     trackProductSearch({
       query: productType,
       category: productType,
       language: language ?? 'ALL',
-      results: products.length,
+      results: visibleProducts.length,
     });
-  }, [loading, productType, title, language, products.length]);
+  }, [loading, productType, title, language, visibleProducts.length]);
 
   const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
-    total: products.length,
+    total: visibleProducts.length,
   });
 
   // Build language-pill href, preserving the current path.
@@ -207,7 +230,7 @@ export function ProductListPage({
             </div>
           )}
 
-          {loading ? (
+          {loading || b2bLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {[...Array(8)].map((_, i) => (
                 <div
@@ -220,16 +243,18 @@ export function ProductListPage({
                 </div>
               ))}
             </div>
-          ) : products.length === 0 ? (
+          ) : visibleProducts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
               <div className="text-5xl mb-4">📦</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">
                 No hay productos disponibles
               </p>
               <p className="text-gray-500 mb-6">
-                {language
-                  ? `No tenemos productos en ${LANGUAGE_LABELS[language]} para esta categoría ahora mismo.`
-                  : 'No hemos encontrado productos en esta categoría ahora mismo.'}
+                {isB2B
+                  ? 'No hay productos con tarifas mayoristas para esta categoría todavía. Contacta con sales@tcgiberia.com para más información.'
+                  : language
+                    ? `No tenemos productos en ${LANGUAGE_LABELS[language]} para esta categoría ahora mismo.`
+                    : 'No hemos encontrado productos en esta categoría ahora mismo.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {language && (
@@ -247,7 +272,7 @@ export function ProductListPage({
             </div>
           ) : (
             <ProductGridInfinite
-              products={products}
+              products={visibleProducts}
               visibleCount={visibleCount}
               sentinelRef={sentinelRef}
               hasMore={hasMore}

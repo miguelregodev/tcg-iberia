@@ -44,6 +44,16 @@ export async function POST(request: NextRequest) {
         price: parseFloat(body.price),
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
         noShrinkPrice: body.noShrinkPrice ? parseFloat(body.noShrinkPrice) : null,
+        b2bPrice:
+          body.b2bPrice !== undefined && body.b2bPrice !== null && body.b2bPrice !== ''
+            ? parseFloat(body.b2bPrice)
+            : null,
+        b2bPriceNoShrink:
+          body.b2bPriceNoShrink !== undefined &&
+          body.b2bPriceNoShrink !== null &&
+          body.b2bPriceNoShrink !== ''
+            ? parseFloat(body.b2bPriceNoShrink)
+            : null,
         notes: body.notes || null,
         type: body.type || null,
         releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,

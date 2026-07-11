@@ -90,6 +90,12 @@ export function serializePublicProduct(
       ? Number(product.discountPercentage)
       : null,
     noShrinkPrice: product.noShrinkPrice ? Number(product.noShrinkPrice) : null,
+    // B2B pricing is intentionally NOT exposed by the public serializer to
+    // avoid leaking wholesale rates to anonymous visitors. Consumers that
+    // need the wholesale prices should call `/api/b2b/prices?ids=…` from
+    // an authenticated B2B session — see `src/lib/b2b/prices.ts`.
+    b2bPrice: null,
+    b2bPriceNoShrink: null,
     notes: product.notes,
     type: product.type,
     releaseDate: inventoryState.releaseDate,

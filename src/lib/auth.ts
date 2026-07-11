@@ -3,7 +3,10 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import * as Sentry from '@sentry/nextjs';
+import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
+import { B2B_SESSION_COOKIE } from '@/lib/b2b/session';
+import { hashToken } from '@/lib/b2b/tokens';
 
 /**
  * Absolute lifetime of a user session, in seconds.
@@ -43,6 +46,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // ── Mutual exclusion with the B2B portal ─────────────────────────
+        //    Refuse the customer login while a valid B2B session cookie
+        //    exists on the request. The client-side LoginModal shows a
+        //    friendly message; this is the authoritative check.
+        try {
+          const store = await cookies();
+          const raw = store.get(B2B_SESSION_COOKIE)?.value;
+          if (raw) {
+            const active = await db.b2bSession.findUnique({
+              where: { tokenHash: hashToken(raw) },
+              select: { expiresAt: true },
+            });
+            if (active && active.expiresAt.getTime() > Date.now()) {
+              // Encode a signal into the thrown error message so the client
+              // can distinguish this case from ordinary invalid-credential
+              // failures. NextAuth CredentialsSignin errors surface the
+              // message as `error` on the client.
+              throw new Error('b2b_session_active');
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message === 'b2b_session_active') throw err;
+          // Any other failure here (e.g. cookie API unavailable in a test
+          // context) is non-fatal — fall through to the regular login flow.
+        }
 
         try {
           const user = await db.user.findUnique({

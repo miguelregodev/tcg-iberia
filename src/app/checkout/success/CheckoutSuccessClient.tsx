@@ -226,26 +226,26 @@ return (
                 {/* Order Total */}
                 <div className="border-t border-gray-200 pt-6 bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">Importe:</span>
-                    <span className="text-2xl font-bold text-gray-600">
+                    <span className="text-sm font-bold text-gray-900">Importe:</span>
+                    <span className="text-base font-bold text-gray-600">
                       {(sessionData.totalAmount / 1.21).toFixed(2)}€
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">IVA:</span>
-                    <span className="text-2xl font-bold text-gray-600">
+                    <span className="text-sm font-bold text-gray-900">IVA:</span>
+                    <span className="text-base font-bold text-gray-600">
                       {(sessionData.totalAmount - (sessionData.totalAmount / 1.21)).toFixed(2)}€
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">Envío:</span>
-                    <span className="text-2xl font-bold text-gray-600">
+                    <span className="text-sm font-bold text-gray-900">Envío:</span>
+                    <span className="text-base font-bold text-gray-600">
                       Gratis
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">Total:</span>
-                    <span className="text-3xl font-bold text-gray-600">
+                    <span className="text-sm font-bold text-gray-900">Total:</span>
+                    <span className="text-xl font-bold text-gray-600">
                       {sessionData.totalAmount.toFixed(2)}€
                     </span>
                   </div>

@@ -87,6 +87,8 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
     price: seed?.price ?? '',
     discountPercentage: seed?.discountPercentage ?? '',
     noShrinkPrice: seed?.noShrinkPrice ?? '',
+    b2bPrice: seed?.b2bPrice ?? '',
+    b2bPriceNoShrink: seed?.b2bPriceNoShrink ?? '',
     noShrinkStock: seed?.noShrinkStock ?? 0,
     notes: seed?.notes || '',
     type: seed?.type || '',
@@ -196,7 +198,15 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
             formData.noShrinkPrice === '' || formData.noShrinkPrice === null
               ? null
               : parseFloat(String(formData.noShrinkPrice)),
-          noShrinkStock: formData.noShrinkPrice ? parseInt(String(formData.noShrinkStock), 10) || 0 : 0,
+          noShrinkStock: parseInt(String(formData.noShrinkStock), 10),
+          b2bPrice:
+            formData.b2bPrice === '' || formData.b2bPrice === null
+              ? null
+              : parseFloat(String(formData.b2bPrice)),
+          b2bPriceNoShrink:
+            formData.b2bPriceNoShrink === '' || formData.b2bPriceNoShrink === null
+              ? null
+              : parseFloat(String(formData.b2bPriceNoShrink)),
           notes: formData.notes || null,
           type: formData.type || null,
           releaseDate: formData.releaseDate || null,
@@ -404,6 +414,19 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                     </span>
                   </div>
                 </Field>
+                <Field label="Stock con plástico" required>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="0"
+                    required
+                    className={inputClass}
+                    disabled={loading}
+                  />
+                </Field>
               </div>
 
               {previewFinalPrice !== null &&
@@ -419,11 +442,11 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                 )}
 
               <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Stock con plástico" required>
+                <Field label="Stock sin plástico">
                   <input
                     type="number"
-                    name="stock"
-                    value={formData.stock}
+                    name="noShrinkStock"
+                    value={formData.noShrinkStock}
                     onChange={handleChange}
                     min="0"
                     placeholder="0"
@@ -463,6 +486,56 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                   />
                 </Field>
               )}
+            </FormSection>
+
+            <FormSection
+              title="Precios B2B (mayorista)"
+              description="Precios que verán únicamente los clientes B2B activos. Deja el campo vacío para ocultar el producto a mayoristas para esa variante."
+            >
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field
+                  label="Precio B2B con plástico (€)"
+                  hint="Opcional. Solo visible para cuentas B2B activas."
+                >
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                      €
+                    </span>
+                    <input
+                      type="number"
+                      name="b2bPrice"
+                      value={formData.b2bPrice}
+                      onChange={handleChange}
+                      step="0.01"
+                      min="0"
+                      placeholder="Opcional"
+                      className={inputClass + ' pl-7'}
+                      disabled={loading}
+                    />
+                  </div>
+                </Field>
+                <Field
+                  label="Precio B2B sin plástico (€)"
+                  hint="Opcional. Solo visible cuando el producto tiene variante sin plástico."
+                >
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                      €
+                    </span>
+                    <input
+                      type="number"
+                      name="b2bPriceNoShrink"
+                      value={formData.b2bPriceNoShrink}
+                      onChange={handleChange}
+                      step="0.01"
+                      min="0"
+                      placeholder="Opcional"
+                      className={inputClass + ' pl-7'}
+                      disabled={loading}
+                    />
+                  </div>
+                </Field>
+              </div>
             </FormSection>
 
             <FormSection

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Product } from '@/types';
-import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } from '@/lib/products/state';
+import { formatReleaseDate, getProductInventoryState } from '@/lib/products/state';
+import { ProductPriceDisplay } from './ProductPriceDisplay';
+import { InventoryStatusLabel } from './InventoryStatusLabel';
 
 function getLanguageFlag(language: string): { path: string; name: string } {
   const flags: Record<string, { path: string; name: string }> = {
@@ -45,20 +47,12 @@ export function ProductCard({ product }: { product: Product }) {
         </h3>
         
         <div className="mb-3">
-          {product.discountPercentage ? (
-            <div className="flex items-center gap-2">
-              <p className="text-black font-bold text-lg">
-                {(product.price * (1 - product.discountPercentage / 100)).toFixed(2)}€
-              </p>
-              <p className="text-sm text-gray-400 line-through">
-                {Number(product.price).toFixed(2)}€
-              </p>
-            </div>
-          ) : (
-            <p className="text-black font-bold text-lg">
-              {Number(product.price).toFixed(2)}€
-            </p>
-          )}
+          <ProductPriceDisplay
+            productId={product.id}
+            variant="SHRINK"
+            publicPrice={Number(product.price)}
+            discountPercentage={product.discountPercentage}
+          />
         </div>
         
         <p className="text-sm text-gray-500 mb-4 line-clamp-2">
@@ -73,17 +67,7 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
           
           <div className="flex justify-between items-center">
-            <span className={`text-sm font-semibold ${
-              inventoryState.status === 'preorder'
-                ? 'text-blue-700'
-                : inventoryState.status === 'available'
-                ? 'text-green-600'
-                : inventoryState.status === 'low_stock'
-                ? 'text-orange-600'
-                : 'text-red-600'
-            }`}>
-              {getProductStatusLabel(inventoryState)}
-            </span>
+            <InventoryStatusLabel inventoryState={inventoryState} />
           </div>
         </div>
       </div>

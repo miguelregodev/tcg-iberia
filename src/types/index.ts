@@ -8,6 +8,10 @@ export type Product = {
   price: number;
   discountPercentage: number | null;
   noShrinkPrice: number | null;
+  /** Optional wholesale (B2B) price for the SHRINK variant. */
+  b2bPrice: number | null;
+  /** Optional wholesale (B2B) price for the NO_SHRINK variant. */
+  b2bPriceNoShrink: number | null;
   notes: string | null;
   type: string | null;
   releaseDate: string | null;

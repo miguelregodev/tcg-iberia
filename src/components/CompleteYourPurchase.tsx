@@ -101,11 +101,11 @@ function SuggestionCard({ product }: { product: Product }) {
             </p>
           ) : null}
           <div className="flex items-baseline gap-2 h-7">
-            <span className="text-lg font-bold text-black">
+            <span className="text-sm font-bold text-black">
               {finalPrice.toFixed(2)}€
             </span>
             {product.discountPercentage ? (
-              <span className="text-xs text-gray-400 line-through">
+              <span className="text-[10px] text-gray-400 line-through">
                 {Number(product.price).toFixed(2)}€
               </span>
             ) : null}
