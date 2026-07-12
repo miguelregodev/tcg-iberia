@@ -120,10 +120,11 @@ function buildVariantBreakdown(eurCost: number, marginPercent: number): VariantP
   const taxInclusiveBase = eurCost * COST_MARGIN_FACTOR * VAT_FACTOR;
   const raw = taxInclusiveBase * (1 + marginPercent / 100);
   const finalPrice = snapToRetailPrice(raw);
+  const benefit = Math.max(0, (finalPrice / VAT_FACTOR) - (taxInclusiveBase / VAT_FACTOR) - SHIPPING_COST_PER_BOX);
 
   return {
     finalPrice,
-    benefit: Math.max(0, finalPrice - eurCost),
+    benefit,
     marginPercent,
     marginComponents: {
       costMarginPercent: COST_MARGIN_PERCENT,
@@ -164,6 +165,7 @@ const COST_MARGIN_FACTOR = 1.027;
 /** 21% VAT applied after the cost margin. */
 const VAT_PERCENT = 21;
 const VAT_FACTOR = 1.21;
+const SHIPPING_COST_PER_BOX = 3.5
 
 /**
  * Compute the suggested selling price given a EUR cost and a profit margin percentage.
