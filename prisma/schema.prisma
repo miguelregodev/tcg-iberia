@@ -48,6 +48,22 @@ enum ProductVariant {
   NO_SHRINK
 }
 
+enum PaymentProvider {
+  REDSYS
+  STRIPE
+  PAYPAL
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
 /// AnnouncementBanner model stores rotating announcement messages shown site-wide below the navigation.
 /// Administrators manage banners from the Admin Panel (/admin/banners).
 /// Only banners with enabled=true are served to the storefront.
@@ -626,4 +642,24 @@ model B2bOrder {
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
+}
+
+model Payment {
+  id                    String            @id @default(cuid())
+  orderNumber           String            @unique
+  provider              PaymentProvider
+  status                PaymentStatus
+  amount                Decimal           @db.Decimal(12,2)
+  customerData          Json
+  items                 Json
+  transactionId         String?           @db.VarChar(64)
+  authorizationCode     String?           @db.VarChar(32)
+  createdAt             DateTime          @default(now())
+  paidAt                DateTime?
+  updatedAt             DateTime          @updatedAt
+  
+  @@index([status])
+  @@index([provider])
+  @@index([createdAt])
+  @@index([paidAt])
 }
