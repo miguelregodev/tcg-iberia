@@ -55,6 +55,28 @@ interface Notification {
   message: string;
 }
 
+/**
+ * Mirrors `SupplierPriceUpdateReport` from
+ * `@/lib/price-import/update-supplier-prices` (kept as a local, server-agnostic
+ * type so the client bundle doesn't need to import Prisma-backed server code).
+ *
+ * The sync only imports prices into history and stages `items` for review —
+ * it never changes catalog prices on its own. `items` reuses the exact same
+ * shape as the Google Sheets import so it drops straight into the existing
+ * review table / price modal / create-product flow below.
+ */
+interface SupplierSyncReport {
+  processedRows: number;
+  items: ImportedRow[];
+  skippedProducts: { product: string; reason: string }[];
+  ignoredCategories: number;
+  errors: { product: string; message: string }[];
+  exchangeRate: number;
+  exchangeRateSource: string;
+  historyResults: { key: string; isHistoricalMin: boolean }[];
+  durationMs: number;
+}
+
 // ── Formatters ────────────────────────────────────────────────────────────────
 
 const eur = new Intl.NumberFormat('es-ES', {
@@ -93,9 +115,7 @@ function StatusBadge({ row }: { row: TableRow }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function PriceImportPage() {
-  const [sheetsUrl, setSheetsUrl] = useState(
-    process.env.NEXT_PUBLIC_PRICE_IMPORT_SHEET_URL ?? ''
-  );
+  const [sheetsUrl, setSheetsUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -111,6 +131,11 @@ export default function PriceImportPage() {
 
   const [savingMappingKey, setSavingMappingKey] = useState<string | null>(null);
   const initialImportTriggered = useRef(false);
+
+  // ── Automated supplier JSON sync (same use case the Cron job calls) ───────
+  const [supplierSyncLoading, setSupplierSyncLoading] = useState(false);
+  const [supplierSyncReport, setSupplierSyncReport] = useState<SupplierSyncReport | null>(null);
+  const [supplierSyncError, setSupplierSyncError] = useState<string | null>(null);
 
   /**
    * Keys `${productId}:${variant}` for which the just-imported purchase price
@@ -195,6 +220,63 @@ export default function PriceImportPage() {
     },
     []
   );
+
+  // ── Supplier JSON sync handler ──────────────────────────────────────────────
+  // Orchestration only: matching + PriceHistory persistence happen server-side
+  // in `runUpdateSupplierPricesUseCase()` (same service the Vercel Cron job
+  // calls). It NEVER changes catalog prices — it only stages `items` into the
+  // review table below so the admin can confirm margins per product (matched)
+  // or create a new product (unmatched), exactly like the Sheets import.
+  const handleSupplierSync = useCallback(async () => {
+    setSupplierSyncLoading(true);
+    setSupplierSyncError(null);
+    try {
+      const res = await fetch('/api/admin/price-import/supplier-sync', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error ?? 'No se pudo sincronizar los precios del proveedor.');
+      }
+
+      const report = data as SupplierSyncReport;
+      setSupplierSyncReport(report);
+
+      setExchangeRate(report.exchangeRate);
+      setExchangeRateSource(report.exchangeRateSource);
+
+      const tableRows: TableRow[] = report.items.map((item, index) => ({
+        ...item,
+        key: `supplier-${index}`,
+        priceUpdated: false,
+        updatedPrice: null,
+      }));
+      setRows(tableRows);
+
+      const mins = new Set(
+        report.historyResults.filter((r) => r.isHistoricalMin).map((r) => r.key)
+      );
+      setHistoricalMinKeys(mins);
+      setHistoryRefreshKey((k) => k + 1);
+
+      const matchedCount = tableRows.filter((r) => r.matchedProductId).length;
+      if (report.errors.length > 0) {
+        pushNotification(
+          'error',
+          `Histórico importado con ${report.errors.length} error(es). Revisa los ${tableRows.length} productos (${matchedCount} coincidentes).`
+        );
+      } else {
+        pushNotification(
+          'success',
+          `Histórico importado: ${tableRows.length} productos del proveedor listos para revisar (${matchedCount} coincidentes).`
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error desconocido durante la sincronización.';
+      setSupplierSyncError(message);
+      pushNotification('error', message);
+    } finally {
+      setSupplierSyncLoading(false);
+    }
+  }, [pushNotification]);
 
   // ── Import handler ──────────────────────────────────────────────────────────
   const handleImport = async () => {
@@ -512,6 +594,64 @@ export default function PriceImportPage() {
                 <strong className="text-gray-700">1 JPY = {exchangeRate.toFixed(6)} EUR</strong>
               </span>
               <span>Fuente: {exchangeRateSource}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Automated supplier JSON sync — same use case run by the Vercel Cron job */}
+        <div className="rounded-2xl bg-white border border-gray-200 p-6 mb-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-gray-800">Actualizar precios (proveedor JSON)</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Descarga el feed de <code>SUPPLIER_PRICE_URL</code>, procesa la categoría "Pokemon Box" y
+                guarda el histórico de precios. No modifica precios del catálogo automáticamente — revisa
+                y confirma cada producto abajo, igual que con la importación manual. El mismo servicio se
+                ejecuta automáticamente cada 3 horas vía Vercel Cron (solo histórico).
+              </p>
+            </div>
+            <button
+              onClick={handleSupplierSync}
+              disabled={supplierSyncLoading}
+              className="btn btn-primary text-sm whitespace-nowrap"
+            >
+              {supplierSyncLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  Sincronizando…
+                </span>
+              ) : (
+                'Actualizar precios'
+              )}
+            </button>
+          </div>
+
+          {supplierSyncError && (
+            <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {supplierSyncError}
+            </div>
+          )}
+
+          {supplierSyncReport && (
+            <div className="mt-3 text-xs text-gray-500">
+              <p>
+                Categorías ignoradas: {supplierSyncReport.ignoredCategories} · Omitidos:{' '}
+                {supplierSyncReport.skippedProducts.length} · Errores: {supplierSyncReport.errors.length} ·
+                Duración: {(supplierSyncReport.durationMs / 1000).toFixed(1)}s
+              </p>
+
+              {supplierSyncReport.errors.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer font-medium text-red-700">
+                    Ver errores ({supplierSyncReport.errors.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1 list-disc list-inside">
+                    {supplierSyncReport.errors.map((e, i) => (
+                      <li key={i}>{e.product}: {e.message}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </div>
           )}
         </div>
