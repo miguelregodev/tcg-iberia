@@ -49,7 +49,7 @@ export default function AvisoLegalPage() {
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Disclaimers</h2>
                 <p className="text-text-secondary">
-                  TCG Iberia no es responsable por daños indirectos, incidentales o consecuentes derivados del uso de esta plataforma. Los productos se venden "tal como están" sin garantías adicionales.
+                  TCG Iberia no es responsable por daños indirectos, incidentales o consecuentes derivados del uso de esta plataforma. Los productos se venden &quot;tal como están&quot; sin garantías adicionales.
                 </p>
               </section>
             </div>
