@@ -17,6 +17,10 @@ interface FavoriteProduct {
   stock: number;
   type: string | null;
   visible: boolean;
+  weightGrams: number | null;
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
 }
 
 interface Favorite {
@@ -76,6 +80,10 @@ export default function FavoritosPage() {
       inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'available',
       liveOpeningPrice: null,
       b2bPrice: null,
+      weightGrams: product.weightGrams,
+      lengthCm: product.lengthCm,
+      widthCm: product.widthCm,
+      heightCm: product.heightCm,
       createdAt: '',
       updatedAt: '',
     };
