@@ -147,7 +147,17 @@ export async function POST(request: NextRequest) {
     );
 
     // Use calculated shipping cost, default to standard if calculation unavailable
-    const shippingCost = shippingResult.available ? shippingResult.price || 0 : SHIPPING_CONFIG.standardShippingCost;
+    // But always respect free shipping threshold
+    let shippingCost: number;
+    if (shippingResult.available) {
+      shippingCost = shippingResult.price || 0;
+    } else {
+      // Shipping calculation unavailable (e.g., missing dimensions)
+      // Check if order qualifies for free shipping before using fallback cost
+      const qualifiesForFreeShipping = !isCanaryIslandsPostalCode(customerData.shippingPostalCode) && 
+                                       subtotal >= SHIPPING_CONFIG.freeShippingThreshold;
+      shippingCost = qualifiesForFreeShipping ? 0 : SHIPPING_CONFIG.standardShippingCost;
+    }
     const totalAmount = subtotal + shippingCost;
     const totalAmountCents = Math.round(totalAmount * 100);
 
