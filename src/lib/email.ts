@@ -538,21 +538,33 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
   }
 
   const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
-  const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'sales@tcgiberia.com').trim().toLowerCase();
+  const customerEmail = (payload.email || '').trim().toLowerCase();
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(customerEmail) || !emailRegex.test(adminEmail)) {
+    console.error(
+      `[email] Invalid email format for order ${payload.orderNumber}\n` +
+      `  → Customer: ${customerEmail}\n` +
+      `  → Admin: ${adminEmail}`
+    );
+    return;
+  }
 
   const customerSubject = `Tu pedido ${payload.orderNumber} - TCG Iberia`;
-  const adminSubject = `Nuevo pedido ${payload.orderNumber} - ${payload.fullName}`;
+  const adminSubject = `Nuevo pedido ${payload.orderNumber} - ${escapeHtml(payload.fullName)}`;
 
   console.log(
     `[email] Sending order confirmation emails for order ${payload.orderNumber}\n` +
-    `  → Customer: ${payload.email}\n` +
+    `  → Customer: ${customerEmail}\n` +
     `  → Admin: ${adminEmail}`
   );
 
   const tasks: Promise<unknown>[] = [
     transporter.sendMail({
       from,
-      to: payload.email,
+      to: customerEmail,
       subject: customerSubject,
       html: buildCustomerHtml(payload),
       text: buildCustomerText(payload),
@@ -560,7 +572,7 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
     transporter.sendMail({
       from,
       to: adminEmail,
-      replyTo: payload.email,
+      replyTo: customerEmail,
       subject: adminSubject,
       html: buildAdminHtml(payload),
       text: buildAdminText(payload),
@@ -571,7 +583,7 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
       const emailType = i === 0 ? 'customer' : 'admin';
-      const recipient = i === 0 ? payload.email : adminEmail;
+      const recipient = i === 0 ? customerEmail : adminEmail;
       console.error(
         `[email] Failed to send ${emailType} email to ${recipient}\n` +
         `Order: ${payload.orderNumber}\n` +
@@ -579,7 +591,7 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
       );
     } else {
       const emailType = i === 0 ? 'customer' : 'admin';
-      const recipient = i === 0 ? payload.email : adminEmail;
+      const recipient = i === 0 ? customerEmail : adminEmail;
       console.log(`[email] ✓ ${emailType} email sent to ${recipient}`);
     }
   });
@@ -596,21 +608,32 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
   }
 
   const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const toEmail = (payload.to || '').trim().toLowerCase();
 
-  console.log(`[email] Sending stock alert email to ${payload.to} for product: ${payload.product.name}`);
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(toEmail)) {
+    console.error(
+      `[email] Invalid email format for stock alert: ${toEmail}\n` +
+      `Product: ${payload.product.name}`
+    );
+    return;
+  }
+
+  console.log(`[email] Sending stock alert email to ${toEmail} for product: ${payload.product.name}`);
 
   try {
     await transporter.sendMail({
       from,
-      to: payload.to,
+      to: toEmail,
       subject: '¡Tu producto vuelve a estar disponible!',
       html: buildStockAlertHtml(payload),
       text: buildStockAlertText(payload),
     });
-    console.log(`[email] ✓ Stock alert email sent to ${payload.to}`);
+    console.log(`[email] ✓ Stock alert email sent to ${toEmail}`);
   } catch (error) {
     console.error(
-      `[email] Failed to send stock alert email to ${payload.to}\n` +
+      `[email] Failed to send stock alert email to ${toEmail}\n` +
       `Product: ${payload.product.name}\n` +
       `Error: ${String(error)}`
     );
@@ -713,21 +736,32 @@ export async function sendShippingNotificationEmail(payload: ShippingNotificatio
   }
 
   const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const toEmail = (payload.email || '').trim().toLowerCase();
 
-  console.log(`[email] Sending shipping notification email to ${payload.email} for order ${payload.orderNumber}`);
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(toEmail)) {
+    console.error(
+      `[email] Invalid email format for shipping notification: ${toEmail}\n` +
+      `Order: ${payload.orderNumber}`
+    );
+    return;
+  }
+
+  console.log(`[email] Sending shipping notification email to ${toEmail} for order ${payload.orderNumber}`);
 
   try {
     await transporter.sendMail({
       from,
-      to: payload.email,
+      to: toEmail,
       subject: `Tu pedido ${payload.orderNumber} está en camino - TCG Iberia`,
       html: buildShippingNotificationHtml(payload),
       text: buildShippingNotificationText(payload),
     });
-    console.log(`[email] ✓ Shipping notification email sent to ${payload.email}`);
+    console.log(`[email] ✓ Shipping notification email sent to ${toEmail}`);
   } catch (error) {
     console.error(
-      `[email] Failed to send shipping notification email to ${payload.email}\n` +
+      `[email] Failed to send shipping notification email to ${toEmail}\n` +
       `Order: ${payload.orderNumber}\n` +
       `Error: ${String(error)}`
     );
