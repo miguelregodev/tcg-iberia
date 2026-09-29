@@ -4,9 +4,6 @@
   - A unique constraint covering the columns `[redsysOrderId]` on the table `Order` will be added. If there are existing duplicate values, this will fail.
 
 */
--- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PENDING_PAYMENT', 'PAID', 'PAYMENT_FAILED', 'CANCELLED');
-
 -- AlterTable
 ALTER TABLE "Order" ADD COLUMN     "paymentAmount" DECIMAL(12,2),
 ADD COLUMN     "paymentCurrency" VARCHAR(3),
