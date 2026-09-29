@@ -5,7 +5,7 @@
 
 */
 -- DropEnum (if it exists with old values)
-DROP TYPE IF EXISTS "PaymentStatus" CASCADE;
+DROP TYPE IF EXISTS "PaymentStatus" CASCADE; 
 
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING_PAYMENT', 'PAID', 'PAYMENT_FAILED', 'CANCELLED');
