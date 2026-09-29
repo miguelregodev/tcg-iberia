@@ -20,6 +20,10 @@ export const publicProductSelect = {
   language: true,
   priority: true,
   visible: true,
+  weightGrams: true,
+  lengthCm: true,
+  widthCm: true,
+  heightCm: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ProductSelect;
@@ -49,6 +53,10 @@ type ProductCoreShape = {
   language: Product['language'];
   priority: number;
   visible: boolean;
+  weightGrams: number | null;
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -105,6 +113,10 @@ export function serializePublicProduct(
     canPurchase: inventoryState.canPurchase,
     isPreorder: inventoryState.isPreorder,
     inventoryStatus: inventoryState.status,
+    weightGrams: product.weightGrams,
+    lengthCm: product.lengthCm,
+    widthCm: product.widthCm,
+    heightCm: product.heightCm,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
     hitCards: product.hitCards?.map(serializeHitCard),
