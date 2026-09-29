@@ -1,11 +1,11 @@
 -- DropIndex
-DROP INDEX "Product_description_trgm_idx";
+DROP INDEX IF EXISTS "Product_description_trgm_idx";
 
 -- DropIndex
-DROP INDEX "Product_name_trgm_idx";
+DROP INDEX IF EXISTS "Product_name_trgm_idx";
 
 -- DropIndex
-DROP INDEX "Product_visible_priority_idx";
+DROP INDEX IF EXISTS "Product_visible_priority_idx";
 
 -- AlterTable
 ALTER TABLE "Product" ADD COLUMN     "heightCm" DECIMAL(8,2),
