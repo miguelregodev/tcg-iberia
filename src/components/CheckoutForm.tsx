@@ -43,8 +43,11 @@ export function CheckoutForm() {
   useEffect(() => {
     if (!postalCodeFilled || !formData.shippingPostalCode) return;
 
-    // Check if order qualifies for free shipping based on new total price
-    if (freeShippingState.qualified) {
+    // Check if order qualifies for free shipping (not available in Canary Islands)
+    const isCanary = isCanaryIslandsPostalCode(formData.shippingPostalCode);
+    const qualifiesForFreeShipping = !isCanary && freeShippingState.qualified;
+    
+    if (qualifiesForFreeShipping) {
       setCalculatedShippingCost(0);
     } else {
       // Recalculate shipping cost based on updated items
@@ -127,11 +130,13 @@ export function CheckoutForm() {
         // Valid postal code - clear error and calculate shipping
         setPostalCodeError(null);
         setPostalCodeFilled(true);
-        setIsCanaryZone(isCanaryIslandsPostalCode(value));
+        const isCanary = isCanaryIslandsPostalCode(value);
+        setIsCanaryZone(isCanary);
         
-        // Check if order qualifies for free shipping
-        if (freeShippingState.qualified) {
-          // Order amount meets or exceeds the free shipping limit
+        // Check if order qualifies for free shipping (not available in Canary Islands)
+        const qualifiesForFreeShipping = !isCanary && freeShippingState.qualified;
+        if (qualifiesForFreeShipping) {
+          // Order amount meets or exceeds the free shipping limit AND is not Canary Islands
           setCalculatedShippingCost(0);
         } else {
           // Calculate real-time shipping cost estimate
