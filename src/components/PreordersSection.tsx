@@ -31,7 +31,7 @@ export async function PreordersSection() {
   const showCarouselDesktop = count > DESKTOP_CAROUSEL_THRESHOLD;
 
   const ProductGrid = (
-    <section className="py-12 bg-white">
+    <section className="py-12 bg-dark-bg">
       <div className="container-custom px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {serialized.map((product) => (

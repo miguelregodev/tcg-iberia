@@ -4,10 +4,10 @@
   "description": "Premium TCG/Pokémon Ecommerce Landing Page",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node node-with-legacy-provider.js next dev",
     "postinstall": "prisma generate",
-    "build": "prisma migrate deploy && next build",
-    "start": "next start",
+    "build": "prisma migrate deploy && node node-with-legacy-provider.js next build",
+    "start": "node node-with-legacy-provider.js next start",
     "lint": "next lint",
     "test": "vitest run",
     "prisma:generate": "prisma generate",

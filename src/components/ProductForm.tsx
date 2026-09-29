@@ -20,7 +20,11 @@ const PRODUCT_TYPES = [
   { value: 'Booster Box', label: 'Booster Box' },
   { value: 'Booster Bundle', label: 'Booster Bundle' },
   { value: 'Booster Pack', label: 'Booster Pack' },
+  { value: 'Elite Trainer Box', label: 'Elite Trainer Box' },
+  { value: 'Mystery', label: 'Mystery Packs' },
+  { value: 'PSA', label: 'PSA' },
   { value: 'Single Card', label: 'Carta individual' },
+  { value: 'Accesorios', label: 'Accesorios' },
 ];
 
 const LANGUAGES = [
@@ -33,19 +37,32 @@ const LANGUAGES = [
 function FormSection({
   title,
   description,
+  icon,
   children,
 }: {
   title: string;
   description?: string;
+  icon?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <header className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-        <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        {description && (
-          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
-        )}
+        <div className="flex items-center gap-3">
+          {icon && (
+            <img
+              src={icon}
+              alt=""
+              className="w-5 h-5 object-contain"
+            />
+          )}
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{title}</h3>
+            {description && (
+              <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+            )}
+          </div>
+        </div>
       </header>
       <div className="p-6 space-y-5">{children}</div>
     </section>
@@ -84,20 +101,22 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
   const [formData, setFormData] = useState({
     name: seed?.name || '',
     description: seed?.description || '',
-    price: seed?.price ?? '',
-    discountPercentage: seed?.discountPercentage ?? '',
-    noShrinkPrice: seed?.noShrinkPrice ?? '',
-    b2bPrice: seed?.b2bPrice ?? '',
-    b2bPriceNoShrink: seed?.b2bPriceNoShrink ?? '',
-    noShrinkStock: seed?.noShrinkStock ?? 0,
+    price: seed?.price ? String(seed.price) : '',
+    discountPercentage: seed?.discountPercentage ? String(seed.discountPercentage) : '',
+    liveOpeningPrice: seed?.liveOpeningPrice ? String(seed.liveOpeningPrice) : '',
+    b2bPrice: seed?.b2bPrice ? String(seed.b2bPrice) : '',
     notes: seed?.notes || '',
     type: seed?.type || '',
     releaseDate: seed?.releaseDate ? seed.releaseDate.slice(0, 10) : '',
-    stock: seed?.stock ?? '',
+    stock: seed?.stock ? String(seed.stock) : '',
     imageUrl: seed?.imageUrl || '',
     language: seed?.language || 'ENGLISH',
     priority: seed?.priority ?? 999,
     visible: seed?.visible ?? true,
+    weightGrams: seed?.weightGrams ? String(seed.weightGrams) : '',
+    lengthCm: seed?.lengthCm ? String(seed.lengthCm) : '',
+    widthCm: seed?.widthCm ? String(seed.widthCm) : '',
+    heightCm: seed?.heightCm ? String(seed.heightCm) : '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,19 +213,14 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
             formData.discountPercentage === null
               ? null
               : parseFloat(String(formData.discountPercentage)),
-          noShrinkPrice:
-            formData.noShrinkPrice === '' || formData.noShrinkPrice === null
+          liveOpeningPrice:
+            formData.liveOpeningPrice === '' || formData.liveOpeningPrice === null
               ? null
-              : parseFloat(String(formData.noShrinkPrice)),
-          noShrinkStock: parseInt(String(formData.noShrinkStock), 10),
+              : parseFloat(String(formData.liveOpeningPrice)),
           b2bPrice:
             formData.b2bPrice === '' || formData.b2bPrice === null
               ? null
               : parseFloat(String(formData.b2bPrice)),
-          b2bPriceNoShrink:
-            formData.b2bPriceNoShrink === '' || formData.b2bPriceNoShrink === null
-              ? null
-              : parseFloat(String(formData.b2bPriceNoShrink)),
           notes: formData.notes || null,
           type: formData.type || null,
           releaseDate: formData.releaseDate || null,
@@ -215,6 +229,22 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
           language: formData.language,
           priority: parseInt(String(formData.priority), 10) || 999,
           visible: formData.visible,
+          weightGrams:
+            formData.weightGrams === '' || formData.weightGrams === null
+              ? null
+              : parseInt(String(formData.weightGrams), 10),
+          lengthCm:
+            formData.lengthCm === '' || formData.lengthCm === null
+              ? null
+              : parseFloat(String(formData.lengthCm)),
+          widthCm:
+            formData.widthCm === '' || formData.widthCm === null
+              ? null
+              : parseFloat(String(formData.widthCm)),
+          heightCm:
+            formData.heightCm === '' || formData.heightCm === null
+              ? null
+              : parseFloat(String(formData.heightCm)),
         }),
       });
 
@@ -274,6 +304,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
             <FormSection
               title="Información básica"
               description="Datos principales del producto que aparecerán en el catálogo."
+              icon="/images/logo.png"
             >
               <Field label="Nombre del producto" required>
                 <input
@@ -353,9 +384,10 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
             <FormSection
               title="Precio e inventario"
               description="Configura el precio público, descuentos y disponibilidad."
+              icon="/images/shopping-bag.png"
             >
               <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Precio con plástico (€)" required>
+                <Field label="Precio Sellado (€)" required>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                       €
@@ -374,15 +406,15 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                     />
                   </div>
                 </Field>
-                <Field label="Precio sin plástico (€)" hint="Opcional. Permite selección de variante en detalle de producto.">
+                <Field label="Precio Apertura en Directo (€)" hint="Opcional. Se abrirá en directo (TikTok) a un precio más bajo que el Sellado.">
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                       €
                     </span>
                     <input
                       type="number"
-                      name="noShrinkPrice"
-                      value={formData.noShrinkPrice}
+                      name="liveOpeningPrice"
+                      value={formData.liveOpeningPrice}
                       onChange={handleChange}
                       step="0.01"
                       min="0"
@@ -414,7 +446,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                     </span>
                   </div>
                 </Field>
-                <Field label="Stock con plástico" required>
+                <Field label="Stock" required>
                   <input
                     type="number"
                     name="stock"
@@ -442,19 +474,6 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                 )}
 
               <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Stock sin plástico">
-                  <input
-                    type="number"
-                    name="noShrinkStock"
-                    value={formData.noShrinkStock}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="0"
-                    required
-                    className={inputClass}
-                    disabled={loading}
-                  />
-                </Field>
                 <Field
                   label="Prioridad"
                   hint="Menor número = aparece antes. Por defecto 999."
@@ -471,76 +490,40 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                   />
                 </Field>
               </div>
-
-              {formData.noShrinkPrice !== '' && formData.noShrinkPrice !== null && (
-                <Field label="Stock sin plástico" hint="Unidades disponibles del formato sin plástico.">
-                  <input
-                    type="number"
-                    name="noShrinkStock"
-                    value={formData.noShrinkStock}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="0"
-                    className={inputClass}
-                    disabled={loading}
-                  />
-                </Field>
-              )}
             </FormSection>
 
             <FormSection
-              title="Precios B2B (mayorista)"
-              description="Precios que verán únicamente los clientes B2B activos. Deja el campo vacío para ocultar el producto a mayoristas para esa variante."
+              title="Precio B2B (mayorista)"
+              description="Precio que verán únicamente los clientes B2B activos (siempre variante Sellado). Deja el campo vacío para ocultar el producto a mayoristas."
+              icon="/images/shopping-bag.png"
             >
-              <div className="grid md:grid-cols-2 gap-4">
-                <Field
-                  label="Precio B2B con plástico (€)"
-                  hint="Opcional. Solo visible para cuentas B2B activas."
-                >
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                      €
-                    </span>
-                    <input
-                      type="number"
-                      name="b2bPrice"
-                      value={formData.b2bPrice}
-                      onChange={handleChange}
-                      step="0.01"
-                      min="0"
-                      placeholder="Opcional"
-                      className={inputClass + ' pl-7'}
-                      disabled={loading}
-                    />
-                  </div>
-                </Field>
-                <Field
-                  label="Precio B2B sin plástico (€)"
-                  hint="Opcional. Solo visible cuando el producto tiene variante sin plástico."
-                >
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                      €
-                    </span>
-                    <input
-                      type="number"
-                      name="b2bPriceNoShrink"
-                      value={formData.b2bPriceNoShrink}
-                      onChange={handleChange}
-                      step="0.01"
-                      min="0"
-                      placeholder="Opcional"
-                      className={inputClass + ' pl-7'}
-                      disabled={loading}
-                    />
-                  </div>
-                </Field>
-              </div>
+              <Field
+                label="Precio B2B (€)"
+                hint="Opcional. Solo visible para cuentas B2B activas."
+              >
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                    €
+                  </span>
+                  <input
+                    type="number"
+                    name="b2bPrice"
+                    value={formData.b2bPrice}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    placeholder="Opcional"
+                    className={inputClass + ' pl-7'}
+                    disabled={loading}
+                  />
+                </div>
+              </Field>
             </FormSection>
 
             <FormSection
               title="Detalles adicionales"
               description="Notas que aparecerán como puntos en la página del producto."
+              icon="/images/search.png"
             >
               <Field
                 label="Notas"
@@ -557,6 +540,67 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                 />
               </Field>
             </FormSection>
+
+            <FormSection
+              title="Envío y Logística"
+              description="Especifica el peso y dimensiones de una unidad para el cálculo automático de costos de envío."
+              icon="/images/add-to-cart.png"
+            >
+              <Field label="Peso (gramos)" hint="Opcional. El peso de una unidad del producto.">
+                <input
+                  type="number"
+                  name="weightGrams"
+                  value={formData.weightGrams}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="Ej.: 500"
+                  className={inputClass}
+                  disabled={loading}
+                />
+              </Field>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <Field label="Largo (cm)" hint="Opcional. Dimensión máxima.">
+                  <input
+                    type="number"
+                    name="lengthCm"
+                    value={formData.lengthCm}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Ej.: 30"
+                    className={inputClass}
+                    disabled={loading}
+                  />
+                </Field>
+                <Field label="Ancho (cm)" hint="Opcional.">
+                  <input
+                    type="number"
+                    name="widthCm"
+                    value={formData.widthCm}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Ej.: 20"
+                    className={inputClass}
+                    disabled={loading}
+                  />
+                </Field>
+                <Field label="Alto (cm)" hint="Opcional.">
+                  <input
+                    type="number"
+                    name="heightCm"
+                    value={formData.heightCm}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Ej.: 20"
+                    className={inputClass}
+                    disabled={loading}
+                  />
+                </Field>
+              </div>
+            </FormSection>
           </div>
 
           {/* Right column — image + visibility */}
@@ -564,6 +608,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
             <FormSection
               title="Imagen del producto"
               description="JPG, PNG o WebP. Máximo 5 MB."
+              icon="/images/favorite.png"
             >
               {formData.imageUrl ? (
                 <div className="space-y-3">
@@ -590,7 +635,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
               )}
             </FormSection>
 
-            <FormSection title="Visibilidad">
+            <FormSection title="Visibilidad" icon="/images/login.png">
               <label
                 htmlFor="visible"
                 className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -654,6 +699,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
         <FormSection
           title="Hit Cards"
           description="Cartas destacadas que pueden aparecer en este producto."
+          icon="/images/psa.png"
         >
           {showHitCardForm && (
             <div className="mb-4">

@@ -66,11 +66,11 @@ export function ReleaseProductModal({ product, onClose }: Props) {
 
       {/* Panel — stop propagation so clicks inside don't close */}
       <div
-        className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp"
+        className="relative bg-dark-surface border border-dark-border rounded-2xl shadow-elevated max-w-md w-full overflow-hidden animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Product image */}
-        <div className="h-64 sm:h-80 bg-gray-100 overflow-hidden">
+        <div className="h-64 sm:h-80 bg-dark-bgSecondary overflow-hidden">
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -78,7 +78,7 @@ export function ReleaseProductModal({ product, onClose }: Props) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <div className="w-full h-full flex items-center justify-center text-text-muted">
               <svg
                 className="w-12 h-12"
                 fill="none"
@@ -99,45 +99,45 @@ export function ReleaseProductModal({ product, onClose }: Props) {
 
         {/* Details */}
         <div className="p-5">
-          <h3 className="text-xl font-bold text-gray-900 mb-4 leading-snug">
+          <h3 className="text-xl font-bold text-text-primary mb-4 leading-snug">
             {product.name}
           </h3>
 
           <dl className="space-y-2 mb-5">
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Precio</dt>
+              <dt className="text-sm text-text-secondary">Precio</dt>
               <dd className="flex items-center gap-2">
                 {product.discountPercentage ? (
                   <>
-                    <span className="text-base font-semibold text-red-600">
+                    <span className="text-base font-semibold text-premium-gold">
                       {(product.price * (1 - product.discountPercentage / 100)).toFixed(2)}€
                     </span>
-                    <span className="text-sm text-gray-400 line-through">
+                    <span className="text-sm text-text-muted line-through">
                       {product.price.toFixed(2)}€
                     </span>
                   </>
                 ) : (
-                  <span className="text-base font-semibold text-red-600">
+                  <span className="text-base font-semibold text-premium-gold">
                     {product.price.toFixed(2)}€
                   </span>
                 )}
               </dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Lanzamiento</dt>
-              <dd className="text-sm font-medium text-gray-800 capitalize">
+              <dt className="text-sm text-text-secondary">Lanzamiento</dt>
+              <dd className="text-sm font-medium text-text-primary capitalize">
                 {releaseFormatted}
               </dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Idioma</dt>
+              <dt className="text-sm text-text-secondary">Idioma</dt>
               <dd className="flex items-center gap-1.5">
                 <img
                   src={flagSrc}
                   alt={languageLabel}
                   className="w-5 h-3.5 object-cover rounded-sm"
                 />
-                <span className="text-sm font-medium text-gray-800">{languageLabel}</span>
+                <span className="text-sm font-medium text-text-primary">{languageLabel}</span>
               </dd>
             </div>
           </dl>
@@ -160,9 +160,9 @@ export function ReleaseProductModal({ product, onClose }: Props) {
           aria-label="Cerrar"
           className={[
             'absolute top-3 right-3 p-1.5 rounded-full',
-            'bg-white/80 hover:bg-white',
-            'text-gray-500 hover:text-gray-900 shadow',
-            'transition-colors focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none',
+            'bg-dark-surface/80 hover:bg-dark-surface',
+            'text-text-secondary hover:text-text-primary shadow',
+            'transition-colors focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:outline-none',
           ].join(' ')}
         >
           <svg

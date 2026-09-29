@@ -25,7 +25,7 @@ export default async function EliteTrainerBoxesPage({ searchParams }: PageProps)
     <>
       <Navigation />
       <ProductListPage
-        title="elite trainer boxes"
+        title="Elite Trainer Boxes"
         productType="elite trainer box"
         language={language}
         eyebrow="Sets de entrenador"

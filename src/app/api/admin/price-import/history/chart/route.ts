@@ -1,5 +1,5 @@
 /**
- * GET /api/admin/price-import/history/chart?variant=SHRINK|NO_SHRINK
+ * GET /api/admin/price-import/history/chart?variant=SEALED|LIVE_OPENING
  *
  * Returns all historical purchase-price series for all products with the
  * given variant, grouped by product ID.
@@ -24,7 +24,7 @@ function isAuthenticated(request: NextRequest): boolean {
 }
 
 function isValidVariant(v: string): v is ProductVariant {
-  return v === 'SHRINK' || v === 'NO_SHRINK';
+  return v === 'SEALED' || v === 'LIVE_OPENING';
 }
 
 export async function GET(request: NextRequest) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   if (!isValidVariant(variant)) {
     return NextResponse.json(
-      { error: '"variant" debe ser SHRINK o NO_SHRINK.' },
+      { error: '"variant" debe ser SEALED o LIVE_OPENING.' },
       { status: 400 }
     );
   }

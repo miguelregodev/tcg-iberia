@@ -92,23 +92,23 @@ export default function B2bProfilePage() {
 
   if (sessionLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <span className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+      <main className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <span className="h-8 w-8 rounded-full border-2 border-premium-gold border-t-transparent animate-spin" />
       </main>
     );
   }
 
   if (!isB2B) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-md text-center bg-white rounded-2xl shadow p-8">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Acceso B2B requerido</h1>
-          <p className="text-sm text-gray-500 mb-4">
+      <main className="min-h-screen bg-dark-bg flex items-center justify-center px-4">
+        <div className="max-w-md text-center bg-dark-surface border border-dark-border rounded-2xl shadow-elevated p-8">
+          <h1 className="text-xl font-bold text-text-primary mb-2">Acceso B2B requerido</h1>
+          <p className="text-sm text-text-secondary mb-4">
             Debes iniciar sesión con una cuenta B2B activa para ver tu perfil mayorista.
           </p>
           <Link
             href="/"
-            className="inline-block px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+            className="inline-block btn btn-primary"
           >
             Volver al inicio
           </Link>
@@ -118,25 +118,25 @@ export default function B2bProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10">
+    <main className="min-h-screen bg-dark-bg py-10">
       <div className="container-custom px-4 max-w-3xl">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mi perfil B2B</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold text-text-primary">Mi perfil B2B</h1>
+            <p className="text-sm text-text-secondary mt-1">
               Datos registrados para tu cuenta mayorista.
             </p>
           </div>
           <div className="flex gap-2">
             <Link
               href="/mi-cuenta/b2b/pedidos"
-              className="text-sm font-medium px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="btn btn-secondary text-sm py-2"
             >
               Mis pedidos
             </Link>
             <Link
               href="/b2b-catalog"
-              className="text-sm font-medium px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              className="btn btn-primary text-sm py-2"
             >
               Ir al catálogo
             </Link>
@@ -144,23 +144,23 @@ export default function B2bProfilePage() {
         </div>
 
         {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="mb-4 p-4 rounded-lg bg-danger-bg border border-danger/30 text-danger text-sm">
             {error}
           </div>
         )}
 
         {loading && !profile && (
           <div className="flex items-center justify-center py-16">
-            <span className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+            <span className="h-8 w-8 rounded-full border-2 border-premium-gold border-t-transparent animate-spin" />
           </div>
         )}
 
         {profile && (
           <div className="space-y-4">
             {/* Company block */}
-            <section className="rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <header className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-900">Datos de la empresa</h2>
+            <section className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm">
+              <header className="px-5 py-4 border-b border-dark-border">
+                <h2 className="text-base font-semibold text-text-primary">Datos de la empresa</h2>
               </header>
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 text-sm">
                 <ProfileField label="Razón social" value={profile.companyName} />
@@ -173,9 +173,9 @@ export default function B2bProfilePage() {
             </section>
 
             {/* Contact block */}
-            <section className="rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <header className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-900">
+            <section className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm">
+              <header className="px-5 py-4 border-b border-dark-border">
+                <h2 className="text-base font-semibold text-text-primary">
                   Persona de contacto
                 </h2>
               </header>
@@ -190,9 +190,9 @@ export default function B2bProfilePage() {
             </section>
 
             {/* Address block */}
-            <section className="rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <header className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-900">Direcciones</h2>
+            <section className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm">
+              <header className="px-5 py-4 border-b border-dark-border">
+                <h2 className="text-base font-semibold text-text-primary">Direcciones</h2>
               </header>
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 text-sm">
                 <ProfileField
@@ -209,9 +209,9 @@ export default function B2bProfilePage() {
             </section>
 
             {/* Commercial block */}
-            <section className="rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <header className="px-5 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-900">Datos comerciales</h2>
+            <section className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm">
+              <header className="px-5 py-4 border-b border-dark-border">
+                <h2 className="text-base font-semibold text-text-primary">Datos comerciales</h2>
               </header>
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 text-sm">
                 <ProfileField
@@ -228,15 +228,15 @@ export default function B2bProfilePage() {
             </section>
 
             {/* Update contact card */}
-            <section className="rounded-2xl bg-red-50 border border-red-100 p-5 text-sm">
-              <div className="font-semibold text-red-800 mb-1">
+            <section className="rounded-2xl bg-premium-gold/10 border border-premium-gold/30 p-5 text-sm">
+              <div className="font-semibold text-premium-gold mb-1">
                 ¿Necesitas actualizar algún dato?
               </div>
-              <p className="text-red-700">
+              <p className="text-text-primary">
                 Para modificar los datos fiscales, direcciones o cualquier información de tu
                 cuenta B2B, escríbenos a{' '}
                 <a
-                  className="font-semibold underline"
+                  className="font-semibold underline text-premium-gold"
                   href={`mailto:${B2B_COMPANY.email}`}
                 >
                   {B2B_COMPANY.email}
@@ -266,11 +266,11 @@ function ProfileField({
   const display = value?.toString().trim() || '—';
   return (
     <div>
-      <dt className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">
+      <dt className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-0.5">
         {label}
       </dt>
       <dd
-        className={`text-gray-900 ${mono ? 'font-mono text-sm' : ''} ${
+        className={`text-text-primary ${mono ? 'font-mono text-sm' : ''} ${
           multiline ? 'whitespace-pre-line' : ''
         }`}
       >

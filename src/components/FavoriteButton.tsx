@@ -131,12 +131,12 @@ export function FavoriteButton({
           className={`
             relative flex items-center justify-center
             w-full h-full rounded-xl border-2
-            transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500
+            transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-premium-gold
             disabled:opacity-50 disabled:cursor-not-allowed
             ${
               isFavorited
-                ? 'border-red-400 bg-red-50 hover:bg-red-100'
-                : 'border-gray-300 bg-white hover:border-red-400 hover:bg-red-50'
+                ? 'border-premium-gold/60 bg-premium-gold/10 hover:bg-premium-gold/20'
+                : 'border-dark-border bg-dark-surface hover:border-premium-gold/50 hover:bg-dark-surfaceHover'
             }
           `}
         >
@@ -144,7 +144,7 @@ export function FavoriteButton({
           {burst && (
             <span
               aria-hidden="true"
-              className="absolute inset-0 rounded-xl border-2 border-red-400 animate-ping opacity-60 pointer-events-none"
+              className="absolute inset-0 rounded-xl border-2 border-premium-gold animate-ping opacity-60 pointer-events-none"
             />
           )}
 
@@ -154,7 +154,7 @@ export function FavoriteButton({
               {[...Array(6)].map((_, i) => (
                 <span
                   key={i}
-                  className="absolute w-1.5 h-1.5 rounded-full bg-red-400"
+                  className="absolute w-1.5 h-1.5 rounded-full bg-premium-gold"
                   style={{
                     top: '50%',
                     left: '50%',
@@ -172,7 +172,7 @@ export function FavoriteButton({
             src={isFavorited ? '/images/favorite.png' : '/images/no-favorite.png'}
             alt=""
             aria-hidden="true"
-            className={`w-6 h-6 transition-transform duration-300 ${
+            className={`w-6 h-6 transition-transform duration-300 ${!isFavorited ? 'icon-invert opacity-80' : ''} ${
               burst && isFavorited ? 'scale-125' : isFavorited ? 'scale-110' : 'scale-100'
             }`}
           />
@@ -183,7 +183,7 @@ export function FavoriteButton({
           <div
             role="status"
             aria-live="polite"
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-10 animate-fadeIn"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-2 bg-dark-surface border border-dark-border text-text-primary text-xs rounded-lg shadow-elevated z-10 animate-fadeIn"
           >
             {toast}
           </div>

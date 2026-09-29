@@ -43,26 +43,23 @@ export async function POST(request: NextRequest) {
         description: body.description,
         price: parseFloat(body.price),
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
-        noShrinkPrice: body.noShrinkPrice ? parseFloat(body.noShrinkPrice) : null,
+        liveOpeningPrice: body.liveOpeningPrice ? parseFloat(body.liveOpeningPrice) : null,
         b2bPrice:
           body.b2bPrice !== undefined && body.b2bPrice !== null && body.b2bPrice !== ''
             ? parseFloat(body.b2bPrice)
-            : null,
-        b2bPriceNoShrink:
-          body.b2bPriceNoShrink !== undefined &&
-          body.b2bPriceNoShrink !== null &&
-          body.b2bPriceNoShrink !== ''
-            ? parseFloat(body.b2bPriceNoShrink)
             : null,
         notes: body.notes || null,
         type: body.type || null,
         releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,
         stock: parseInt(body.stock),
-        noShrinkStock: body.noShrinkStock ? parseInt(body.noShrinkStock) : 0,
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
         priority: body.priority !== undefined ? parseInt(body.priority) : 999,
         visible: body.visible ?? true,
+        weightGrams: body.weightGrams ? parseInt(body.weightGrams) : null,
+        lengthCm: body.lengthCm ? parseFloat(body.lengthCm) : null,
+        widthCm: body.widthCm ? parseFloat(body.widthCm) : null,
+        heightCm: body.heightCm ? parseFloat(body.heightCm) : null,
       },
     });
 

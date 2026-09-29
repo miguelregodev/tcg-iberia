@@ -499,7 +499,6 @@ export async function sendB2bRequestAdminNotification(email: string): Promise<vo
 /** Line item used by every order-related email template. */
 export interface OrderEmailLine {
   name: string;
-  variant?: 'SHRINK' | 'NO_SHRINK';
   quantity: number;
   unitPriceEur: number;
   lineTotal: number;
@@ -530,7 +529,7 @@ function orderItemsTable(items: OrderEmailLine[]): string {
       (i) => `
     <tr>
       <td style="padding:10px 8px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">
-        ${escapeHtml(i.name)}${i.variant === 'NO_SHRINK' ? ' <span style="color:' + BRAND.textMuted + ';">(sin plástico)</span>' : ''}
+        ${escapeHtml(i.name)}
       </td>
       <td align="right" style="padding:10px 8px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">${i.quantity}</td>
       <td align="right" style="padding:10px 8px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">${eurFmt.format(i.unitPriceEur)}</td>

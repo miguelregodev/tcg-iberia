@@ -46,10 +46,9 @@ const VARIANT_CONFIG: Array<{
   label: string;
   badge: string;
 }> = [
-  { key: 'shrink', label: 'Con plástico', badge: 'SHRINK' },
-  { key: 'noShrink', label: 'Sin plástico', badge: 'NO_SHRINK' },
+  { key: 'sealed', label: 'Sellado', badge: 'SEALED' },
+  { key: 'liveOpening', label: 'Apertura en Directo', badge: 'LIVE_OPENING' },
   { key: 'b2b', label: 'B2B', badge: 'B2B' },
-  { key: 'b2bNoShrink', label: 'B2B sin plástico', badge: 'B2B_NO_SHRINK' },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -92,25 +91,23 @@ export function PriceUpdateModal({ isOpen, onClose, onConfirm, row, exchangeRate
   );
 
   const eurCost = row ? convertJpyToEur(row.jpyPrice, exchangeRate) : 0;
-  const noShrinkOriginCost = row?.correspondingRightJpyPrice
+  const liveOpeningOriginCost = row?.correspondingRightJpyPrice
     ? convertJpyToEur(row.correspondingRightJpyPrice, exchangeRate)
     : eurCost;
   const variantCosts = useMemo(
     () => ({
-      shrink: eurCost,
-      noShrink: noShrinkOriginCost,
+      sealed: eurCost,
+      liveOpening: liveOpeningOriginCost,
       b2b: eurCost,
-      b2bNoShrink: noShrinkOriginCost,
     }),
-    [eurCost, noShrinkOriginCost]
+    [eurCost, liveOpeningOriginCost]
   );
   const breakdowns = useMemo(
     () =>
       computeVariantPriceBreakdown(eurCost, selectedMargins, {
-        noShrink: noShrinkOriginCost,
-        b2bNoShrink: noShrinkOriginCost,
+        liveOpening: liveOpeningOriginCost,
       }),
-    [eurCost, noShrinkOriginCost, selectedMargins]
+    [eurCost, liveOpeningOriginCost, selectedMargins]
   );
 
   const handleConfirm = async () => {
@@ -118,10 +115,9 @@ export function PriceUpdateModal({ isOpen, onClose, onConfirm, row, exchangeRate
     setConfirming(true);
     try {
       await onConfirm(row.matchedProductId, {
-        shrink: breakdowns.shrink.finalPrice,
-        noShrink: breakdowns.noShrink.finalPrice,
+        sealed: breakdowns.sealed.finalPrice,
+        liveOpening: breakdowns.liveOpening.finalPrice,
         b2b: breakdowns.b2b.finalPrice,
-        b2bNoShrink: breakdowns.b2bNoShrink.finalPrice,
       });
     } finally {
       setConfirming(false);

@@ -8,16 +8,23 @@ import { useSession } from 'next-auth/react';
 import * as Sentry from '@sentry/nextjs';
 import { trackCheckoutFailed, trackCheckoutStarted, trackUserRegistered } from '@/lib/analytics/events';
 import { FreeShippingProgress } from './FreeShippingProgress';
-import { getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
+import { isCanaryIslandsPostalCode, isValidSpanishPostalCode } from '@/lib/shipping/postal-codes';
+import { estimateShippingCost } from '@/lib/shipping/client-calculator';
+import { SHIPPING_CONFIG } from '@/lib/shipping/config';
 import { createOrderItemSnapshot } from '@/lib/orders/items';
 import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } from '@/lib/products/state';
 
 export function CheckoutForm() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, totalPrice, shippingCost, finalPrice } = useCart();
+  const { items, totalPrice, shippingCost: defaultShippingCost, finalPrice } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [postalCodeFilled, setPostalCodeFilled] = useState(false);
+  const [postalCodeError, setPostalCodeError] = useState<string | null>(null);
+  const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
+  const [isCanaryZone, setIsCanaryZone] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -29,7 +36,31 @@ export function CheckoutForm() {
     shippingLocality: '',
     shippingProvince: '',
   });
+
   const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
+
+  // Recalculate shipping cost when cart items change (and postal code is already filled)
+  useEffect(() => {
+    if (!postalCodeFilled || !formData.shippingPostalCode) return;
+
+    // Check if order qualifies for free shipping (not available in Canary Islands)
+    const isCanary = isCanaryIslandsPostalCode(formData.shippingPostalCode);
+    const qualifiesForFreeShipping = !isCanary && freeShippingState.qualified;
+    
+    if (qualifiesForFreeShipping) {
+      setCalculatedShippingCost(0);
+    } else {
+      // Recalculate shipping cost based on updated items
+      const shippingCost = estimateShippingCost(
+        items.map(item => ({
+          quantity: item.quantity,
+          weightGrams: item.product.weightGrams,
+        })),
+        formData.shippingPostalCode
+      );
+      setCalculatedShippingCost(shippingCost);
+    }
+  }, [items, totalPrice, freeShippingState, formData.shippingPostalCode, postalCodeFilled]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -71,9 +102,9 @@ export function CheckoutForm() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-8 text-center">
-        <p className="text-gray-700 text-lg mb-4">Tu carrito está vacío</p>
-        <Link href="/" className="text-red-600 hover:text-red-700 font-semibold">
+      <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8 text-center">
+        <p className="text-text-secondary text-lg mb-4">Tu carrito está vacío</p>
+        <Link href="/" className="text-premium-gold hover:text-premium-gold_dark font-semibold">
           Volver a la tienda
         </Link>
       </div>
@@ -83,6 +114,48 @@ export function CheckoutForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Recalculate shipping cost every time postal code changes
+    if (name === 'shippingPostalCode') {
+      if (value.trim().length > 0) {
+        // Validate postal code format (5 digits, all numeric)
+        if (!isValidSpanishPostalCode(value)) {
+          setPostalCodeError('El código postal debe tener 5 dígitos numéricos');
+          setPostalCodeFilled(false);
+          setCalculatedShippingCost(null);
+          setIsCanaryZone(false);
+          return;
+        }
+        
+        // Valid postal code - clear error and calculate shipping
+        setPostalCodeError(null);
+        setPostalCodeFilled(true);
+        const isCanary = isCanaryIslandsPostalCode(value);
+        setIsCanaryZone(isCanary);
+        
+        // Check if order qualifies for free shipping (not available in Canary Islands)
+        const qualifiesForFreeShipping = !isCanary && freeShippingState.qualified;
+        if (qualifiesForFreeShipping) {
+          // Order amount meets or exceeds the free shipping limit AND is not Canary Islands
+          setCalculatedShippingCost(0);
+        } else {
+          // Calculate real-time shipping cost estimate
+          const shippingCost = estimateShippingCost(
+            items.map(item => ({
+              quantity: item.quantity,
+              weightGrams: item.product.weightGrams,
+            })),
+            value
+          );
+          setCalculatedShippingCost(shippingCost);
+        }
+      } else {
+        setPostalCodeFilled(false);
+        setPostalCodeError(null);
+        setCalculatedShippingCost(null);
+        setIsCanaryZone(false);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -92,7 +165,7 @@ export function CheckoutForm() {
 
     trackCheckoutStarted({
       amount: finalPrice,
-      paymentMethod: 'stripe_checkout',
+      paymentMethod: 'redsys',
     });
 
     try {
@@ -110,11 +183,16 @@ export function CheckoutForm() {
         throw new Error('Por favor completa todos los campos');
       }
 
+      // Validate postal code format
+      if (!isValidSpanishPostalCode(formData.shippingPostalCode)) {
+        throw new Error('El código postal debe tener 5 dígitos numéricos');
+      }
+
       // Prepare checkout items
       const checkoutItems = items.map((item) => createOrderItemSnapshot(item.product, item.quantity));
 
-      // Create Stripe checkout session with customer data
-      const response = await fetch('/api/checkout', {
+      // Create Redsys payment with customer data
+      const response = await fetch('/api/payments/redsys/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,17 +200,17 @@ export function CheckoutForm() {
         body: JSON.stringify({
           items: checkoutItems,
           customerData: formData,
-          shippingCost,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Error al crear la sesión de pago');
+        throw new Error(data.error || 'Error al crear el pago');
       }
 
-      const { url } = await response.json();
+      const paymentData = await response.json();
 
+      // Track user registration if first time
       const alreadyTracked = window.localStorage.getItem('tcg_user_registered');
       if (!alreadyTracked) {
         trackUserRegistered({
@@ -141,14 +219,32 @@ export function CheckoutForm() {
         window.localStorage.setItem('tcg_user_registered', '1');
       }
 
-      window.location.href = url;
+      // Submit payment form to Redsys
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = paymentData.url;
+
+      const createInput = (name: string, value: string) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
+
+      createInput('Ds_SignatureVersion', paymentData.Ds_SignatureVersion);
+      createInput('Ds_MerchantParameters', paymentData.Ds_MerchantParameters);
+      createInput('Ds_Signature', paymentData.Ds_Signature);
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Error en el checkout';
 
       trackCheckoutFailed({
         amount: finalPrice,
-        paymentMethod: 'stripe_checkout',
+        paymentMethod: 'redsys',
         reason: errorMessage,
       });
 
@@ -172,23 +268,23 @@ export function CheckoutForm() {
       <div className="grid md:grid-cols-3 gap-8">
         {/* Form Section */}
         <div className="md:col-span-2">
-          <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-700 font-semibold">{error}</p>
+                <div className="p-4 bg-danger-bg border border-danger/30 rounded-lg">
+                  <p className="text-danger font-semibold">{error}</p>
                 </div>
               )}
 
               {/* Personal Information */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-text-primary mb-4">
                   Información Personal
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="fullName" className="block text-sm font-semibold text-text-secondary mb-2">
                       Nombre Completo *
                     </label>
                     <input
@@ -198,13 +294,13 @@ export function CheckoutForm() {
                       value={formData.fullName}
                       onChange={handleChange}
                       placeholder="Juan Pérez García"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-semibold text-text-secondary mb-2">
                       Email *
                     </label>
                     <input
@@ -214,13 +310,13 @@ export function CheckoutForm() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="tu@email.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="phone" className="block text-sm font-semibold text-text-secondary mb-2">
                       Teléfono *
                     </label>
                     <input
@@ -230,7 +326,7 @@ export function CheckoutForm() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+34 612 345 678"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
@@ -239,13 +335,13 @@ export function CheckoutForm() {
 
               {/* Shipping Information */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-text-primary mb-4">
                   Dirección de Envío
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="shippingAddress" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="shippingAddress" className="block text-sm font-semibold text-text-secondary mb-2">
                       Dirección *
                     </label>
                     <input
@@ -255,15 +351,15 @@ export function CheckoutForm() {
                       value={formData.shippingAddress}
                       onChange={handleChange}
                       placeholder="Calle Principal 123, Apartamento 4B"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="shippingPostalCode" className="block text-sm font-semibold text-gray-700 mb-2">
-                        Código Postal *
+                      <label htmlFor="shippingPostalCode" className="block text-sm font-semibold text-text-secondary mb-2">
+                        Código Postal * {postalCodeFilled && <span className="text-success">✓</span>}
                       </label>
                       <input
                         type="text"
@@ -272,13 +368,22 @@ export function CheckoutForm() {
                         value={formData.shippingPostalCode}
                         onChange={handleChange}
                         placeholder="28001"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                        maxLength={5}
+                        className={`w-full px-4 py-2 bg-dark-bgSecondary border ${
+                          postalCodeError ? 'border-error' : postalCodeFilled ? 'border-success' : 'border-dark-border'
+                        } text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition`}
                         required
                       />
+                      {postalCodeError && (
+                        <p className="text-error text-xs mt-2">{postalCodeError}</p>
+                      )}
+                      {postalCodeFilled && !postalCodeError && (
+                        <p className="text-success text-xs mt-2">Código postal confirmado • Gastos de envío calculados</p>
+                      )}
                     </div>
 
                     <div>
-                      <label htmlFor="shippingCity" className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label htmlFor="shippingCity" className="block text-sm font-semibold text-text-secondary mb-2">
                         Ciudad *
                       </label>
                       <input
@@ -288,14 +393,14 @@ export function CheckoutForm() {
                         value={formData.shippingCity}
                         onChange={handleChange}
                         placeholder="Madrid"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                        className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="shippingLocality" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="shippingLocality" className="block text-sm font-semibold text-text-secondary mb-2">
                       Localidad *
                     </label>
                     <input
@@ -305,12 +410,12 @@ export function CheckoutForm() {
                       value={formData.shippingLocality}
                       onChange={handleChange}
                       placeholder="Madrid"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
                   <div>
-                    <label htmlFor="shippingProvince" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="shippingProvince" className="block text-sm font-semibold text-text-secondary mb-2">
                       Provincia *
                     </label>
                     <input
@@ -320,7 +425,7 @@ export function CheckoutForm() {
                       value={formData.shippingProvince}
                       onChange={handleChange}
                       placeholder="Madrid"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition"
+                      className="w-full px-4 py-2 bg-dark-bgSecondary border border-dark-border text-text-primary placeholder-text-muted rounded-lg focus:ring-2 focus:ring-premium-gold focus:border-transparent outline-none transition"
                       required
                     />
                   </div>
@@ -331,13 +436,13 @@ export function CheckoutForm() {
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                className="btn btn-primary w-full py-3 px-4 disabled:opacity-60"
               >
-                {isProcessing ? 'Procesando...' : `Pagar ${finalPrice.toFixed(2)}€`}
+                {isProcessing ? 'Procesando...' : `Pagar de forma segura ${finalPrice.toFixed(2)}€`}
               </button>
 
               {/* Back Link */}
-              <Link href="/" className="text-center text-gray-600 hover:text-gray-800">
+              <Link href="/" className="text-center block text-text-secondary hover:text-premium-gold transition-colors">
                 ← Volver a la tienda
               </Link>
             </form>
@@ -346,8 +451,8 @@ export function CheckoutForm() {
 
         {/* Order Summary Section */}
         <div className="md:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-8 sticky top-20">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen del Pedido</h2>
+          <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8 sticky top-20">
+            <h2 className="text-xl font-bold text-text-primary mb-4">Resumen del Pedido</h2>
 
             <FreeShippingProgress
               state={freeShippingState}
@@ -366,16 +471,16 @@ export function CheckoutForm() {
                 return (
                   <div key={item.product.id} className="flex justify-between text-sm">
                     <div>
-                      <p className="font-semibold text-gray-900 line-clamp-2">
+                      <p className="font-semibold text-text-primary line-clamp-2">
                         {item.product.name}
                       </p>
-                      {(item.product.id.endsWith('_noshrink') || item.product.noShrinkPrice != null) && (
+                      {(item.product.id.endsWith('_live') || item.product.liveOpeningPrice != null) && (
                         <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${
-                          item.product.id.endsWith('_noshrink')
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-blue-100 text-blue-800'
+                          item.product.id.endsWith('_live')
+                            ? 'bg-warning-bg text-warning'
+                            : 'bg-premium-gold/15 text-premium-gold'
                         }`}>
-                          {item.product.id.endsWith('_noshrink') ? 'Sin Plástico' : 'Con Plástico'}
+                          {item.product.id.endsWith('_live') ? 'Apertura en Directo' : 'Sellado'}
                         </span>
                       )}
                       {(() => {
@@ -385,20 +490,20 @@ export function CheckoutForm() {
                         });
                         return !state.isLowStock ? (
                           <p className={`text-xs font-semibold ${
-                            state.isPreorder ? 'text-blue-700' : 'text-gray-500'
+                            state.isPreorder ? 'text-premium-gold' : 'text-text-secondary'
                           }`}>
                             {getProductStatusLabel(state)}
                           </p>
                         ) : null;
                       })()}
                       {item.product.isPreorder && item.product.releaseDate ? (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-text-secondary">
                           Lanzamiento: {formatReleaseDate(item.product.releaseDate)}
                         </p>
                       ) : null}
-                      <p className="text-gray-600">x{item.quantity}</p>
+                      <p className="text-text-secondary">x{item.quantity}</p>
                     </div>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-text-primary">
                       {itemTotal.toFixed(2)}€
                     </p>
                   </div>
@@ -407,27 +512,45 @@ export function CheckoutForm() {
             </div>
 
             {items.some((i) => i.product.isPreorder) && (
-              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 space-y-2">
+              <div className="mb-4 rounded-lg border border-warning/30 bg-warning-bg p-3 text-xs text-warning space-y-2">
                 <p className="font-bold">⚠️ Este pedido incluye productos en preventa.</p>
                 <p>Al realizar la reserva, garantizas tu unidad antes del lanzamiento oficial. Los artículos serán enviados una vez estén disponibles y hayan sido recibidos por TCG Iberia de nuestros distribuidores.</p>
                 <p>Si el pedido contiene productos en stock y productos en preventa, todo el pedido se enviará conjuntamente cuando los artículos en preventa estén disponibles. Las fechas de lanzamiento pueden variar por causas ajenas a TCG Iberia.</p>
               </div>
             )}
 
-            <div className="border-t border-gray-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm text-gray-700">
+            <div className={`border-t border-dark-border pt-4 space-y-2 ${
+              postalCodeFilled ? 'bg-success-bg/10 p-4 rounded-lg' : ''
+            }`}>
+              <div className="flex justify-between text-sm text-text-secondary">
                 <span>Subtotal</span>
-                <span className="font-semibold text-gray-900">{totalPrice.toFixed(2)}€</span>
+                <span className="font-semibold text-text-primary">{totalPrice.toFixed(2)}€</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-700">
-                <span>Envío</span>
-                <span className="font-semibold text-gray-900">
-                  {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
+              <div className={`flex justify-between text-sm ${
+                postalCodeFilled ? 'text-success font-semibold' : 'text-text-secondary'
+              }`}>
+                <span>Envío {postalCodeFilled && '(Confirmado)'}</span>
+                <span className={`font-semibold ${
+                  postalCodeFilled ? 'text-success' : 'text-text-primary'
+                }`}>
+                  {calculatedShippingCost === null
+                    ? defaultShippingCost === 0
+                      ? 'Gratis'
+                      : `${defaultShippingCost.toFixed(2)}€`
+                    : calculatedShippingCost === 0
+                    ? 'Gratis'
+                    : `${calculatedShippingCost.toFixed(2)}€`
+                  }
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-200">
+              <div className="flex justify-between text-sm font-bold text-text-primary pt-2 border-t border-dark-border">
                 <span>Total:</span>
-                <span className="text-red-600 text-sm">{finalPrice.toFixed(2)}€</span>
+                <span className="text-premium-gold text-sm">
+                  {postalCodeFilled && calculatedShippingCost !== null
+                    ? (totalPrice + calculatedShippingCost).toFixed(2)
+                    : finalPrice.toFixed(2)
+                  }€
+                </span>
               </div>
             </div>
           </div>

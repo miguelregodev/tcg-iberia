@@ -66,10 +66,10 @@ const SearchResultRow = function SearchResultRow({
         onClick={onSelect}
         onMouseEnter={onMouseEnter}
         className={`flex items-center gap-4 px-4 py-3 transition-colors ${
-          isActive ? 'bg-red-50' : 'hover:bg-gray-50'
+          isActive ? 'bg-dark-surfaceHover' : 'hover:bg-dark-surfaceHover'
         }`}
       >
-        <div className="flex-shrink-0 w-14 h-14 bg-gray-100 rounded-lg overflow-hidden">
+        <div className="flex-shrink-0 w-14 h-14 bg-dark-bgSecondary rounded-lg overflow-hidden">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -79,33 +79,33 @@ const SearchResultRow = function SearchResultRow({
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
+            <div className="w-full h-full flex items-center justify-center text-text-muted text-xs">
               IMG
             </div>
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">
+          <p className="text-sm font-semibold text-text-primary truncate">
             {product.name}
           </p>
           {product.type && (
-            <p className="text-xs text-gray-500 truncate">{product.type}</p>
+            <p className="text-xs text-text-secondary truncate">{product.type}</p>
           )}
         </div>
 
         <div className="flex-shrink-0 text-right">
           {discounted ? (
             <div className="flex flex-col items-end leading-tight">
-              <span className="text-xs text-gray-400 line-through">
+              <span className="text-xs text-text-muted line-through">
                 {formatPrice(product.price)}
               </span>
-              <span className="text-sm font-bold text-red-600">
+              <span className="text-sm font-bold text-premium-gold">
                 {formatPrice(displayPrice)}
               </span>
             </div>
           ) : (
-            <span className="text-sm font-bold text-red-600">
+            <span className="text-sm font-bold text-premium-gold">
               {formatPrice(displayPrice)}
             </span>
           )}
@@ -301,7 +301,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
     return (
       <div
         ref={containerRef}
-        className={`relative z-30 bg-white border-b border-gray-200 grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+        className={`relative z-30 bg-dark-bg border-b border-dark-border grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
           open
             ? 'grid-rows-[1fr] opacity-100'
             : 'grid-rows-[0fr] opacity-0 pointer-events-none'
@@ -330,7 +330,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
                   {/* Search icon inside the input */}
                   <span
                     aria-hidden="true"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -363,7 +363,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
                     aria-controls={resultsListId}
                     aria-activedescendant={activeOptionId}
                     aria-autocomplete="list"
-                    className="w-full pl-12 pr-12 py-3 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-400 transition-colors"
+                    className="w-full pl-12 pr-12 py-3 rounded-xl border border-dark-border bg-dark-bgSecondary focus:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-premium-gold focus:border-transparent text-base text-text-primary placeholder:text-text-muted transition-colors"
                   />
 
                   {/* Close button on the right */}
@@ -371,7 +371,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
                     type="button"
                     onClick={onClose}
                     aria-label="Cerrar búsqueda"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-gray-100 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-text-secondary hover:text-premium-gold hover:bg-dark-surfaceHover transition-colors"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -392,17 +392,17 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
 
                 {/* Live-results dropdown */}
                 {showDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-2xl overflow-hidden z-50">
+                  <div className="absolute left-0 right-0 top-full mt-2 bg-dark-surface rounded-xl border border-dark-border shadow-elevated overflow-hidden z-[9999]">
                     {status === 'loading' && !hasResults && (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">
+                      <div className="px-4 py-6 text-center text-sm text-text-secondary">
                         Buscando…
                       </div>
                     )}
 
                     {status !== 'loading' && !hasResults && (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">
+                      <div className="px-4 py-6 text-center text-sm text-text-secondary">
                         No hemos encontrado productos para{' '}
-                        <span className="font-semibold text-gray-700">
+                        <span className="font-semibold text-text-primary">
                           “{trimmedQuery}”
                         </span>
                         .
@@ -414,7 +414,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
                         id={resultsListId}
                         role="listbox"
                         aria-label="Resultados de búsqueda"
-                        className="divide-y divide-gray-100"
+                        className="divide-y divide-dark-border"
                       >
                         {products.map((product, index) => (
                           <SearchResultRow
@@ -432,7 +432,7 @@ export const SearchPanel = forwardRef<SearchPanelHandle, SearchPanelProps>(
                       <button
                         type="button"
                         onClick={goToFullResults}
-                        className="w-full px-4 py-3 text-center text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                        className="w-full px-4 py-3 text-center text-sm font-semibold text-premium-gold hover:bg-dark-surfaceHover transition-colors border-t border-dark-border"
                       >
                         Ver todos los resultados ({total})
                       </button>

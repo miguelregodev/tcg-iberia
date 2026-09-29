@@ -45,12 +45,12 @@ export function CalendarDay({ day, onProductClick }: Props) {
       role="gridcell"
       aria-label={ariaLabel}
       className={[
-        'relative border-r border-gray-100 last:border-r-0',
+        'relative border-r border-dark-border last:border-r-0',
         'p-1 sm:p-1.5 lg:p-2',
         'min-h-[80px] sm:min-h-[100px] lg:min-h-[120px]',
-        day.isCurrentMonth ? 'bg-white' : 'bg-gray-50/60',
-        day.isToday ? 'ring-2 ring-inset ring-red-500' : '',
-        day.isWeekend && day.isCurrentMonth ? 'bg-red-50/20' : '',
+        day.isCurrentMonth ? 'bg-dark-surface' : 'bg-dark-bgSecondary/60',
+        day.isToday ? 'ring-2 ring-inset ring-premium-gold' : '',
+        day.isWeekend && day.isCurrentMonth ? 'bg-dark-surfaceHover/40' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -61,10 +61,10 @@ export function CalendarDay({ day, onProductClick }: Props) {
           'inline-flex items-center justify-center w-6 h-6 mb-1',
           'text-xs sm:text-sm font-semibold rounded-full leading-none',
           day.isToday
-            ? 'bg-red-600 text-white'
+            ? 'bg-premium-gold text-dark-bg'
             : day.isCurrentMonth
-            ? 'text-gray-900'
-            : 'text-gray-400',
+            ? 'text-text-primary'
+            : 'text-text-muted',
         ].join(' ')}
         aria-hidden="true"
       >
@@ -89,8 +89,8 @@ export function CalendarDay({ day, onProductClick }: Props) {
               className={[
                 'aspect-square flex items-center justify-center',
                 'text-xs font-semibold rounded',
-                'bg-gray-100 hover:bg-gray-200 text-gray-600',
-                'transition-colors focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none',
+                'bg-dark-surfaceHover hover:bg-dark-bgSecondary text-text-secondary',
+                'transition-colors focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:outline-none',
               ].join(' ')}
             >
               +{overflowCount}

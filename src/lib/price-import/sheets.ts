@@ -15,7 +15,7 @@
 export interface SheetImportItem {
   importedName: string;
   jpyPrice: number;
-  /** H-column (right table) price for this source row — used to pre-fill noShrinkPrice when creating a new product. */
+  /** H-column (right table) price for this source row — used to pre-fill liveOpeningPrice when creating a new product. */
   correspondingRightJpyPrice: number | null;
   sourceRow: number;
   sourceGroup: 'left' | 'right';
@@ -172,7 +172,7 @@ export async function fetchSheetData(url: string): Promise<SheetImportItem[]> {
       items.push({
         importedName: rightName,
         jpyPrice: rightPrice,
-        correspondingRightJpyPrice: rightPrice, // right IS the no-shrink price
+        correspondingRightJpyPrice: rightPrice, // right IS the live-opening price
         sourceRow,
         sourceGroup: 'right',
       });

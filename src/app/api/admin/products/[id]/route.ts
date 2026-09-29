@@ -37,28 +37,25 @@ export async function PUT(
         description: body.description,
         price: parseFloat(body.price),
         discountPercentage: body.discountPercentage ? parseFloat(body.discountPercentage) : null,
-        noShrinkPrice: body.noShrinkPrice ? parseFloat(body.noShrinkPrice) : null,
+        liveOpeningPrice: body.liveOpeningPrice ? parseFloat(body.liveOpeningPrice) : null,
         b2bPrice:
           body.b2bPrice === undefined
             ? undefined
             : body.b2bPrice === null || body.b2bPrice === ''
               ? null
               : parseFloat(body.b2bPrice),
-        b2bPriceNoShrink:
-          body.b2bPriceNoShrink === undefined
-            ? undefined
-            : body.b2bPriceNoShrink === null || body.b2bPriceNoShrink === ''
-              ? null
-              : parseFloat(body.b2bPriceNoShrink),
         notes: body.notes || null,
         type: body.type || null,
         releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,
         stock: nextStock,
-        noShrinkStock: body.noShrinkStock !== undefined ? parseInt(body.noShrinkStock) : undefined,
         imageUrl: body.imageUrl,
         language: body.language || 'ENGLISH',
         priority: body.priority !== undefined ? parseInt(body.priority) : undefined,
         visible: body.visible,
+        weightGrams: body.weightGrams ? parseInt(body.weightGrams) : null,
+        lengthCm: body.lengthCm ? parseFloat(body.lengthCm) : null,
+        widthCm: body.widthCm ? parseFloat(body.widthCm) : null,
+        heightCm: body.heightCm ? parseFloat(body.heightCm) : null,
       },
     });
 

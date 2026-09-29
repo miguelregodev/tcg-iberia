@@ -24,7 +24,7 @@ export function ReleasesCalendar({
   const [selectedProduct, setSelectedProduct] = useState<CalendarProduct | null>(null);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-dark-surface rounded-2xl shadow-sm border border-dark-border overflow-hidden">
       <CalendarHeader
         year={year}
         month={month}

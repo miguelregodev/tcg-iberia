@@ -28,6 +28,7 @@ export interface OrderEmailPayload {
   totalAmount: number;
   items: OrderEmailItem[];
   paymentStatus: string; // 'paid' | 'unpaid' | 'no_payment_required' (Stripe values)
+  shippingCost?: number; // Calculated shipping cost; if not provided, will be computed
   shipping?: {
     address?: string;
     postalCode?: string;
@@ -47,6 +48,14 @@ export interface StockAlertEmailPayload {
     price: number;
     discountPercentage?: number | null;
   };
+}
+
+export interface ShippingNotificationPayload {
+  orderNumber: string;
+  fullName: string;
+  email: string;
+  shippingProvider: string;
+  trackingNumber: string;
 }
 
 // --- Branding ---
@@ -85,9 +94,20 @@ function getTransporter(): nodemailer.Transporter | null {
   const pass = process.env.SMTP_PASSWORD;
 
   if (!host || !port || !user || !pass) {
-    console.warn(
-      '[email] SMTP env vars missing — emails will not be sent. ' +
-        'Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD.'
+    const missingVars = [
+      !host && 'SMTP_HOST',
+      !port && 'SMTP_PORT',
+      !user && 'SMTP_USER',
+      !pass && 'SMTP_PASSWORD',
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    console.error(
+      `[email] CRITICAL: Missing SMTP configuration. Emails will not be sent.\n` +
+      `Missing variables: ${missingVars}\n` +
+      `Please set these in your .env.local or deployment environment.\n` +
+      `See EMAIL_CONFIGURATION.md for setup instructions.`
     );
     return null;
   }
@@ -125,6 +145,10 @@ function lineSubtotal(item: OrderEmailItem): number {
   const discount = item.discountPercentage ?? 0;
   const unit = item.price * (1 - discount / 100);
   return unit * item.quantity;
+}
+
+function calculateSubtotal(items: OrderEmailItem[]): number {
+  return items.reduce((sum, item) => sum + lineSubtotal(item), 0);
 }
 
 function paymentStatusBadge(status: string): {
@@ -224,10 +248,34 @@ function totalRowHtml(total: number): string {
   `;
 }
 
+function totalBreakdownHtml(subtotal: number, shippingCost: number, total: number): string {
+  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
+      <tr>
+        <td style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Subtotal</td>
+        <td align="right" style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};font-weight:500;">${formatCurrency(subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Env&iacute;o</td>
+        <td align="right" style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};font-weight:500;">${shippingDisplay}</td>
+      </tr>
+      <tr>
+        <td style="padding-top:12px;border-top:2px solid ${BRAND.text};font-family:${FONT_STACK};font-size:14px;color:${BRAND.textMuted};text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Total</td>
+        <td align="right" style="padding-top:12px;border-top:2px solid ${BRAND.text};font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${BRAND.primary};">${formatCurrency(total)}</td>
+      </tr>
+    </table>
+  `;
+}
+
 // --- Customer email ---
 
 function buildCustomerHtml(payload: OrderEmailPayload): string {
   const firstName = payload.fullName.split(' ')[0] || payload.fullName;
+  
+  // Calculate shipping cost if not provided
+  const subtotal = calculateSubtotal(payload.items);
+  const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
 
   const content = `
     <tr>
@@ -252,7 +300,7 @@ function buildCustomerHtml(payload: OrderEmailPayload): string {
         <!-- Items header -->
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Resumen del pedido</div>
         ${itemsTableHtml(payload.items)}
-        ${totalRowHtml(payload.totalAmount)}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount)}
 
         <p style="margin:32px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.textMuted};">
           Te enviaremos otro correo en cuanto tu pedido salga de nuestro almac&eacute;n. Si tienes cualquier duda, escr&iacute;benos a
@@ -274,6 +322,11 @@ function buildCustomerHtml(payload: OrderEmailPayload): string {
 function buildAdminHtml(payload: OrderEmailPayload): string {
   const badge = paymentStatusBadge(payload.paymentStatus);
   const shipping = payload.shipping;
+  
+  // Calculate shipping cost if not provided
+  const subtotal = calculateSubtotal(payload.items);
+  const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
+  
   const shippingBlock = shipping
     ? `
       <tr>
@@ -327,7 +380,7 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Art&iacute;culos</div>
         ${itemsTableHtml(payload.items)}
-        ${totalRowHtml(payload.totalAmount)}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount)}
       </td>
     </tr>
   `;
@@ -341,6 +394,11 @@ function buildCustomerText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
     (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
+  
+  const subtotal = calculateSubtotal(payload.items);
+  const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
+  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+  
   return [
     `Hola ${payload.fullName},`,
     '',
@@ -351,7 +409,9 @@ function buildCustomerText(payload: OrderEmailPayload): string {
     'Resumen:',
     ...lines,
     '',
-    `Total: ${formatCurrency(payload.totalAmount)}`,
+    `Subtotal: ${formatCurrency(subtotal)}`,
+    `Envio:    ${shippingDisplay}`,
+    `Total:    ${formatCurrency(payload.totalAmount)}`,
     '',
     'El equipo de TCG Iberia',
   ].join('\n');
@@ -361,6 +421,11 @@ function buildAdminText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
     (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
+  
+  const subtotal = calculateSubtotal(payload.items);
+  const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
+  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+  
   return [
     `Nuevo pedido: ${payload.orderNumber}`,
     `Estado pago: ${payload.paymentStatus}`,
@@ -372,7 +437,9 @@ function buildAdminText(payload: OrderEmailPayload): string {
     'Articulos:',
     ...lines,
     '',
-    `Total: ${formatCurrency(payload.totalAmount)}`,
+    `Subtotal: ${formatCurrency(subtotal)}`,
+    `Envio:    ${shippingDisplay}`,
+    `Total:    ${formatCurrency(payload.totalAmount)}`,
   ].join('\n');
 }
 
@@ -462,13 +529,25 @@ function buildStockAlertText(payload: StockAlertEmailPayload): string {
 
 export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void> {
   const transporter = getTransporter();
-  if (!transporter) return;
+  if (!transporter) {
+    console.error(
+      `[email] Cannot send order emails for ${payload.orderNumber}: ` +
+      `SMTP not configured. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD in environment.`
+    );
+    return;
+  }
 
   const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
   const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const customerSubject = `Tu pedido ${payload.orderNumber} - TCG Iberia`;
   const adminSubject = `Nuevo pedido ${payload.orderNumber} - ${payload.fullName}`;
+
+  console.log(
+    `[email] Sending order confirmation emails for order ${payload.orderNumber}\n` +
+    `  → Customer: ${payload.email}\n` +
+    `  → Admin: ${adminEmail}`
+  );
 
   const tasks: Promise<unknown>[] = [
     transporter.sendMail({
@@ -491,22 +570,166 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
   const results = await Promise.allSettled(tasks);
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
-      console.error(`[email] ${i === 0 ? 'customer' : 'admin'} send failed`, r.reason);
+      const emailType = i === 0 ? 'customer' : 'admin';
+      const recipient = i === 0 ? payload.email : adminEmail;
+      console.error(
+        `[email] Failed to send ${emailType} email to ${recipient}\n` +
+        `Order: ${payload.orderNumber}\n` +
+        `Error: ${String(r.reason)}`
+      );
+    } else {
+      const emailType = i === 0 ? 'customer' : 'admin';
+      const recipient = i === 0 ? payload.email : adminEmail;
+      console.log(`[email] ✓ ${emailType} email sent to ${recipient}`);
     }
   });
 }
 
 export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Promise<void> {
   const transporter = getTransporter();
-  if (!transporter) return;
+  if (!transporter) {
+    console.error(
+      `[email] Cannot send stock alert email for ${payload.product.name}: ` +
+      `SMTP not configured. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD in environment.`
+    );
+    return;
+  }
 
   const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
 
-  await transporter.sendMail({
-    from,
-    to: payload.to,
-    subject: '¡Tu producto vuelve a estar disponible!',
-    html: buildStockAlertHtml(payload),
-    text: buildStockAlertText(payload),
-  });
+  console.log(`[email] Sending stock alert email to ${payload.to} for product: ${payload.product.name}`);
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: payload.to,
+      subject: '¡Tu producto vuelve a estar disponible!',
+      html: buildStockAlertHtml(payload),
+      text: buildStockAlertText(payload),
+    });
+    console.log(`[email] ✓ Stock alert email sent to ${payload.to}`);
+  } catch (error) {
+    console.error(
+      `[email] Failed to send stock alert email to ${payload.to}\n` +
+      `Product: ${payload.product.name}\n` +
+      `Error: ${String(error)}`
+    );
+  }
+}
+
+// --- Shipping notification email ---
+
+function buildShippingNotificationHtml(payload: ShippingNotificationPayload): string {
+  const { getTrackingUrl, getProviderLabel } = require('@/lib/shipping/tracking-urls');
+  const providerLabel = getProviderLabel(payload.shippingProvider as any);
+  const trackingUrl = getTrackingUrl(payload.shippingProvider as any, payload.trackingNumber);
+  const trackingLink = trackingUrl 
+    ? `<a href="${escapeHtml(trackingUrl)}" style="color:${BRAND.primary};text-decoration:none;font-weight:500;">${escapeHtml(payload.trackingNumber)}</a>`
+    : escapeHtml(payload.trackingNumber);
+
+  const content = `
+    <tr>
+      <td style="padding:32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <h1 style="font-family:${FONT_STACK};font-size:28px;font-weight:700;margin:0 0 8px 0;color:${BRAND.text};">¡Tu pedido está en camino!</h1>
+              <p style="font-family:${FONT_STACK};font-size:14px;margin:0 0 24px 0;color:${BRAND.textMuted};">
+                Hola ${escapeHtml(payload.fullName)},
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;background:${BRAND.primaryLight};border-radius:8px;border-left:4px solid ${BRAND.primary};margin-bottom:24px;">
+              <p style="font-family:${FONT_STACK};font-size:14px;margin:0 0 12px 0;color:${BRAND.text};line-height:1.6;">
+                Tu pedido <strong>${escapeHtml(payload.orderNumber)}</strong> ha sido enviado y ya está en tránsito hacia ti.
+              </p>
+              <p style="font-family:${FONT_STACK};font-size:13px;margin:0;color:${BRAND.textMuted};">
+                Recibirás tu paquete en los próximos días. Puedes seguir el estado de tu envío con el número de seguimiento.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div style="background:${BRAND.bg};padding:20px;border-radius:8px;margin:24px 0;border:1px solid ${BRAND.border};">
+                <div style="font-family:${FONT_STACK};font-size:11px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:700;margin-bottom:8px;">Detalles del envío</div>
+                <div style="font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};line-height:1.8;">
+                  <div><strong>Transportista:</strong> ${escapeHtml(providerLabel)}</div>
+                  <div><strong>Número de seguimiento:</strong> ${trackingLink}</div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-top:24px;border-top:1px solid ${BRAND.border};">
+              ${trackingUrl 
+                ? `<a href="${escapeHtml(trackingUrl)}" style="display:inline-block;padding:12px 32px;background:${BRAND.primary};color:white;text-decoration:none;border-radius:6px;font-family:${FONT_STACK};font-size:14px;font-weight:600;text-align:center;">Seguir pedido</a>` 
+                : ''
+              }
+              <p style="font-family:${FONT_STACK};font-size:13px;margin:24px 0 0 0;color:${BRAND.textMuted};line-height:1.6;">
+                Si tienes alguna pregunta sobre tu pedido, no dudes en contactarnos.
+              </p>
+              <p style="font-family:${FONT_STACK};font-size:13px;margin:16px 0 0 0;color:${BRAND.textMuted};">
+                El equipo de TCG Iberia
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  return htmlShell('¡Tu pedido está en camino!', content);
+}
+
+function buildShippingNotificationText(payload: ShippingNotificationPayload): string {
+  const { getProviderLabel } = require('@/lib/shipping/tracking-urls');
+  const providerLabel = getProviderLabel(payload.shippingProvider as any);
+
+  return [
+    '¡Tu pedido está en camino!',
+    '',
+    `Hola ${payload.fullName},`,
+    '',
+    `Tu pedido ${payload.orderNumber} ha sido enviado y ya está en tránsito hacia ti.`,
+    'Recibirás tu paquete en los próximos días.',
+    '',
+    'Detalles del envío:',
+    `Transportista: ${providerLabel}`,
+    `Número de seguimiento: ${payload.trackingNumber}`,
+    '',
+    'El equipo de TCG Iberia',
+  ].join('\n');
+}
+
+export async function sendShippingNotificationEmail(payload: ShippingNotificationPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error(
+      `[email] Cannot send shipping notification email for ${payload.orderNumber}: ` +
+      `SMTP not configured. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD in environment.`
+    );
+    return;
+  }
+
+  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+
+  console.log(`[email] Sending shipping notification email to ${payload.email} for order ${payload.orderNumber}`);
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: payload.email,
+      subject: `Tu pedido ${payload.orderNumber} está en camino - TCG Iberia`,
+      html: buildShippingNotificationHtml(payload),
+      text: buildShippingNotificationText(payload),
+    });
+    console.log(`[email] ✓ Shipping notification email sent to ${payload.email}`);
+  } catch (error) {
+    console.error(
+      `[email] Failed to send shipping notification email to ${payload.email}\n` +
+      `Order: ${payload.orderNumber}\n` +
+      `Error: ${String(error)}`
+    );
+  }
 }

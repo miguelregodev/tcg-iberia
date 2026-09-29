@@ -24,7 +24,6 @@ import { truncate } from '@/lib/b2b/validation';
 
 interface OrderItemInput {
   productId: string;
-  variant: 'SHRINK' | 'NO_SHRINK';
   quantity: number;
 }
 
@@ -113,15 +112,12 @@ export async function POST(request: NextRequest) {
     if (!raw || typeof raw !== 'object') continue;
     const r = raw as Record<string, unknown>;
     const productId = typeof r.productId === 'string' ? r.productId.trim() : '';
-    const rawVariant = r.variant;
-    const variant: 'SHRINK' | 'NO_SHRINK' =
-      rawVariant === 'NO_SHRINK' ? 'NO_SHRINK' : 'SHRINK';
     const quantity =
       typeof r.quantity === 'number' ? Math.floor(r.quantity) : parseInt(String(r.quantity), 10);
     if (!productId) continue;
     if (!Number.isFinite(quantity) || quantity <= 0) continue;
     if (quantity > MAX_QTY_PER_LINE) continue;
-    rawItems.push({ productId, variant, quantity });
+    rawItems.push({ productId, quantity });
   }
 
   if (rawItems.length === 0) {
@@ -131,12 +127,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Merge duplicate (productId, variant) pairs — sum quantities.
+  // Merge duplicate productId lines — sum quantities.
   const merged = new Map<string, OrderItemInput>();
   for (const i of rawItems) {
-    const k = `${i.productId}:${i.variant}`;
-    const prev = merged.get(k);
-    merged.set(k, prev ? { ...prev, quantity: prev.quantity + i.quantity } : i);
+    const prev = merged.get(i.productId);
+    merged.set(i.productId, prev ? { ...prev, quantity: prev.quantity + i.quantity } : i);
   }
   const items = Array.from(merged.values());
 
@@ -147,11 +142,8 @@ export async function POST(request: NextRequest) {
       id: true,
       name: true,
       price: true,
-      noShrinkPrice: true,
       b2bPrice: true,
-      b2bPriceNoShrink: true,
       stock: true,
-      noShrinkStock: true,
       visible: true,
     },
   });
@@ -167,27 +159,17 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // Choose the correct b2b price for the variant. Fall back to the public
-    // price when no wholesale price is set — the invoice still uses this
-    // effective price so the customer knows exactly what they will pay.
-    let unit: number;
-    if (line.variant === 'NO_SHRINK') {
-      if (customer === null || p.b2bPriceNoShrink === null) {
-        rejections.push({ productId: line.productId, reason: 'no_variant' });
-        continue;
-      }
-      unit = p.b2bPriceNoShrink !== null ? Number(p.b2bPriceNoShrink) : Number(p.noShrinkPrice);
-    } else {
-      if (customer === null || p.b2bPrice === null) {
-        rejections.push({ productId: line.productId, reason: 'no_variant' });
-        continue;
-      }
-      unit = p.b2bPrice !== null ? Number(p.b2bPrice) : Number(p.price);
+    // Fall back to the public price when no wholesale price is set — the
+    // invoice still uses this effective price so the customer knows exactly
+    // what they will pay.
+    if (customer === null || p.b2bPrice === null) {
+      rejections.push({ productId: line.productId, reason: 'no_price' });
+      continue;
     }
+    const unit = p.b2bPrice !== null ? Number(p.b2bPrice) : Number(p.price);
 
     // Stock check (server-side, silent enforcement)
-    const available = line.variant === 'NO_SHRINK' ? p.noShrinkStock : p.stock;
-    if (line.quantity > available) {
+    if (line.quantity > p.stock) {
       rejections.push({ productId: line.productId, reason: 'insufficient_stock' });
       continue;
     }
@@ -196,7 +178,6 @@ export async function POST(request: NextRequest) {
     const lineTotal = Math.round(unit * line.quantity * 100) / 100;
     persisted.push({
       productId: line.productId,
-      variant: line.variant,
       quantity: line.quantity,
       name: p.name,
       unitPriceEur: Math.round(unit * 100) / 100,
@@ -248,7 +229,6 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget notification emails.
     const emailLines: OrderEmailLine[] = persisted.map((i) => ({
       name: i.name,
-      variant: i.variant,
       quantity: i.quantity,
       unitPriceEur: i.unitPriceEur,
       lineTotal: i.lineTotal,

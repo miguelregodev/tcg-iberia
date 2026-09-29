@@ -18,7 +18,6 @@ import { useB2BPrices, resolveEffectivePrice } from '@/hooks/useB2BPrices';
 
 interface Props {
   productId: string;
-  variant?: 'SHRINK' | 'NO_SHRINK';
   publicPrice: number;
   discountPercentage?: number | null;
   /** Optional class overrides for the price container. */
@@ -27,7 +26,6 @@ interface Props {
 
 export function ProductPriceDisplay({
   productId,
-  variant = 'SHRINK',
   publicPrice,
   discountPercentage,
   className,
@@ -36,7 +34,6 @@ export function ProductPriceDisplay({
   const overrides = useB2BPrices(isB2B ? [productId] : []);
   const { price, isB2B: usingB2B } = resolveEffectivePrice({
     productId,
-    variant,
     publicPrice,
     overrides,
   });
@@ -49,17 +46,17 @@ export function ProductPriceDisplay({
 
   return (
     <div className={className ?? 'flex items-center gap-2'}>
-      <p className="text-black font-bold text-sm">
+      <p className="text-premium-gold font-bold text-sm">
         {displayPrice.toFixed(2)}€
       </p>
       {discounted && (
-        <p className="text-[11px] text-gray-400 line-through">
+        <p className="text-[11px] text-text-muted line-through">
           {publicPrice.toFixed(2)}€
         </p>
       )}
       {usingB2B && (
         <span
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold"
           title="Precio mayorista B2B"
         >
           B2B

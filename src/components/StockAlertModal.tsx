@@ -64,11 +64,11 @@ export function StockAlertModal({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl p-6 md:p-8 animate-slideUp">
+      <div className="relative w-full max-w-md bg-dark-surface border border-dark-border rounded-xl shadow-elevated p-6 md:p-8 animate-slideUp">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+          className="absolute top-4 right-4 text-text-muted hover:text-text-primary"
           aria-label="Cerrar modal"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -76,17 +76,17 @@ export function StockAlertModal({
           </svg>
         </button>
 
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
+        <h2 className="text-xl font-bold text-text-primary mb-2">
           Te notificaremos por email cuando el producto vuelva a estar disponible
         </h2>
 
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-text-secondary mb-6">
           Introduce tu correo electrónico y te avisaremos en cuanto haya stock.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
-            <label htmlFor="stock-alert-email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="stock-alert-email" className="block text-sm font-medium text-text-secondary mb-1">
               Correo electrónico
             </label>
             <input
@@ -96,14 +96,14 @@ export function StockAlertModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+              className="w-full bg-dark-bgSecondary border border-dark-border rounded-lg px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-premium-gold focus:ring-1 focus:ring-premium-gold"
               placeholder="tu@email.com"
               required
             />
           </div>
 
           {error && (
-            <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div className="px-3 py-2 rounded-lg bg-danger-bg border border-danger/30 text-danger text-sm">
               {error}
             </div>
           )}

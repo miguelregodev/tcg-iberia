@@ -27,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-white text-black antialiased">
+      <body className="bg-dark-bg text-text-primary antialiased">
         <PostHogProvider>
           <SessionProvider>
             <B2BSessionProvider>

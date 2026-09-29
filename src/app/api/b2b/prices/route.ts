@@ -5,7 +5,7 @@
  * B2B sessions receive data — anonymous or non-active callers get 401/403.
  *
  * Response:
- *   { prices: { [productId]: { b2bPrice: number|null, b2bPriceNoShrink: number|null } } }
+ *   { prices: { [productId]: { b2bPrice: number|null } } }
  *
  * The endpoint intentionally accepts a batch of IDs so a product listing page
  * can fetch every override in a single round-trip.
@@ -36,26 +36,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log("IDS:", ids);
-
     const rows = await db.product.findMany({
       where: { id: { in: ids } },
-      select: { id: true, b2bPrice: true, b2bPriceNoShrink: true },
+      select: { id: true, b2bPrice: true },
     });
 
-    console.log("ROWS:", rows);
-
-    const prices: Record<
-      string,
-      { b2bPrice: number | null; b2bPriceNoShrink: number | null }
-    > = {};
+    const prices: Record<string, { b2bPrice: number | null }> = {};
     for (const r of rows) {
       prices[r.id] = {
         b2bPrice: r.b2bPrice ? Number(r.b2bPrice) : null,
-        b2bPriceNoShrink: r.b2bPriceNoShrink ? Number(r.b2bPriceNoShrink) : null,
       };
     }
-    console.log("PRICES:", prices);
     return NextResponse.json({ prices });
   } catch {
     return NextResponse.json(

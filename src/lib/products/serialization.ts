@@ -11,16 +11,19 @@ export const publicProductSelect = {
   description: true,
   price: true,
   discountPercentage: true,
-  noShrinkPrice: true,
+  liveOpeningPrice: true,
   notes: true,
   type: true,
   releaseDate: true,
   stock: true,
-  noShrinkStock: true,
   imageUrl: true,
   language: true,
   priority: true,
   visible: true,
+  weightGrams: true,
+  lengthCm: true,
+  widthCm: true,
+  heightCm: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ProductSelect;
@@ -41,16 +44,19 @@ type ProductCoreShape = {
   description: string;
   price: { toString(): string };
   discountPercentage: { toString(): string } | null;
-  noShrinkPrice: { toString(): string } | null;
+  liveOpeningPrice: { toString(): string } | null;
   notes: string | null;
   type: string | null;
   releaseDate: Date | null;
   stock: number;
-  noShrinkStock: number;
   imageUrl: string | null;
   language: Product['language'];
   priority: number;
   visible: boolean;
+  weightGrams: { toString(): string } | null;
+  lengthCm: { toString(): string } | null;
+  widthCm: { toString(): string } | null;
+  heightCm: { toString(): string } | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -89,18 +95,16 @@ export function serializePublicProduct(
     discountPercentage: product.discountPercentage
       ? Number(product.discountPercentage)
       : null,
-    noShrinkPrice: product.noShrinkPrice ? Number(product.noShrinkPrice) : null,
+    liveOpeningPrice: product.liveOpeningPrice ? Number(product.liveOpeningPrice) : null,
     // B2B pricing is intentionally NOT exposed by the public serializer to
     // avoid leaking wholesale rates to anonymous visitors. Consumers that
     // need the wholesale prices should call `/api/b2b/prices?ids=…` from
     // an authenticated B2B session — see `src/lib/b2b/prices.ts`.
     b2bPrice: null,
-    b2bPriceNoShrink: null,
     notes: product.notes,
     type: product.type,
     releaseDate: inventoryState.releaseDate,
     stock: product.stock,
-    noShrinkStock: product.noShrinkStock,
     imageUrl: product.imageUrl,
     language: product.language,
     priority: product.priority,
@@ -109,6 +113,10 @@ export function serializePublicProduct(
     canPurchase: inventoryState.canPurchase,
     isPreorder: inventoryState.isPreorder,
     inventoryStatus: inventoryState.status,
+    weightGrams: product.weightGrams ? Number(product.weightGrams) : null,
+    lengthCm: product.lengthCm ? Number(product.lengthCm) : null,
+    widthCm: product.widthCm ? Number(product.widthCm) : null,
+    heightCm: product.heightCm ? Number(product.heightCm) : null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
     hitCards: product.hitCards?.map(serializeHitCard),

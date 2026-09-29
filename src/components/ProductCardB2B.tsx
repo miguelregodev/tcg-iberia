@@ -6,10 +6,8 @@ import { formatReleaseDate, getProductInventoryState } from '@/lib/products/stat
 
 interface Props {
   product: Product;
-  /** B2B wholesale price for the shrink (with-plastic) variant */
+  /** B2B wholesale price (Sellado variant) */
   b2bPrice: number;
-  /** B2B wholesale price for the no-shrink variant — null when not available */
-  b2bPriceNoShrink: number | null;
 }
 
 function getLanguageFlag(language: string): { path: string; name: string } {
@@ -22,7 +20,7 @@ function getLanguageFlag(language: string): { path: string; name: string } {
   return flags[language] || flags.ENGLISH;
 }
 
-export function ProductCardB2B({ product, b2bPrice, b2bPriceNoShrink }: Props) {
+export function ProductCardB2B({ product, b2bPrice }: Props) {
   const flagInfo = getLanguageFlag(product.language);
   const inventoryState = getProductInventoryState({
     stock: product.stock,
@@ -34,14 +32,14 @@ export function ProductCardB2B({ product, b2bPrice, b2bPriceNoShrink }: Props) {
     <Link href={`/b2b/product/${product.slug}`} className="h-full">
       <div className="card card-hover cursor-pointer group h-full flex flex-col">
         {product.imageUrl && (
-          <div className="mb-4 h-64 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
+          <div className="mb-4 h-64 bg-dark-bgSecondary rounded-lg overflow-hidden relative flex-shrink-0">
             <img
               src={product.imageUrl}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
             {/* Language flag */}
-            <div className="absolute top-3 right-3 bg-white rounded-lg p-1.5 shadow-md">
+            <div className="absolute top-3 right-3 bg-dark-surface/90 backdrop-blur rounded-lg p-1.5 shadow-elevated border border-dark-border">
               <img
                 src={flagInfo.path}
                 alt={flagInfo.name}
@@ -51,42 +49,32 @@ export function ProductCardB2B({ product, b2bPrice, b2bPriceNoShrink }: Props) {
             </div>
             {/* B2B badge */}
             <div className="absolute top-3 left-3">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-600 text-white shadow-sm">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold text-dark-bg shadow-sm">
                 B2B
               </span>
             </div>
           </div>
         )}
 
-        <h3 className="text-lg font-semibold mb-2 group-hover:text-red-600 line-clamp-2 min-h-[3.5rem]">
+        <h3 className="text-lg font-semibold mb-2 text-text-primary group-hover:text-premium-gold transition-colors line-clamp-2 min-h-[3.5rem]">
           {product.name}
         </h3>
 
-        {/* B2B price(s) */}
+        {/* B2B price */}
         <div className="mb-3 space-y-1">
           <div className="flex items-center gap-2">
-            <p className="text-black font-bold text-sm">{b2bPrice.toFixed(2)}€</p>
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-              Con plástico
+            <p className="text-premium-gold font-bold text-sm">{b2bPrice.toFixed(2)}€</p>
+            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide">
+              Sellado
             </span>
           </div>
-          {b2bPriceNoShrink != null && (
-            <div className="flex items-center gap-2">
-              <p className="text-gray-700 font-semibold text-sm">
-                {b2bPriceNoShrink.toFixed(2)}€
-              </p>
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                Sin plástico
-              </span>
-            </div>
-          )}
         </div>
 
-        <p className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</p>
+        <p className="text-sm text-text-secondary mb-4 line-clamp-2">{product.description}</p>
 
         <div className="mt-auto flex flex-col gap-2">
           {inventoryState.isPreorder && releaseDate ? (
-            <p className="text-xs font-semibold text-gray-600">Lanzamiento: {releaseDate}</p>
+            <p className="text-xs font-semibold text-text-secondary">Lanzamiento: {releaseDate}</p>
           ) : null}
         </div>
       </div>

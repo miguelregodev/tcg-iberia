@@ -117,7 +117,7 @@ export default function DatosPersonalesPage() {
     readOnly = false,
   ) => (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-text-secondary mb-1">
         {label}
       </label>
       <input
@@ -131,13 +131,13 @@ export default function DatosPersonalesPage() {
         readOnly={readOnly}
         className={`w-full rounded-lg px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-1 ${
           readOnly
-            ? 'bg-gray-100 border border-gray-200 text-gray-500 cursor-default'
+            ? 'bg-dark-bg border border-dark-border text-text-muted cursor-default'
             : fieldErrors[id]
-            ? 'bg-gray-50 border border-red-400 focus:border-red-500 focus:ring-red-500'
-            : 'bg-gray-50 border border-gray-300 focus:border-red-500 focus:ring-red-500'
+            ? 'bg-dark-bgSecondary border border-danger text-text-primary focus:border-danger focus:ring-danger'
+            : 'bg-dark-bgSecondary border border-dark-border text-text-primary focus:border-premium-gold focus:ring-premium-gold'
         }`}
       />
-      {fieldErrors[id] && <p className="mt-1 text-xs text-red-600">{fieldErrors[id]}</p>}
+      {fieldErrors[id] && <p className="mt-1 text-xs text-danger">{fieldErrors[id]}</p>}
     </div>
   );
 
@@ -146,7 +146,7 @@ export default function DatosPersonalesPage() {
       <div className="card">
         <div className="animate-pulse space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+            <div key={i} className="h-10 bg-dark-surfaceHover rounded-lg" />
           ))}
         </div>
       </div>
@@ -158,12 +158,12 @@ export default function DatosPersonalesPage() {
       <h1 className="text-h3 mb-6">Datos Personales</h1>
 
       {error && (
-        <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="mb-5 px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-5 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+        <div className="mb-5 px-4 py-3 bg-success-bg border border-success/30 text-success rounded-lg text-sm">
           ✓ Datos actualizados correctamente.
         </div>
       )}

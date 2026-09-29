@@ -1,9 +1,14 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { captureServerError } from '@/lib/observability/sentry';
+import { sendShippingNotificationEmail } from '@/lib/email';
+import { ShippingProvider } from '@/lib/shipping/tracking-urls';
 
-const VALID_ORDER_STATUS = ['PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'] as const;
+const VALID_ORDER_STATUS = ['PROCESSING', 'SHIPPED', 'COMPLETED', 'FAILED', 'CANCELLED'] as const;
 type OrderStatus = (typeof VALID_ORDER_STATUS)[number];
+
+const VALID_SHIPPING_PROVIDERS = ['CORREOS', 'MRW', 'SEUR', 'CTT_EXPRESS'] as const;
+type ShippingProviderType = (typeof VALID_SHIPPING_PROVIDERS)[number];
 
 function isAuthenticated(request: NextRequest): boolean {
   const cookie = request.cookies.get('tcg_admin_auth');
@@ -45,7 +50,16 @@ export async function GET(request: NextRequest) {
       shippingProvince: o.shippingProvince,
       totalAmount: parseFloat(o.totalAmount.toString()),
       status: o.status,
+      shippingProvider: o.shippingProvider,
+      trackingNumber: o.trackingNumber,
+      shippedAt: o.shippedAt,
       stripeSessionId: o.stripeSessionId,
+      paymentStatus: o.paymentStatus,
+      paymentProvider: o.paymentProvider,
+      redsysOrderId: o.redsysOrderId,
+      redsysTransactionId: o.redsysTransactionId,
+      redsysAuthCode: o.redsysAuthCode,
+      paymentPaidAt: o.paymentPaidAt,
       items: o.items,
       createdAt: o.createdAt,
       updatedAt: o.updatedAt,
@@ -73,9 +87,16 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { orderId?: string; status?: string };
+    const body = (await request.json()) as {
+      orderId?: string;
+      status?: string;
+      shippingProvider?: string;
+      trackingNumber?: string;
+    };
     const orderId = body.orderId?.trim();
     const status = body.status as OrderStatus | undefined;
+    const shippingProvider = body.shippingProvider?.trim();
+    const trackingNumber = body.trackingNumber?.trim();
 
     if (!orderId) {
       return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
@@ -85,13 +106,93 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
+    // Validate shipping details when transitioning to SHIPPED
+    if (status === 'SHIPPED') {
+      if (!shippingProvider) {
+        return NextResponse.json(
+          { error: 'El proveedor logístico es obligatorio para marcar el pedido como enviado.' },
+          { status: 400 }
+        );
+      }
+
+      if (!VALID_SHIPPING_PROVIDERS.includes(shippingProvider as ShippingProviderType)) {
+        return NextResponse.json(
+          { error: 'Proveedor logístico inválido.' },
+          { status: 400 }
+        );
+      }
+
+      if (!trackingNumber) {
+        return NextResponse.json(
+          { error: 'El número de tracking es obligatorio para marcar el pedido como enviado.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Fetch current order to check state
+    const currentOrder = await db.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        orderNumber: true,
+        email: true,
+        fullName: true,
+        status: true,
+        shippingProvider: true,
+      },
+    });
+
+    if (!currentOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Check if we're transitioning from PROCESSING to SHIPPED (to send email)
+    const shouldSendShippingEmail = currentOrder.status === 'PROCESSING' && status === 'SHIPPED';
+
+    // Update order
+    const updateData: any = { status };
+    if (status === 'SHIPPED') {
+      updateData.shippingProvider = shippingProvider;
+      updateData.trackingNumber = trackingNumber;
+      updateData.shippedAt = new Date();
+    }
+
     const updated = await db.order.update({
       where: { id: orderId },
-      data: { status },
+      data: updateData,
     });
+
+    // Send shipping notification email only if transitioning to SHIPPED from PROCESSING
+    if (shouldSendShippingEmail) {
+      try {
+        await sendShippingNotificationEmail({
+          orderNumber: updated.orderNumber,
+          fullName: updated.fullName,
+          email: updated.email,
+          shippingProvider: updated.shippingProvider || 'UNKNOWN',
+          trackingNumber: updated.trackingNumber || 'UNKNOWN',
+        });
+      } catch (emailError) {
+        console.error(
+          `[admin_orders_api] Failed to send shipping notification email for order ${updated.orderNumber}:`,
+          emailError
+        );
+        // Don't fail the entire request if email fails - just log it
+        captureServerError({
+          error: emailError,
+          module: 'admin_orders_shipping_email_failure',
+          extra: {
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+          },
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
+      message: status === 'SHIPPED' ? 'Pedido marcado como enviado correctamente.' : undefined,
       order: {
         id: updated.id,
         orderNumber: updated.orderNumber,
@@ -105,7 +206,9 @@ export async function PATCH(request: NextRequest) {
         shippingProvince: updated.shippingProvince,
         totalAmount: parseFloat(updated.totalAmount.toString()),
         status: updated.status,
-        stripeSessionId: updated.stripeSessionId,
+        shippingProvider: updated.shippingProvider,
+        trackingNumber: updated.trackingNumber,
+        shippedAt: updated.shippedAt,
         items: updated.items,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,

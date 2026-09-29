@@ -71,7 +71,7 @@ export function AnnouncementBannerBar() {
 
   return (
     <div
-      className="bg-red-600 text-white sticky top-[65px] z-40"
+      className="bg-dark-bgSecondary text-premium-gold border-b border-dark-border sticky top-[65px] z-30"
       aria-live="polite"
       aria-atomic="true"
       aria-label="Anuncios de la tienda"

@@ -29,23 +29,23 @@ function getLanguageFlag(language: string): { path: string; name: string } {
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [variant, setVariant] = useState<'shrink' | 'noshrink'>('shrink');
+  const [variant, setVariant] = useState<'sealed' | 'live'>('sealed');
   const { addToCart, items } = useCart();
   const { isB2B } = useB2BSession();
   const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);
-  const b2bShrinkPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
-  const b2bNoShrinkPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPriceNoShrink ?? null) : null;
+  const b2bSealedPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
   const releaseDate = formatReleaseDate(product.releaseDate);
   
 
-  const hasNoShrink = product.noShrinkPrice != null;
+  const hasLiveOpening = product.liveOpeningPrice != null;
 
   // Build the effective product object for the current variant.
-  // The no-shrink variant gets a virtual ID (suffix) so it lives as a
-  // separate cart line item — independent quantity, independent price, independent stock.
-  const variantProduct = hasNoShrink && variant === 'noshrink'
-    ? { ...product, id: `${product.id}_noshrink`, price: Number(product.noShrinkPrice!), discountPercentage: null, stock: product.noShrinkStock }
+  // The live-opening variant gets a virtual ID (suffix) so it lives as a
+  // separate cart line item — independent quantity, independent price.
+  // Both variants share the same stock pool.
+  const variantProduct = hasLiveOpening && variant === 'live'
+    ? { ...product, id: `${product.id}_live`, price: Number(product.liveOpeningPrice!), discountPercentage: null }
     : product;
 
   // Derive inventory state from the active variant's stock so all stock
@@ -57,10 +57,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   });
 
   // Active price depends on variant selection; B2B overrides take priority
-  const activeBasePrice = variant === 'noshrink' && b2bNoShrinkPrice
-    ? b2bNoShrinkPrice
-    : variant === 'shrink' && b2bShrinkPrice
-    ? b2bShrinkPrice
+  const activeBasePrice = variant === 'sealed' && b2bSealedPrice
+    ? b2bSealedPrice
     : variantProduct.price;
   // No discount for B2B users
   const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
@@ -124,9 +122,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         .filter(note => note.length > 0)
     : [];
 
-  // StockAlertButton is for the base (shrink) product — don't show it for
-  // the noshrink variant when it runs out; instead show a disabled add-to-cart.
-  const isSoldOut = variant === 'shrink' && inventoryState.isOutOfStock;
+  // StockAlertButton is for the base (sealed) product — don't show it for
+  // the live-opening variant when it runs out; instead show a disabled add-to-cart.
+  const isSoldOut = variant === 'sealed' && inventoryState.isOutOfStock;
   const hasHitCards = product.hitCards && product.hitCards.length > 0;
 
   useEffect(() => {
@@ -157,7 +155,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }, [inventoryState.isPreorder, product.id, product.name, product.releaseDate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-8 md:py-16">
+    <div className="min-h-screen bg-dark-bg py-8 md:py-16">
       <div className="container-custom px-4">
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 mb-16">
@@ -166,7 +164,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Main Image */}
             {product.imageUrl && (
               <div className="relative group">
-                <div className="relative bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 h-96 lg:h-[500px] flex items-center justify-center">
+                <div className="relative bg-dark-surface rounded-2xl shadow-elevated overflow-hidden border border-dark-border h-96 lg:h-[500px] flex items-center justify-center">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
@@ -174,7 +172,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   />
 
                   {/* Language Flag */}
-                  <div className="absolute top-4 left-4 bg-white rounded-lg p-2 shadow-md">
+                  <div className="absolute top-4 left-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
                     <img
                       src={flagInfo.path}
                       alt={flagInfo.name}
@@ -185,13 +183,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
                   {/* Badge Overlay */}
                   {product.discountPercentage && (
-                    <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg">
+                    <div className="absolute top-4 right-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
                       -{Number(product.discountPercentage)}%
                     </div>
                   )}
 
                   {inventoryState.isLowStock && !isB2B && (
-                    <div className="absolute bottom-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full font-semibold text-xs shadow-lg">
+                    <div className="absolute bottom-4 right-4 bg-warning text-dark-bg px-3 py-1 rounded-full font-semibold text-xs shadow-elevated">
                       Últimas unidades
                     </div>
                   )}
@@ -206,12 +204,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="mb-6">
               <span className={`inline-block px-4 py-2 rounded-full font-semibold text-sm ${
                 inventoryState.status === 'preorder'
-                  ? 'bg-blue-100 text-blue-700'
+                  ? 'bg-premium-gold/15 text-premium-gold'
                   : inventoryState.status === 'available'
-                  ? 'bg-green-100 text-green-700'
+                  ? 'bg-success-bg text-success'
                   : inventoryState.status === 'low_stock'
-                  ? 'bg-orange-100 text-orange-700'
-                  : 'bg-gray-300 text-gray-700'
+                  ? 'bg-warning-bg text-warning'
+                  : 'bg-danger-bg text-danger'
               }`}>
                 {isB2B
                   ? inventoryState.status === 'preorder'
@@ -222,48 +220,47 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl lg:text-3xl font-bold text-black mb-2 leading-tight">
+            <h1 className="text-2xl lg:text-3xl font-bold text-text-primary mb-2 leading-tight">
               {product.name}
             </h1>
 
             {inventoryState.isPreorder && releaseDate ? (
-              <p className="text-sm font-semibold text-blue-700 mb-4">
+              <p className="text-sm font-semibold text-premium-gold mb-4">
                 Lanzamiento: {releaseDate}
               </p>
             ) : null}
 
             <br></br>
 
-            {/* Variant selector — only when product has a no-shrink price */}
-            {hasNoShrink && (
+            {/* Variant selector — only when product has a live-opening price */}
+            {hasLiveOpening && (
               <div className="mb-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">
                   Formato
                 </p>
-                <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden">
+                <div className="inline-flex rounded-xl border border-dark-border overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setVariant('shrink')}
+                    onClick={() => setVariant('sealed')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      variant === 'shrink'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                      variant === 'sealed'
+                        ? 'bg-premium-gold text-dark-bg'
+                        : 'bg-dark-surface text-text-secondary hover:bg-dark-surfaceHover'
                     }`}
                   >
-                    Con Plástico — {(b2bShrinkPrice ?? Number(product.price)).toFixed(2)}€
-                    {b2bShrinkPrice && <span className="ml-1 text-[10px] font-bold bg-red-100 text-red-700 px-1 rounded">B2B</span>}
+                    Sellado — {(b2bSealedPrice ?? Number(product.price)).toFixed(2)}€
+                    {b2bSealedPrice && <span className="ml-1 text-[10px] font-bold bg-dark-bg/20 text-dark-bg px-1 rounded">B2B</span>}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setVariant('noshrink')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
-                      variant === 'noshrink'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    onClick={() => setVariant('live')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-l border-dark-border ${
+                      variant === 'live'
+                        ? 'bg-premium-gold text-dark-bg'
+                        : 'bg-dark-surface text-text-secondary hover:bg-dark-surfaceHover'
                     }`}
                   >
-                    Sin Plástico — {(b2bNoShrinkPrice ?? Number(product.noShrinkPrice)).toFixed(2)}€
-                    {b2bNoShrinkPrice && <span className="ml-1 text-[10px] font-bold bg-red-100 text-red-700 px-1 rounded">B2B</span>}
+                    Apertura en Directo — {Number(product.liveOpeningPrice).toFixed(2)}€
                   </button>
                 </div>
               </div>
@@ -271,21 +268,21 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {/* Price Section */}
               <div className="flex items-baseline gap-4">
-                <span className="text-xl font-bold text-black-600">
+                <span className="text-xl font-bold text-premium-gold">
                   {finalPrice.toFixed(2)}€
                 </span>
                 {activeDiscount && (
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-400 line-through">
+                    <span className="text-xs text-text-muted line-through">
                       {activeBasePrice.toFixed(2)}€
                     </span>
-                    <span className="text-[11px] font-semibold text-red-600">
+                    <span className="text-[11px] font-semibold text-danger">
                       Ahorras {savingsAmount}€
                     </span>
                   </div>
                 )}
-                {isB2B && (b2bShrinkPrice || b2bNoShrinkPrice) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">
+                {isB2B && b2bSealedPrice && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-premium-gold/15 text-premium-gold">
                     Precio B2B
                   </span>
                 )}
@@ -293,7 +290,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {/* Description */}
             <div className="mb-8">
-              <p className="text-gray-700 leading-relaxed text-base">
+              <p className="text-text-secondary leading-relaxed text-base">
                 {product.description.split('\n')[0]}
               </p>
             </div>
@@ -301,18 +298,18 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Features/Notes List */}
             {(notesList.length > 0 || features.length > 1) && (
               <div className="mb-8">
-                <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-4">
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wide mb-4">
                   {notesList.length > 0 ? 'Detalles' : 'Key Features'}
                 </h3>
                 <div className="space-y-3">
                   {notesList.length > 0
                     ? notesList.map((note, idx) => (
-                        <p key={idx} className="text-gray-700 text-sm leading-relaxed">
+                        <p key={idx} className="text-text-secondary text-sm leading-relaxed">
                           {note}
                         </p>
                       ))
                     : features.slice(1).map((feature, idx) => (
-                        <p key={idx} className="text-gray-700 text-sm leading-relaxed">
+                        <p key={idx} className="text-text-secondary text-sm leading-relaxed">
                           {feature.trim()}
                         </p>
                       ))}
@@ -322,20 +319,20 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {/* Quantity Selector */}
             <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-2">
-              <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <span className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
                 Unidades
               </span>
-              <div className="flex items-center border-2 border-gray-300 rounded-lg bg-white">
+              <div className="flex items-center border-2 border-dark-border rounded-lg bg-dark-surface">
                 <button
                   type="button"
                   onClick={decrementQuantity}
                   disabled={!inventoryState.canPurchase || quantity <= 1}
                   aria-label="Reducir cantidad"
-                  className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
+                  className="px-4 py-3 text-text-secondary hover:text-premium-gold hover:bg-dark-surfaceHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
                   −
                 </button>
-                <span className="px-6 py-3 font-bold text-lg text-black min-w-16 text-center">
+                <span className="px-6 py-3 font-bold text-lg text-text-primary min-w-16 text-center">
                   {quantity}
                 </span>
                 <button
@@ -343,7 +340,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   onClick={incrementQuantity}
                   disabled={!inventoryState.canPurchase || reachedMax}
                   aria-label="Aumentar cantidad"
-                  className="px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
+                  className="px-4 py-3 text-text-secondary hover:text-premium-gold hover:bg-dark-surfaceHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                 >
                   +
                 </button>
@@ -355,7 +352,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               {hasHitCards && (
                 <a
                   href={`/product/${product.slug}/hit-cards`}
-                  className="btn bg-purple-600 hover:bg-purple-700 text-white w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl"
+                  className="btn bg-dark-surfaceHover border border-premium-gold/30 text-premium-gold w-full text-center font-bold py-4 text-lg transition-all hover:bg-dark-surface"
                 >
                   ✨ Ver hits ({product.hitCards?.length || 0})
                 </a>
@@ -375,18 +372,18 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       <button
                         onClick={handleAddToCart}
                         disabled={addToCartDisabled}
-                        className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl flex items-center justify-center gap-2 ${
+                        className={`btn w-full text-center font-bold py-4 text-lg transition-all flex items-center justify-center gap-2 ${
                           addToCartDisabled
-                            ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                            ? 'bg-dark-surfaceHover text-text-muted cursor-not-allowed'
                             : addedToCart
-                              ? 'bg-green-600 hover:bg-green-700 text-white'
-                              : 'bg-red-600 hover:bg-red-700 text-white'
+                              ? 'bg-success text-dark-bg'
+                              : 'btn-primary'
                         }`}
                       >
                         <img
                           src="/images/add-to-cart.png"
                           alt="Add to Cart"
-                          className="w-5 h-5"
+                          className={`w-5 h-5 ${addToCartDisabled || addedToCart ? 'icon-invert' : ''}`}
                         />
                         {addedToCart
                           ? '✓ Añadido al carrito'
@@ -405,13 +402,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                             w-72
                             -translate-x-1/2
                             rounded-lg
-                            bg-gray-900
+                            bg-dark-surface
+                            border
+                            border-dark-border
                             px-4
                             py-3
                             text-sm
-                            text-white
+                            text-text-primary
                             opacity-0
-                            shadow-xl
+                            shadow-elevated
                             transition-opacity
                             duration-200
                             group-hover:opacity-100
@@ -436,7 +435,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
 
             {/* Shipping Info */}
-            <div className="mt-8 pt-8 border-t border-gray-200 space-y-3 text-sm text-gray-600">
+            <div className="mt-8 pt-8 border-t border-dark-border space-y-3 text-sm text-text-secondary">
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>

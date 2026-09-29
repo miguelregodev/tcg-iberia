@@ -19,11 +19,11 @@ export default async function BoosterPacksPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="booster packs"
+        title="Booster Packs"
         productType="pack"
         language={language}
         eyebrow="Sobres individuales"
-        subtitle="Sobres sueltos para coleccionistas y jugadores. Cartas oficiales, listas para abrir."
+        subtitle="Sobres sueltos para coleccionistas. Cartas oficiales, listos para abrir."
       />
       <Footer />
     </>

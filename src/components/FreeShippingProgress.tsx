@@ -75,7 +75,7 @@ export function FreeShippingProgress({
   if (emptyCart) {
     return (
       <div
-        className={`py-1 text-center text-xs font-semibold text-gray-700 ${className}`}
+        className={`py-1 text-center text-xs font-semibold text-text-secondary ${className}`}
         aria-label="Información de envío gratuito"
       >
         Envío gratuito a partir de 200€
@@ -86,24 +86,24 @@ export function FreeShippingProgress({
   // Full progress variant
   return (
     <section
-      className={`rounded-xl border border-gray-200 bg-gray-50 p-2 ${className}`}
+      className={`rounded-xl border border-dark-border bg-dark-surface p-2 ${className}`}
       aria-label="Estado de envío gratuito"
     >
-      <p className={`text-xs font-semibold ${state.qualified ? 'text-green-700' : 'text-gray-800'}`}>
+      <p className={`text-xs font-semibold ${state.qualified ? 'text-success' : 'text-text-primary'}`}>
         {title}
       </p>
 
       {showBar && (
         <>
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200" aria-hidden="true">
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-dark-surfaceHover" aria-hidden="true">
             <div
               className={`h-full rounded-full transition-all duration-500 ease-out ${
-                state.qualified ? 'bg-green-500' : 'bg-red-500'
+                state.qualified ? 'bg-success' : 'bg-premium-gold'
               }`}
               style={{ width: `${state.percentage}%` }}
             />
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-gray-600">
+          <div className="mt-1 flex items-center justify-between text-xs text-text-secondary">
             <span>{formatCurrency(state.cartValue)}</span>
             <span>{Math.round(state.percentage)}%</span>
             <span>{formatCurrency(state.threshold)}</span>

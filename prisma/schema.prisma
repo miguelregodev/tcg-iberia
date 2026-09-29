@@ -20,8 +20,23 @@ enum Language {
 
 enum OrderStatus {
   PROCESSING
+  SHIPPED
   COMPLETED
   FAILED
+  CANCELLED
+}
+
+enum ShippingProvider {
+  CORREOS
+  MRW
+  SEUR
+  CTT_EXPRESS
+}
+
+enum PaymentStatus {
+  PENDING_PAYMENT
+  PAID
+  PAYMENT_FAILED
   CANCELLED
 }
 
@@ -40,12 +55,13 @@ enum NotificationChannel {
   TELEGRAM
 }
 
-/// Product variant distinguishing between shrink-wrapped and no-shrink versions
-/// of the same underlying catalog product. Used to keep independent price histories
-/// per variant (the left/right sections of the Google Sheets import).
+/// Product variant distinguishing between the sealed ("Sellado") version and the
+/// live-opening ("Apertura en directo") version of the same underlying catalog
+/// product, opened on stream at a lower price. Used to keep independent price
+/// histories per variant (the left/right sections of the Google Sheets import).
 enum ProductVariant {
-  SHRINK
-  NO_SHRINK
+  SEALED
+  LIVE_OPENING
 }
 
 /// AnnouncementBanner model stores rotating announcement messages shown site-wide below the navigation.
@@ -93,22 +109,27 @@ model Product {
   description          String   @db.Text
   price                Decimal  @db.Decimal(10, 2)
   discountPercentage   Decimal? @db.Decimal(5, 2)
-  noShrinkPrice        Decimal? @db.Decimal(10, 2)
-  /// Optional wholesale price for authenticated B2B customers (SHRINK variant).
+  /// Optional public price for the "Apertura en directo" (live-opening) variant.
+  liveOpeningPrice     Decimal? @db.Decimal(10, 2)
+  /// Optional wholesale price for authenticated B2B customers (SEALED variant only).
   /// When present, replaces the public `price` for logged-in active B2B users.
   b2bPrice             Decimal? @db.Decimal(10, 2)
-  /// Optional wholesale price for the NO_SHRINK variant. Same visibility rules
-  /// as `b2bPrice`.
-  b2bPriceNoShrink     Decimal? @db.Decimal(10, 2)
   notes                String?  @db.Text
   type                 String?  @db.VarChar(100)
   releaseDate          DateTime?
   stock                Int      @default(0)
-  noShrinkStock        Int      @default(0)
   imageUrl             String?  @db.VarChar(500)
   language             Language @default(ENGLISH)
   priority             Int      @default(999)
   visible              Boolean  @default(true)
+  /// Physical weight of one unit in grams (nullable until populated by admin)
+  weightGrams          Int?
+  /// Physical length of one unit in centimeters (nullable until populated by admin)
+  lengthCm             Decimal? @db.Decimal(8, 2)
+  /// Physical width of one unit in centimeters (nullable until populated by admin)
+  widthCm              Decimal? @db.Decimal(8, 2)
+  /// Physical height of one unit in centimeters (nullable until populated by admin)
+  heightCm             Decimal? @db.Decimal(8, 2)
   favoriteCount        Int      @default(0)  // denormalized counter — kept in sync via API transactions
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -151,7 +172,7 @@ model PriceMapping {
 /// PriceHistory records the imported purchase price (converted JPY → EUR, before margin)
 /// for every imported sheet product on each import day, regardless of whether the imported
 /// row was matched to a catalog product. Independent histories are kept per product
-/// variant (SHRINK / NO_SHRINK), so the Shrink and No-Shrink versions of the same
+/// variant (SEALED / LIVE_OPENING), so the Sealed and Live-Opening versions of the same
 /// product never share data points.
 ///
 /// Deduplication:
@@ -227,6 +248,10 @@ model HitCard {
 /// Order model represents a customer order
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)
+/// - orderNumber: Customer-facing order number (TCG-YYYYMMDD-000000 format)
+/// - redsysOrderId: Numeric Redsys order ID for payment gateway (unique)
+/// - paymentProvider: Payment provider used (stripe, redsys, etc.)
+/// - paymentStatus: Payment status (PENDING_PAYMENT, PAID, PAYMENT_FAILED, CANCELLED)
 /// - fullName: Customer's full name
 /// - email: Customer's email address
 /// - phone: Customer's phone number
@@ -236,19 +261,30 @@ model HitCard {
 /// - shippingLocality: Locality/Region
 /// - shippingProvince: Province/State
 /// - totalAmount: Total order amount in EUR
-/// - status: Order status (PROCESSING, COMPLETED, FAILED, CANCELLED)
-/// - stripeSessionId: Stripe checkout session ID for payment tracking
+/// - status: Order fulfillment status (PROCESSING, COMPLETED, FAILED, CANCELLED)
+/// - stripeSessionId: Stripe checkout session ID for payment tracking (deprecated, legacy)
+/// - redsysTransactionId: Redsys transaction reference ID (Ds_Reference)
+/// - redsysResponseCode: Redsys response code (Ds_Response)
+/// - redsysAuthCode: Redsys authorization code (Ds_AuthorisationCode)
+/// - paymentAmount: Amount actually charged (for reconciliation)
+/// - paymentCurrency: Currency code (should be EUR)
+/// - paymentPaidAt: Timestamp when payment was confirmed
 /// - items: JSON array of ordered items
 /// - createdAt: Timestamp when order was created
 /// - updatedAt: Timestamp of last update
 /// 
 /// Indexes:
 /// - email: For finding orders by customer email
-/// - stripeSessionId: For finding orders by Stripe session
-/// - status: For filtering orders by status
+/// - status: For filtering orders by fulfillment status
+/// - paymentStatus: For filtering orders by payment status
+/// - stripeSessionId: For finding legacy Stripe orders
+/// - redsysOrderId: For finding Redsys orders
 model Order {
-  id                    String      @id @default(cuid())
-  orderNumber           String      @unique @db.VarChar(50)
+  id                    String           @id @default(cuid())
+  orderNumber           String           @unique @db.VarChar(50)
+  redsysOrderId         String?          @unique @db.VarChar(12)  // Numeric Redsys order ID
+  paymentProvider       String           @default("redsys") @db.VarChar(50)  // "stripe" | "redsys"
+  paymentStatus         PaymentStatus    @default(PENDING_PAYMENT)  // PENDING_PAYMENT, PAID, PAYMENT_FAILED, CANCELLED
   userId                String?     // nullable – guest orders have no userId
   fullName              String      @db.VarChar(255)
   email                 String      @db.VarChar(255)
@@ -259,8 +295,17 @@ model Order {
   shippingLocality      String      @db.VarChar(255)
   shippingProvince      String      @db.VarChar(255)
   totalAmount           Decimal     @db.Decimal(12, 2)
-  status                OrderStatus @default(PROCESSING)
-  stripeSessionId       String?     @unique @db.VarChar(500)
+  status                OrderStatus @default(PROCESSING)  // Fulfillment status: PROCESSING, SHIPPED, COMPLETED, FAILED, CANCELLED
+  shippingProvider      ShippingProvider?  // Shipping provider when status is SHIPPED
+  trackingNumber        String?     @db.VarChar(100)  // Tracking number when status is SHIPPED
+  shippedAt             DateTime?   // When the order was marked as shipped
+  stripeSessionId       String?     @unique @db.VarChar(500)  // @deprecated: Legacy Stripe field
+  redsysTransactionId   String?     @db.VarChar(50)  // Ds_Reference from Redsys
+  redsysResponseCode    String?     @db.VarChar(10)  // Ds_Response from Redsys
+  redsysAuthCode        String?     @db.VarChar(50)  // Ds_AuthorisationCode from Redsys
+  paymentAmount         Decimal?    @db.Decimal(12, 2)  // Amount charged (for reconciliation)
+  paymentCurrency       String?     @db.VarChar(3)  // EUR
+  paymentPaidAt         DateTime?   // When payment was confirmed
   items                 Json        // Array of {productId, name, quantity, price, discountPercentage}
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
@@ -270,6 +315,8 @@ model Order {
   @@index([email])
   @@index([userId])
   @@index([status])
+  @@index([paymentStatus])
+  @@index([redsysOrderId])
 }
 
 /// Sequence model represents a sequence for auto-incrementing IDs
@@ -591,7 +638,9 @@ model B2bLoginAudit {
 ///
 /// items is a JSON snapshot at request time so future price/name changes
 /// don't rewrite historical invoices. Each element has the shape:
-///   { productId, name, variant: 'SHRINK'|'NO_SHRINK', quantity, unitPriceEur, lineTotal }
+///   { productId, name, quantity, unitPriceEur, lineTotal }
+/// (B2B only ever sells the SEALED variant; older rows may carry a legacy
+/// `variant` key which is ignored.)
 ///
 /// Money columns are stored net of VAT:
 ///   - subtotal   = sum of line totals (pre-tax)

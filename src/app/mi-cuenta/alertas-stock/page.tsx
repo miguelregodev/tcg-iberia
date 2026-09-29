@@ -101,7 +101,7 @@ export default function AlertasStockPage() {
       <div className="card">
         <div className="animate-pulse space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 bg-gray-100 rounded-xl" />
+            <div key={i} className="h-24 bg-dark-surfaceHover rounded-xl" />
           ))}
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function AlertasStockPage() {
       <h1 className="text-h3 mb-6">Alertas de Stock</h1>
 
       {error && (
-        <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="mb-5 px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
           {error}
         </div>
       )}
@@ -121,14 +121,14 @@ export default function AlertasStockPage() {
       {alerts.length === 0 ? (
         <div className="text-center py-14">
           <p className="text-4xl mb-3">🔔</p>
-          <p className="text-gray-700 font-semibold mb-1">No tienes alertas activas.</p>
-          <p className="text-sm text-gray-500 mb-6">Cuando un producto esté agotado, podrás activar una alerta desde su ficha.</p>
+          <p className="text-text-primary font-semibold mb-1">No tienes alertas activas.</p>
+          <p className="text-sm text-text-secondary mb-6">Cuando un producto esté agotado, podrás activar una alerta desde su ficha.</p>
           <Link href="/booster-boxes" className="btn btn-primary inline-flex">Explorar productos</Link>
         </div>
       ) : (
         <div className="space-y-4">
           {alerts.map((alert) => (
-            <div key={alert.id} className="border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+            <div key={alert.id} className="border border-dark-border rounded-xl p-4 flex items-center gap-4">
               {alert.product.imageUrl ? (
                 <img
                   src={alert.product.imageUrl}
@@ -136,19 +136,19 @@ export default function AlertasStockPage() {
                   className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 flex-shrink-0">📦</div>
+                <div className="w-16 h-16 rounded-lg bg-dark-bgSecondary flex items-center justify-center text-text-muted flex-shrink-0">📦</div>
               )}
 
               <div className="flex-1 min-w-0">
-                <Link href={`/product/${alert.product.slug}`} className="font-semibold text-gray-900 hover:text-red-600 transition-colors line-clamp-1">
+                <Link href={`/product/${alert.product.slug}`} className="font-semibold text-text-primary hover:text-premium-gold transition-colors line-clamp-1">
                   {alert.product.name}
                 </Link>
-                <p className="text-xs text-gray-500 mt-1">Creada el {formatDate(alert.createdAt)}</p>
+                <p className="text-xs text-text-secondary mt-1">Creada el {formatDate(alert.createdAt)}</p>
                 <p className="text-sm mt-1">
                   {alert.product.stock > 0 ? (
-                    <span className="text-green-600 font-medium">Ya hay stock disponible</span>
+                    <span className="text-success font-medium">Ya hay stock disponible</span>
                   ) : (
-                    <span className="text-orange-600 font-medium">Agotado</span>
+                    <span className="text-warning font-medium">Agotado</span>
                   )}
                 </p>
               </div>
@@ -157,7 +157,7 @@ export default function AlertasStockPage() {
                 type="button"
                 onClick={() => handleRemove(alert)}
                 disabled={removingId === alert.id}
-                className="px-3 py-2 text-xs font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-2 text-xs font-medium text-text-secondary hover:text-premium-gold hover:bg-dark-surfaceHover rounded-lg transition-colors disabled:opacity-50"
               >
                 {removingId === alert.id ? 'Eliminando...' : 'Eliminar'}
               </button>
@@ -167,7 +167,7 @@ export default function AlertasStockPage() {
       )}
 
       {toast && (
-        <div className="absolute bottom-4 right-4 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg animate-fadeIn">
+        <div className="absolute bottom-4 right-4 px-3 py-2 bg-dark-surface border border-dark-border text-text-primary text-xs rounded-lg shadow-elevated animate-fadeIn">
           {toast}
         </div>
       )}

@@ -168,15 +168,15 @@ export default function AdminBannersPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       <AdminNav />
 
       <div className="container-custom px-4 py-8 max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Banners de Anuncios</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-text-primary">Banners de Anuncios</h1>
+            <p className="mt-1 text-sm text-text-secondary">
               Los banners activos se muestran en rotación bajo la navegación principal.
               Arrastra para reordenar.
             </p>
@@ -193,7 +193,7 @@ export default function AdminBannersPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg bg-danger-bg border border-danger px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -202,14 +202,14 @@ export default function AdminBannersPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            className="mb-6 rounded-xl border border-dark-border bg-dark-surface p-5 shadow-sm"
           >
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
+            <h2 className="text-base font-semibold text-text-primary mb-4">
               {editingId ? 'Editar banner' : 'Nuevo banner'}
             </h2>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="banner-text">
+              <label className="block text-sm font-medium text-text-primary mb-1" htmlFor="banner-text">
                 Mensaje
               </label>
               <textarea
@@ -220,9 +220,9 @@ export default function AdminBannersPage() {
                 value={form.text}
                 onChange={(e) => setForm((prev) => ({ ...prev, text: e.target.value }))}
                 placeholder='Ej. 🚚 Envío gratuito en pedidos superiores a 200€'
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                className="w-full rounded-lg border border-dark-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-premium-gold resize-none bg-dark-surface text-text-primary"
               />
-              <p className="mt-1 text-xs text-gray-400 text-right">
+              <p className="mt-1 text-xs text-text-muted text-right">
                 {form.text.length}/{MAX_TEXT_LENGTH}
               </p>
             </div>
@@ -233,9 +233,9 @@ export default function AdminBannersPage() {
                 type="checkbox"
                 checked={form.enabled}
                 onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                className="h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold"
               />
-              <label htmlFor="banner-enabled" className="text-sm text-gray-700">
+              <label htmlFor="banner-enabled" className="text-sm text-text-primary">
                 Activo (visible en la tienda)
               </label>
             </div>
@@ -257,10 +257,10 @@ export default function AdminBannersPage() {
 
         {/* Banner list */}
         {loading ? (
-          <div className="text-center py-16 text-gray-400 text-sm">Cargando banners…</div>
+          <div className="text-center py-16 text-text-muted text-sm">Cargando banners…</div>
         ) : banners.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
-            <p className="text-gray-500 text-sm">No hay banners todavía.</p>
+          <div className="rounded-xl border border-dashed border-dark-border bg-dark-surface py-16 text-center">
+            <p className="text-text-muted text-sm">No hay banners todavía.</p>
             <button onClick={openCreate} className="mt-3 btn btn-primary text-sm">
               Crear el primero
             </button>
@@ -274,11 +274,11 @@ export default function AdminBannersPage() {
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm cursor-grab active:cursor-grabbing"
+                className="flex items-start gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 shadow-sm cursor-grab active:cursor-grabbing"
               >
                 {/* Drag handle */}
                 <span
-                  className="mt-0.5 text-gray-300 select-none flex-shrink-0"
+                  className="mt-0.5 text-text-muted select-none flex-shrink-0"
                   aria-hidden="true"
                   title="Arrastra para reordenar"
                 >
@@ -286,12 +286,12 @@ export default function AdminBannersPage() {
                 </span>
 
                 {/* Order badge */}
-                <span className="mt-0.5 text-xs text-gray-400 font-mono w-4 flex-shrink-0">
+                  <span className="mt-0.5 text-xs text-text-muted font-mono w-4 flex-shrink-0">
                   {index + 1}
                 </span>
 
                 {/* Text */}
-                <span className="flex-1 text-sm text-gray-800 break-words">{banner.text}</span>
+                <span className="flex-1 text-sm text-text-primary break-words">{banner.text}</span>
 
                 {/* Status toggle */}
                 <button
@@ -299,8 +299,8 @@ export default function AdminBannersPage() {
                   title={banner.enabled ? 'Desactivar' : 'Activar'}
                   className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${
                     banner.enabled
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      ? 'bg-success-bg text-success hover:bg-success_dark'
+                      : 'bg-dark-surfaceHover text-text-muted hover:bg-dark-borderStrong'
                   }`}
                 >
                   {banner.enabled ? '● Activo' : '○ Inactivo'}
@@ -309,7 +309,7 @@ export default function AdminBannersPage() {
                 {/* Edit */}
                 <button
                   onClick={() => openEdit(banner)}
-                  className="flex-shrink-0 text-xs text-gray-500 hover:text-red-600 transition-colors"
+                  className="flex-shrink-0 text-xs text-text-muted hover:text-premium-gold transition-colors"
                   title="Editar"
                 >
                   ✏️
@@ -318,7 +318,7 @@ export default function AdminBannersPage() {
                 {/* Delete */}
                 <button
                   onClick={() => handleDelete(banner.id)}
-                  className="flex-shrink-0 text-xs text-gray-400 hover:text-red-600 transition-colors"
+                  className="flex-shrink-0 text-xs text-text-muted hover:text-danger transition-colors"
                   title="Eliminar"
                 >
                   🗑️

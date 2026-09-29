@@ -116,10 +116,10 @@ export function StockAlertButton({
           type="button"
           onClick={handleClick}
           disabled={submitting || alreadySubscribed}
-          className={`btn w-full text-center font-bold py-4 text-lg transition-all hover:shadow-xl ${
+          className={`btn w-full text-center font-bold py-4 text-lg transition-all ${
             alreadySubscribed
-              ? 'bg-green-600 text-white cursor-default'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-success text-dark-bg cursor-default'
+              : 'bg-dark-surfaceHover border border-dark-borderStrong text-text-primary hover:border-premium-gold/50'
           }`}
         >
           {submitting
@@ -133,7 +133,7 @@ export function StockAlertButton({
           <div
             role="status"
             aria-live="polite"
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-10 animate-fadeIn"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-2 bg-dark-surface border border-dark-border text-text-primary text-xs rounded-lg shadow-elevated z-10 animate-fadeIn"
           >
             {toast}
           </div>

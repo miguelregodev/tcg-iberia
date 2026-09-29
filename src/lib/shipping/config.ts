@@ -13,5 +13,5 @@ const shippingCostFromEnv =
 export const SHIPPING_CONFIG = {
   // Keep current behavior by default; can be overridden via env.
   freeShippingThreshold: parseNumber(thresholdFromEnv, 200),
-  standardShippingCost: parseNumber(shippingCostFromEnv, 6.95),
+  standardShippingCost: parseNumber(shippingCostFromEnv, 4.99),
 } as const;
