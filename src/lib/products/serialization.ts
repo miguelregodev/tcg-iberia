@@ -53,10 +53,10 @@ type ProductCoreShape = {
   language: Product['language'];
   priority: number;
   visible: boolean;
-  weightGrams: number | null;
-  lengthCm: number | null;
-  widthCm: number | null;
-  heightCm: number | null;
+  weightGrams: { toString(): string } | null;
+  lengthCm: { toString(): string } | null;
+  widthCm: { toString(): string } | null;
+  heightCm: { toString(): string } | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -113,10 +113,10 @@ export function serializePublicProduct(
     canPurchase: inventoryState.canPurchase,
     isPreorder: inventoryState.isPreorder,
     inventoryStatus: inventoryState.status,
-    weightGrams: product.weightGrams,
-    lengthCm: product.lengthCm,
-    widthCm: product.widthCm,
-    heightCm: product.heightCm,
+    weightGrams: product.weightGrams ? Number(product.weightGrams) : null,
+    lengthCm: product.lengthCm ? Number(product.lengthCm) : null,
+    widthCm: product.widthCm ? Number(product.widthCm) : null,
+    heightCm: product.heightCm ? Number(product.heightCm) : null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
     hitCards: product.hitCards?.map(serializeHitCard),
