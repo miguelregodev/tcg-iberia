@@ -44,17 +44,17 @@ export default async function HitCardsPage({
     return (
       <>
         <Navigation />
-        <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="min-h-screen bg-dark-bg flex items-center justify-center">
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900 mb-2">
+            <p className="text-2xl font-bold text-text-primary mb-2">
               Producto no encontrado
             </p>
-            <p className="text-gray-600 mb-6">
+            <p className="text-text-secondary mb-6">
               El producto solicitado no se encuentra disponible.
             </p>
             <a
               href="/"
-              className="text-red-600 font-semibold hover:text-red-700"
+              className="text-premium-gold font-semibold hover:text-premium-gold_dark"
             >
               ← Volver a Inicio
             </a>

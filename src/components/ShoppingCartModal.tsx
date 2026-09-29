@@ -27,9 +27,9 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
   const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
 
   // ── B2B pricing overrides ─────────────────────────────────────────────────
-  // Strip the `_noshrink` suffix so we look up overrides by the real product ID.
+  // Strip the `_live` suffix so we look up overrides by the real product ID.
   const productIds = useMemo(
-    () => items.map((i) => i.product.id.replace(/_noshrink$/, '')),
+    () => items.map((i) => i.product.id.replace(/_live$/, '')),
     [items]
   );
   const b2bOverrides = useB2BPrices(isB2B ? productIds : []);
@@ -41,13 +41,10 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
         ? Number(item.product.price) * (1 - Number(item.product.discountPercentage) / 100)
         : Number(item.product.price);
     }
-    const isNoShrink = item.product.id.endsWith('_noshrink');
-    const realId = item.product.id.replace(/_noshrink$/, '');
+    // B2B only ever has a Sellado price — live-opening items aren't purchasable
+    // via the B2B flow, so this always resolves the base product's override.
+    const realId = item.product.id.replace(/_live$/, '');
     const override = b2bOverrides.get(realId);
-    if (isNoShrink) {
-      const wholesale = override?.b2bPriceNoShrink;
-      return wholesale && wholesale > 0 ? wholesale : Number(item.product.price);
-    }
     const wholesale = override?.b2bPrice;
     return wholesale && wholesale > 0 ? wholesale : Number(item.product.price);
   };
@@ -104,15 +101,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
     setB2bSuccess(null);
 
     // Build payload from cart lines — the API re-fetches prices/stock
-    // server-side, so we only need to send ids + variants + quantities.
-    const payload = items.map((i) => {
-      const isNoShrink = i.product.id.endsWith('_noshrink');
-      return {
-        productId: i.product.id.replace(/_noshrink$/, ''),
-        variant: (isNoShrink ? 'NO_SHRINK' : 'SHRINK') as 'SHRINK' | 'NO_SHRINK',
-        quantity: i.quantity,
-      };
-    });
+    // server-side, so we only need to send ids + quantities (B2B only ever
+    // sells the Sellado variant).
+    const payload = items.map((i) => ({
+      productId: i.product.id.replace(/_live$/, ''),
+      quantity: i.quantity,
+    }));
 
     try {
       const res = await fetch('/api/b2b/orders', {
@@ -151,17 +145,17 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto"
+          className="bg-dark-surface border border-dark-border rounded-2xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">
+          <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-text-primary">
               Tu Bolsa
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-text-secondary hover:text-premium-gold transition-colors"
               aria-label="Close modal"
             >
               <svg
@@ -183,17 +177,17 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
           {/* Content */}
           <div className="p-6">
             {error && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm font-semibold">Error: {error}</p>
+              <div className="mb-4 p-4 bg-danger-bg border border-danger/30 rounded-lg">
+                <p className="text-danger text-sm font-semibold">Error: {error}</p>
               </div>
             )}
 
             {items.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg mb-4">El carrito está vacío</p>
+                <p className="text-text-secondary text-lg mb-4">El carrito está vacío</p>
                 <button
                   onClick={onClose}
-                  className="text-red-600 hover:text-red-700 font-semibold"
+                  className="text-premium-gold hover:text-premium-gold_dark font-semibold"
                 >
                   Continuar Comprando
                 </button>
@@ -222,11 +216,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                     return (
                       <div
                         key={item.product.id}
-                        className="flex gap-4 items-start border border-gray-200 rounded-lg p-4"
+                        className="flex gap-4 items-start border border-dark-border rounded-lg p-4"
                       >
                         {/* Product Image */}
                         {item.product.imageUrl && (
-                          <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                          <div className="flex-shrink-0 w-24 h-24 bg-dark-bgSecondary rounded-lg overflow-hidden">
                             <img
                               src={item.product.imageUrl}
                               alt={item.product.name}
@@ -237,21 +231,21 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
 
                         {/* Product Details */}
                         <div className="flex-grow min-w-0">
-                          <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
+                          <h3 className="font-bold text-text-primary mb-1 line-clamp-2">
                             {item.product.name}
                           </h3>
                           {/* Variant badge */}
-                          {(item.product.id.endsWith('_noshrink') || item.product.noShrinkPrice != null) && (
+                          {(item.product.id.endsWith('_live') || item.product.liveOpeningPrice != null) && (
                             <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${
-                              item.product.id.endsWith('_noshrink')
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-blue-100 text-blue-800'
+                              item.product.id.endsWith('_live')
+                                ? 'bg-warning-bg text-warning'
+                                : 'bg-premium-gold/15 text-premium-gold'
                             }`}>
-                              {item.product.id.endsWith('_noshrink') ? 'Sin Plástico' : 'Con Plástico'}
+                              {item.product.id.endsWith('_live') ? 'Apertura en Directo' : 'Sellado'}
                             </span>
                           )}
                           <p className={`text-xs font-semibold mb-1 ${
-                            inventoryState.isPreorder ? 'text-blue-700' : 'text-gray-600'
+                            inventoryState.isPreorder ? 'text-premium-gold' : 'text-text-secondary'
                           }`}>
                             {isB2B
                               ? inventoryState.isPreorder
@@ -260,20 +254,20 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                               : getProductStatusLabel(inventoryState)}
                           </p>
                           {inventoryState.isPreorder && releaseDate ? (
-                            <p className="text-xs text-gray-500 mb-1">
+                            <p className="text-xs text-text-secondary mb-1">
                               Lanzamiento: {releaseDate}
                             </p>
                           ) : null}
-                          <p className="text-sm text-gray-600 mb-2">
+                          <p className="text-sm text-text-secondary mb-2">
                             {finalUnitPrice.toFixed(2)}€ / ud
                             {isB2B && (
-                              <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                              <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
                                 B2B
                               </span>
                             )}
                           </p>
                           {!isB2B && item.product.discountPercentage && (
-                            <p className="text-xs text-red-600 font-semibold mb-2">
+                            <p className="text-xs text-premium-gold font-semibold mb-2">
                               -{item.product.discountPercentage}% discount applied
                             </p>
                           )}
@@ -287,11 +281,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                                   item.quantity - 1
                                 )
                               }
-                              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                              className="px-3 py-1 border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors"
                             >
                               −
                             </button>
-                            <span className="px-4 py-1 font-semibold text-gray-900 min-w-12 text-center">
+                            <span className="px-4 py-1 font-semibold text-text-primary min-w-12 text-center">
                               {item.quantity}
                             </span>
                             <button
@@ -303,7 +297,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                               }
                               disabled={atMax}
                               aria-label="Aumentar cantidad"
-                              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1 border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               +
                             </button>
@@ -312,12 +306,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
 
                         {/* Price and Remove */}
                         <div className="flex-shrink-0 text-right">
-                          <p className="text-sm font-bold text-gray-900 mb-3">
+                          <p className="text-sm font-bold text-text-primary mb-3">
                             {itemTotal.toFixed(2)}€
                           </p>
                           <button
                             onClick={() => removeFromCart(item.product.id)}
-                            className="text-red-600 hover:text-red-700 text-sm font-semibold transition-colors"
+                            className="text-danger hover:opacity-80 text-sm font-semibold transition-colors"
                           >
                             Eliminar
                           </button>
@@ -328,52 +322,52 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                 </div>
 
                 {/* Summary */}
-                <div className="border-t border-gray-200 pt-6">
+                <div className="border-t border-dark-border pt-6">
                   {isB2B ? (
                     <>
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-red-700 uppercase tracking-wide mb-3">
-                          <span className="inline-block h-2 w-2 rounded-full bg-red-600" />
+                      <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-premium-gold uppercase tracking-wide mb-3">
+                          <span className="inline-block h-2 w-2 rounded-full bg-premium-gold" />
                           Solicitud mayorista B2B
                           {customer?.companyName && (
-                            <span className="ml-1 text-gray-500 normal-case font-medium">
+                            <span className="ml-1 text-text-secondary normal-case font-medium">
                               · {customer.companyName}
                             </span>
                           )}
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-700">Base imponible:</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="text-text-secondary">Base imponible:</span>
+                          <span className="font-semibold text-text-primary">
                             {b2bSubtotal.toFixed(2)}€
                           </span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-700">IVA (21%):</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="text-text-secondary">IVA (21%):</span>
+                          <span className="font-semibold text-text-primary">
                             {b2bIva.toFixed(2)}€
                           </span>
                         </div>
-                        <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
-                          <span className="text-sm font-bold text-gray-900">Total:</span>
-                          <span className="text-lg font-bold text-red-600">
+                        <div className="border-t border-dark-border pt-3 flex justify-between items-center">
+                          <span className="text-sm font-bold text-text-primary">Total:</span>
+                          <span className="text-lg font-bold text-premium-gold">
                             {b2bTotal.toFixed(2)}€
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-text-muted mt-2">
                           El envío se calcula por separado en la factura. El pedido se
                           preparará una vez la factura haya sido abonada.
                         </p>
                       </div>
 
                       {b2bSuccess ? (
-                        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                        <div className="mb-4 p-4 bg-success-bg border border-success/30 rounded-lg text-sm text-success">
                           {b2bSuccess}
                         </div>
                       ) : (
                         <>
                           <label
                             htmlFor="b2b-notes"
-                            className="block text-sm font-medium text-gray-700 mb-1"
+                            className="block text-sm font-medium text-text-secondary mb-1"
                           >
                             Notas para el equipo comercial (opcional)
                           </label>
@@ -384,12 +378,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                             rows={2}
                             maxLength={2000}
                             placeholder="Instrucciones especiales, plazos, etc."
-                            className="w-full mb-4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className="w-full mb-4 rounded-lg border border-dark-border bg-dark-bgSecondary text-text-primary placeholder-text-muted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-premium-gold"
                           />
                           <button
                             onClick={handleB2bSubmit}
                             disabled={isSubmittingB2B || items.length === 0}
-                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-lg transition-colors"
+                            className="w-full btn btn-primary disabled:opacity-60"
                           >
                             {isSubmittingB2B ? 'Enviando…' : 'Solicitar Pedido'}
                           </button>
@@ -398,28 +392,28 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                     </>
                   ) : (
                     <>
-                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                      <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-4 mb-6">
                         <div className="flex justify-between items-center mb-3">
-                          <span className="text-gray-700">Total:</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="text-text-secondary">Total:</span>
+                          <span className="font-semibold text-text-primary">
                             {(totalPrice / 1.21).toFixed(2)}€
                           </span>
                         </div>
                         <div className="flex justify-between items-center mb-3">
-                          <span className="text-gray-700">IVA:</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="text-text-secondary">IVA:</span>
+                          <span className="font-semibold text-text-primary">
                             {(totalPrice - totalPrice / 1.21).toFixed(2)}€
                           </span>
                         </div>
                         <div className="flex justify-between items-center mb-3">
-                          <span className="text-gray-700">Envío:</span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="text-text-secondary">Envío:</span>
+                          <span className="font-semibold text-text-primary">
                             {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
                           </span>
                         </div>
-                        <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
-                          <span className="text-sm font-bold text-gray-900">Total:</span>
-                          <span className="text-lg font-bold text-black-600">
+                        <div className="border-t border-dark-border pt-3 flex justify-between items-center">
+                          <span className="text-sm font-bold text-text-primary">Total:</span>
+                          <span className="text-lg font-bold text-premium-gold">
                             {finalPrice.toFixed(2)}€
                           </span>
                         </div>
@@ -429,7 +423,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                       <button
                         onClick={handleCheckout}
                         disabled={isCheckingOut || items.length === 0}
-                        className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-lg transition-colors"
+                        className="w-full btn btn-primary disabled:opacity-60"
                       >
                         {isCheckingOut ? 'Procesando...' : 'Ir a Pagar'}
                       </button>

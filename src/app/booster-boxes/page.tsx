@@ -19,10 +19,10 @@ export default async function BoosterBoxesPage({ searchParams }: PageProps) {
     <>
       <Navigation />
       <ProductListPage
-        title="booster boxes"
+        title="Booster Boxes"
         productType="booster box"
         language={language}
-        eyebrow="Cajas de expansión"
+        eyebrow="Cajas selladas"
         subtitle="Cajas selladas con todos los sobres de la expansión. La opción preferida por coleccionistas serios."
         allowedLanguages={['JAPANESE', 'KOREAN']}
       />

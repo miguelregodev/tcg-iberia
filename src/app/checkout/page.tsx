@@ -6,7 +6,7 @@ export default function CheckoutPage() {
   return (
     <>
     <Navigation />
-    <main className="min-h-screen bg-gray-50 py-12">
+    <main className="min-h-screen bg-dark-bg py-12">
       <div className="container-custom px-4">
         <CheckoutForm />
       </div>

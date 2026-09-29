@@ -30,7 +30,7 @@ export default async function MiCuentaLayout({ children }: { children: React.Rea
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-dark-bg">
         <div className="section">
           <div className="container-custom">
             <div className="flex flex-col lg:flex-row gap-8">

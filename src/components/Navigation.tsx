@@ -17,6 +17,7 @@ import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { useMemo } from 'react';
 import { AnnouncementBannerBar } from './AnnouncementBannerBar';
 import { SearchPanel, type SearchPanelHandle } from './SearchPanel';
+import { DesktopNavMenu } from './DesktopNavMenu';
 
 const ACCOUNT_LINKS = [
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
@@ -112,31 +113,32 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="container-custom px-4 py-4 flex justify-center items-center relative">
-          {/* Left side: Hamburger + Mobile Search */}
-          <div className="absolute left-4 flex items-center gap-1">
+      {/* Top Bar: Logo centered + hamburger/search on left (mobile), search/login/cart on right */}
+      <nav className="bg-dark-bg/95 backdrop-blur border-b border-dark-border sticky top-0 z-50">
+        <div className="container-custom px-2 sm:px-4 py-3 md:py-4 flex items-center justify-center gap-2 md:gap-6 relative">
+          {/* Left: Hamburger (mobile only) */}
+          <div className="absolute left-1 sm:left-4 flex md:hidden items-center gap-0.5 sm:gap-1">
             <div ref={menuWrapperRef} className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors group"
+                className="relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-dark-surfaceHover transition-colors group"
                 aria-label="Toggle menu"
                 aria-expanded={isMenuOpen}
               >
                 <span className="sr-only">Toggle menu</span>
                 <span
-                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
-                    isMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-2'
+                  className={`absolute h-0.5 w-6 rounded-full bg-text-secondary group-hover:bg-premium-gold transition-all duration-300 ease-out ${
+                    isMenuOpen ? 'rotate-45 translate-y-0 bg-premium-gold' : '-translate-y-2'
                   }`}
                 />
                 <span
-                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
+                  className={`absolute h-0.5 w-6 rounded-full bg-text-secondary group-hover:bg-premium-gold transition-all duration-300 ease-out ${
                     isMenuOpen ? 'opacity-0 scale-x-0' : 'opacity-100 scale-x-100'
                   }`}
                 />
                 <span
-                  className={`absolute h-0.5 w-6 rounded-full bg-gray-700 group-hover:bg-red-600 transition-all duration-300 ease-out ${
-                    isMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-2'
+                  className={`absolute h-0.5 w-6 rounded-full bg-text-secondary group-hover:bg-premium-gold transition-all duration-300 ease-out ${
+                    isMenuOpen ? '-rotate-45 translate-y-0 bg-premium-gold' : 'translate-y-2'
                   }`}
                 />
               </button>
@@ -151,40 +153,22 @@ export function Navigation() {
                 </div>
               )}
             </div>
-
-            {/* Search toggle — visible on mobile only */}
-            <button
-              type="button"
-              data-search-trigger
-              onClick={() => setIsSearchOpen((v) => !v)}
-              className="md:hidden relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label={isSearchOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'}
-              aria-expanded={isSearchOpen}
-              aria-controls="global-search-panel"
-            >
-              <img
-                src="/images/search.png"
-                alt=""
-                aria-hidden="true"
-                className="w-6 h-6"
-              />
-            </button>
           </div>
 
           {/* Centered Logo & Brand */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <img src="/images/logo.png" alt="TCG Iberia" className="h-10 w-auto" />
-            <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
+            <span className="hidden sm:inline text-lg md:text-2xl font-bold text-premium-gold">TCG Iberia</span>
           </Link>
 
           {/* Right side: Search + Login / Account + Shopping Bag */}
-          <div className="absolute right-4 flex items-center gap-1">
-            {/* Search toggle — hidden on mobile (shown on left side instead) */}
+          <div className="absolute right-1 sm:right-4 flex items-center gap-0.5 sm:gap-1">
+            {/* Search toggle */}
             <button
               type="button"
               data-search-trigger
               onClick={() => setIsSearchOpen((v) => !v)}
-              className="hidden md:flex relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex relative p-2 hover:bg-dark-surfaceHover rounded-lg transition-colors"
               aria-label={isSearchOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'}
               aria-expanded={isSearchOpen}
               aria-controls="global-search-panel"
@@ -193,7 +177,7 @@ export function Navigation() {
                 src="/images/search.png"
                 alt=""
                 aria-hidden="true"
-                className="w-6 h-6"
+                className="w-6 h-6 icon-invert opacity-80"
               />
             </button>
 
@@ -202,26 +186,26 @@ export function Navigation() {
               <div ref={accountWrapperRef} className="relative">
                 <button
                   onClick={() => setIsAccountOpen((v) => !v)}
-                  className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="relative p-2 hover:bg-dark-surfaceHover rounded-lg transition-colors"
                   aria-label="Cuenta B2B"
                   aria-expanded={isAccountOpen}
                 >
-                  <img src="/images/login.png" alt="Cuenta B2B" className="w-6 h-6" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 border border-white rounded-full" />
+                  <img src="/images/login.png" alt="Cuenta B2B" className="w-6 h-6 icon-invert opacity-90" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-premium-gold border border-dark-bg rounded-full" />
                 </button>
 
                 {isAccountOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-dark-surface rounded-xl shadow-elevated border border-dark-border overflow-hidden z-[9999] animate-fadeIn">
                     {/* B2B header */}
-                    <div className="px-4 py-3 bg-red-600 text-white">
-                      <p className="text-[10px] tracking-widest opacity-90 uppercase font-semibold">
+                    <div className="px-4 py-3 bg-dark-bgSecondary border-b border-dark-border">
+                      <p className="text-[10px] tracking-widest text-premium-gold uppercase font-semibold">
                         Portal mayorista
                       </p>
-                      <p className="font-bold text-sm truncate">
+                      <p className="font-bold text-sm truncate text-text-primary">
                         {b2bCustomer?.companyName ?? 'Cliente B2B'}
                       </p>
                       {b2bCustomer?.contactName && (
-                        <p className="text-xs opacity-90 truncate">
+                        <p className="text-xs text-text-secondary truncate">
                           {b2bCustomer.contactName}
                         </p>
                       )}
@@ -232,7 +216,7 @@ export function Navigation() {
                       <Link
                         href="/mi-cuenta/b2b/perfil"
                         onClick={() => setIsAccountOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors"
                       >
                         <span>🏢</span>
                         Mi perfil B2B
@@ -240,7 +224,7 @@ export function Navigation() {
                       <Link
                         href="/mi-cuenta/b2b/pedidos"
                         onClick={() => setIsAccountOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors"
                       >
                         <span>📦</span>
                         Mis pedidos B2B
@@ -248,13 +232,13 @@ export function Navigation() {
                       <Link
                         href="/b2b-catalog"
                         onClick={() => setIsAccountOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors"
                       >
                         <span>🛒</span>
                         Ir al catálogo
                       </Link>
 
-                      <hr className="my-1 border-gray-100" />
+                      <hr className="my-1 border-dark-border" />
 
                       <button
                         onClick={async () => {
@@ -262,7 +246,7 @@ export function Navigation() {
                           await logoutB2B();
                           router.refresh();
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors text-left"
                       >
                         <span>🚪</span>
                         Cerrar sesión B2B
@@ -275,20 +259,20 @@ export function Navigation() {
               <div ref={accountWrapperRef} className="relative">
                 <button
                   onClick={() => setIsAccountOpen((v) => !v)}
-                  className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="relative p-2 hover:bg-dark-surfaceHover rounded-lg transition-colors"
                   aria-label="Mi cuenta"
                   aria-expanded={isAccountOpen}
                 >
-                  <img src="/images/login.png" alt="Mi cuenta" className="w-6 h-6" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 border border-white rounded-full" />
+                  <img src="/images/login.png" alt="Mi cuenta" className="w-6 h-6 icon-invert opacity-90" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-success border border-dark-bg rounded-full" />
                 </button>
 
                 {isAccountOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-dark-surface rounded-xl shadow-elevated border border-dark-border overflow-hidden z-[9999] animate-fadeIn">
                     {/* User header */}
-                    <div className="px-4 py-3 bg-red-600 text-white">
-                      <p className="text-xs opacity-80">Mi cuenta B2B</p>
-                      <p className="font-bold text-sm truncate">
+                    <div className="px-4 py-3 bg-dark-bgSecondary border-b border-dark-border">
+                      <p className="text-xs text-text-secondary">Mi cuenta</p>
+                      <p className="font-bold text-sm truncate text-text-primary">
                         {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}
                       </p>
                     </div>
@@ -300,18 +284,18 @@ export function Navigation() {
                           key={item.href}
                           href={item.href}
                           onClick={() => setIsAccountOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors"
                         >
                           <span>{item.icon}</span>
                           {item.label}
                         </Link> 
                       ))}
 
-                      <hr className="my-1 border-gray-100" />
+                      <hr className="my-1 border-dark-border" />
 
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors text-left"
                       >
                         <span>🚪</span>
                         Cerrar Sesión
@@ -323,31 +307,38 @@ export function Navigation() {
             ) : (
               <button
                 onClick={() => setIsLoginOpen(true)}
-                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="relative p-2 hover:bg-dark-surfaceHover rounded-lg transition-colors"
                 aria-label="Iniciar sesión"
               >
-                <img src="/images/login.png" alt="Iniciar sesión" className="w-6 h-6" />
+                <img src="/images/login.png" alt="Iniciar sesión" className="w-6 h-6 icon-invert opacity-90" />
               </button>
             )}
 
             {/* Shopping Bag */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="relative p-2 hover:bg-dark-surfaceHover rounded-lg transition-colors"
               aria-label="Shopping cart"
             >
               <img
                 src="/images/shopping-bag.png"
                 alt="Shopping Cart"
-                className="w-6 h-6"
+                className="w-6 h-6 icon-invert opacity-90"
               />
               {totalQuantity > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-premium-gold text-dark-bg text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {totalQuantity}
                 </span>
               )}
             </button>
           </div>
+        </div>
+      </nav>
+
+      {/* Secondary Nav Bar: Centered menu items (desktop only) */}
+      <nav className="hidden md:block bg-dark-bg/95 backdrop-blur border-b border-dark-border sticky top-16 z-40">
+        <div className="container-custom px-4 py-3 flex justify-center">
+          <DesktopNavMenu onOpenB2B={() => setIsB2BOpen(true)} />
         </div>
       </nav>
 
@@ -365,7 +356,7 @@ export function Navigation() {
 
       {/* Free Shipping Progress Banner — only visible when cart has items */}
       {totalQuantity > 0 && (
-        <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="bg-dark-bgSecondary border-b border-dark-border">
           <div className="container-custom px-4 py-1.5">
             <FreeShippingProgress
               state={freeShippingState}

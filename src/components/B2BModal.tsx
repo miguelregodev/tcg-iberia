@@ -27,7 +27,7 @@ interface Props {
 }
 
 const inputClass =
-  'w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500';
+  'w-full bg-dark-bgSecondary border border-dark-border rounded-lg px-3.5 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-premium-gold focus:border-premium-gold transition-colors disabled:opacity-50';
 
 export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
   const router = useRouter();
@@ -154,10 +154,10 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         onClick={onClose}
       />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-slideUp">
+      <div className="relative bg-dark-surface border border-dark-border rounded-2xl shadow-elevated w-full max-w-md p-8 animate-slideUp">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
+          className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors"
           aria-label="Cerrar"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -166,13 +166,13 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         </button>
 
         <div className="mb-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-semibold tracking-wide uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-premium-gold/15 text-premium-gold text-xs font-semibold tracking-wide uppercase">
             TCG Iberia · B2B
           </div>
-          <h2 id="b2b-modal-title" className="mt-3 text-2xl font-bold text-gray-900">
+          <h2 id="b2b-modal-title" className="mt-3 text-2xl font-bold text-text-primary">
             {mode === 'login' ? 'Acceso mayorista' : 'Solicita tu cuenta B2B'}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-text-secondary">
             {mode === 'login'
               ? 'Introduce tus credenciales para ver tarifas mayoristas.'
               : 'Escribe tu email y te enviaremos la documentación que necesitamos.'}
@@ -180,18 +180,18 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          <div className="mb-4 px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          <div className="mb-4 px-4 py-3 bg-success-bg border border-success/30 text-success rounded-lg text-sm">
             {success}
           </div>
         )}
 
         {hasCustomerSession ? (
-          <div className="mb-4 px-4 py-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 space-y-2">
+          <div className="mb-4 px-4 py-4 bg-premium-gold/10 border border-premium-gold/30 rounded-lg text-sm text-text-primary space-y-2">
             <p>
               Estás dentro como cliente particular
               {customerSession?.user?.email ? ` (${customerSession.user.email})` : ''}. Cierra la
@@ -204,7 +204,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
                 router.refresh();
                 onClose();
               }}
-              className="w-full text-center px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+              className="w-full text-center px-4 py-2 rounded-lg bg-premium-gold text-dark-bg text-sm font-semibold hover:bg-premium-gold_dark transition-colors"
             >
               Cerrar sesión de cliente
             </button>
@@ -212,7 +212,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         ) : mode === 'login' ? (
           <form onSubmit={handleLogin} className="space-y-4" noValidate>
             <div>
-              <label htmlFor="b2b-email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="b2b-email" className="block text-sm font-medium text-text-secondary mb-1">
                 Correo electrónico
               </label>
               <input
@@ -228,7 +228,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
               />
             </div>
             <div>
-              <label htmlFor="b2b-password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="b2b-password" className="block text-sm font-medium text-text-secondary mb-1">
                 Contraseña
               </label>
               <input
@@ -246,7 +246,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? 'Accediendo…' : 'Acceder'}
             </button>
@@ -254,7 +254,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         ) : (
           <form onSubmit={handleRequest} className="space-y-4" noValidate>
             <div>
-              <label htmlFor="b2b-req-email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="b2b-req-email" className="block text-sm font-medium text-text-secondary mb-1">
                 Correo electrónico
               </label>
               <input
@@ -272,7 +272,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
             <button
               type="submit"
               disabled={loading || !!success}
-              className="w-full py-3 px-4 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? 'Enviando…' : success ? 'Solicitud enviada' : 'Solicitar cuenta B2B'}
             </button>
@@ -280,7 +280,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
         )}
 
         {!hasCustomerSession && (
-          <div className="mt-6 pt-4 border-t border-gray-100 text-center text-sm">
+          <div className="mt-6 pt-4 border-t border-dark-border text-center text-sm">
             {mode === 'login' ? (
               <button
                 type="button"
@@ -289,7 +289,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
                   setError(null);
                   setSuccess(null);
                 }}
-                className="text-red-600 hover:text-red-700 font-medium"
+                className="text-premium-gold hover:text-premium-gold_dark font-medium"
               >
                 Solicita tu cuenta B2B para acceder a tarifas mayoristas
               </button>
@@ -301,7 +301,7 @@ export function B2BModal({ isOpen, onClose, initialMode = 'login' }: Props) {
                   setError(null);
                   setSuccess(null);
                 }}
-                className="text-gray-600 hover:text-gray-900 font-medium"
+                className="text-text-secondary hover:text-text-primary font-medium"
               >
                 ← Volver a iniciar sesión
               </button>

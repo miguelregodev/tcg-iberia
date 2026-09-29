@@ -20,7 +20,7 @@ interface PageProps {
 }
 
 const inputClass =
-  'w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500';
+  'w-full bg-dark-bgSecondary border border-dark-border rounded-lg px-3.5 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-premium-gold focus:border-premium-gold transition-colors disabled:opacity-50';
 
 interface CustomerSummary {
   email: string;
@@ -110,38 +110,38 @@ export default function B2bActivationPage({ params }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+    <main className="min-h-screen flex items-center justify-center bg-dark-bg px-4 py-12">
+      <div className="w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-elevated p-8">
         <div className="mb-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-semibold tracking-wide uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-premium-gold/15 text-premium-gold text-xs font-semibold tracking-wide uppercase">
             TCG Iberia · B2B
           </div>
-          <h1 className="mt-3 text-2xl font-bold text-gray-900">
+          <h1 className="mt-3 text-2xl font-bold text-text-primary">
             {done ? '¡Cuenta activada!' : 'Activa tu cuenta'}
           </h1>
           {customer && !done && (
-            <p className="mt-1 text-sm text-gray-500">
-              Hola <strong className="text-gray-800">{customer.contactName}</strong>, define
+            <p className="mt-1 text-sm text-text-secondary">
+              Hola <strong className="text-text-primary">{customer.contactName}</strong>, define
               tu contraseña para acceder a las tarifas mayoristas de{' '}
-              <strong className="text-gray-800">{customer.companyName}</strong>.
+              <strong className="text-text-primary">{customer.companyName}</strong>.
             </p>
           )}
         </div>
 
         {loading && (
           <div className="flex items-center justify-center py-8">
-            <span className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+            <span className="h-8 w-8 rounded-full border-2 border-premium-gold border-t-transparent animate-spin" />
           </div>
         )}
 
         {!loading && !valid && (
           <div className="text-center space-y-4">
-            <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <div className="px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
               {error ?? 'Enlace no válido o expirado.'}
             </div>
             <a
               href="/"
-              className="inline-block text-sm text-red-600 hover:text-red-700 font-medium"
+              className="inline-block text-sm text-premium-gold hover:text-premium-gold_dark font-medium"
             >
               Volver a la tienda
             </a>
@@ -151,13 +151,13 @@ export default function B2bActivationPage({ params }: PageProps) {
         {!loading && valid && !done && (
           <>
             {error && (
-              <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              <div className="mb-4 px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
                 {error}
               </div>
             )}
             <form onSubmit={submit} className="space-y-4" noValidate>
               <div>
-                <label htmlFor="pw" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="pw" className="block text-sm font-medium text-text-secondary mb-1">
                   Contraseña
                 </label>
                 <input
@@ -173,7 +173,7 @@ export default function B2bActivationPage({ params }: PageProps) {
                 />
               </div>
               <div>
-                <label htmlFor="pw2" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="pw2" className="block text-sm font-medium text-text-secondary mb-1">
                   Repetir contraseña
                 </label>
                 <input
@@ -188,13 +188,13 @@ export default function B2bActivationPage({ params }: PageProps) {
                   placeholder="Repite la contraseña"
                 />
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-text-secondary">
                 Mínimo 8 caracteres, con al menos una letra y un número.
               </p>
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 px-4 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Activando…' : 'Activar mi cuenta'}
               </button>
@@ -204,7 +204,7 @@ export default function B2bActivationPage({ params }: PageProps) {
 
         {done && (
           <div className="text-center space-y-4">
-            <div className="px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+            <div className="px-4 py-3 bg-success-bg border border-success/30 text-success rounded-lg text-sm">
               Tu cuenta ya está activa. Te estamos redirigiendo…
             </div>
           </div>

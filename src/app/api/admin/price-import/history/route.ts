@@ -9,7 +9,7 @@
  *   {
  *     exchangeRate: number,
  *     entries: [
- *       { catalogProductId?: string | null, variant: 'SHRINK' | 'NO_SHRINK',
+ *       { catalogProductId?: string | null, variant: 'SEALED' | 'LIVE_OPENING',
  *         sheetProductName: string, priceJpy: number }
  *     ]
  *   }
@@ -42,7 +42,7 @@ function isAuthenticated(request: NextRequest): boolean {
 }
 
 function isValidVariant(v: unknown): v is ProductVariant {
-  return v === 'SHRINK' || v === 'NO_SHRINK';
+  return v === 'SEALED' || v === 'LIVE_OPENING';
 }
 
 export async function POST(request: NextRequest) {

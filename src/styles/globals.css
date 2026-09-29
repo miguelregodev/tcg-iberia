@@ -1,20 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&display=swap");
-
-/* Optional: drop a licensed Airstrike.ttf in /public/fonts/ to use the real
-   font. Falls back to Orbitron (free, OFL-licensed) when not present. */
 @font-face {
-  font-family: "Airstrike";
-  src: url("/fonts/Airstrike.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "DreamMMA";
-  src: url("/fonts/DreamMMA.ttf") format("truetype");
-  font-weight: normal;
+  font-family: "TypoSlabserif";
+  src: url("/fonts/TypoSlabserif-Light.ttf") format("truetype");
+  font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
@@ -32,32 +19,36 @@ html {
 }
 
 body {
-  @apply bg-white text-black;
-  font-family: "Inter", system-ui, sans-serif;
+  @apply bg-dark-bg text-text-primary;
+  font-family: "TypoSlabserif", system-ui, sans-serif;
 }
 
 .btn {
-  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300;
+  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dark-bg disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .btn-primary {
-  @apply bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl;
+  @apply bg-premium-gold text-dark-bg hover:bg-premium-gold_dark shadow-elevated;
 }
 
 .btn-secondary {
-  @apply bg-white border-2 border-red-600 text-red-600 hover:bg-red-50;
+  @apply bg-transparent border border-dark-borderStrong text-text-primary hover:bg-dark-surfaceHover hover:border-premium-gold/40;
 }
 
 .btn-ghost {
-  @apply text-gray-600 hover:text-black;
+  @apply text-text-secondary hover:text-text-primary hover:bg-dark-surfaceHover;
+}
+
+.btn-danger {
+  @apply bg-danger text-white hover:opacity-90;
 }
 
 .card {
-  @apply bg-white border border-gray-200 rounded-xl p-6 hover:border-red-300 hover:shadow-lg transition-all duration-300;
+  @apply bg-dark-surface border border-dark-border rounded-card p-6 hover:border-premium-gold/30 transition-all duration-300;
 }
 
 .card-hover {
-  @apply hover:shadow-xl hover:shadow-red-100;
+  @apply hover:shadow-elevated hover:bg-dark-surfaceHover;
 }
 
 .section {
@@ -69,26 +60,26 @@ body {
 }
 
 .text-h1 {
-  @apply text-4xl md:text-6xl font-bold tracking-tight text-black;
+  @apply text-4xl md:text-6xl font-bold tracking-tight text-text-primary;
 }
 
 .text-h2 {
-  @apply text-3xl md:text-4xl font-bold tracking-tight text-black;
+  @apply text-3xl md:text-4xl font-bold tracking-tight text-text-primary;
 }
 
 .text-h3 {
-  @apply text-2xl md:text-3xl font-semibold text-black;
+  @apply text-2xl md:text-3xl font-semibold text-text-primary;
 }
 
 .gradient-gold {
-  @apply bg-gradient-to-r from-red-500 via-red-600 to-red-700;
+  @apply bg-gradient-to-r from-premium-gold via-premium-gold to-premium-gold_dark;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-white {
-  @apply bg-gradient-to-r from-white via-gray-100 to-white;
+  @apply bg-gradient-to-r from-text-primary via-text-secondary to-text-primary;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -119,8 +110,14 @@ body {
   display: none;
 }
 
+/* Recolors monochrome black-on-transparent PNG icons (search, cart, login…)
+   so they read correctly against the dark theme. */
+.icon-invert {
+  filter: brightness(0) invert(1);
+}
+
 .font-airstrike {
-  font-family:  "DreamMMA", "Airstrike", "Orbitron", system-ui, sans-serif;
+  font-family: "TypoSlabserif", system-ui, sans-serif;
   letter-spacing: 0.05em;
 }
 
@@ -196,12 +193,12 @@ body {
 
 .shimmer {
   animation: shimmer 2s infinite;
-  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+  background: linear-gradient(90deg, #211F30 0%, #2A2740 50%, #211F30 100%);
   background-size: 1000px 100%;
 }
 
 .focus-visible {
-  @apply focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white;
+  @apply focus:outline-none focus:ring-2 focus:ring-premium-gold focus:ring-offset-2 focus:ring-offset-dark-bg;
 }
 
 ::-webkit-scrollbar {
@@ -209,13 +206,13 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-dark-bgSecondary;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-red-500 rounded-full;
+  @apply bg-dark-surfaceHover rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-red-700;
+  @apply bg-premium-gold_dark;
 }

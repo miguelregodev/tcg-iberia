@@ -13,9 +13,9 @@ export function ReleaseProductCard({ product, onClick }: Props) {
       title={product.name}
       aria-label={`Ver detalles de ${product.name}`}
       className={[
-        'aspect-square rounded overflow-hidden bg-gray-100',
-        'hover:ring-2 hover:ring-red-400',
-        'focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none',
+        'aspect-square rounded overflow-hidden bg-dark-bgSecondary',
+        'hover:ring-2 hover:ring-premium-gold/50',
+        'focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:outline-none',
         'transition-all group',
       ].join(' ')}
     >
@@ -27,7 +27,7 @@ export function ReleaseProductCard({ product, onClick }: Props) {
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-gray-400">
+        <div className="w-full h-full flex items-center justify-center text-text-muted">
           <svg
             className="w-4 h-4"
             fill="none"

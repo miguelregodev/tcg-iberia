@@ -72,7 +72,7 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
-                className="w-2 h-2 rounded-full bg-red-300 animate-bounce"
+                className="w-2 h-2 rounded-full bg-premium-gold animate-bounce"
                 style={{ animationDelay: `${i * 150}ms` }}
               />
             ))}

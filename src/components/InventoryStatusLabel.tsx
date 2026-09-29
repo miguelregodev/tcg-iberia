@@ -27,14 +27,14 @@ export function InventoryStatusLabel({ inventoryState }: Props) {
 
   return (
     <span
-      className={`text-sm font-semibold ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
         inventoryState.status === 'preorder'
-          ? 'text-blue-700'
+          ? 'bg-premium-gold/15 text-premium-gold'
           : inventoryState.status === 'available'
-            ? 'text-green-600'
+            ? 'bg-success-bg text-success'
             : inventoryState.status === 'low_stock'
-              ? 'text-orange-600'
-              : 'text-red-600'
+              ? 'bg-warning-bg text-warning'
+              : 'bg-danger-bg text-danger'
       }`}
     >
       {getProductStatusLabel(inventoryState)}

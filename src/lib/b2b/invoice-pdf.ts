@@ -56,7 +56,6 @@ import {
 
 export interface InvoiceItem {
   name: string;
-  variant?: 'SHRINK' | 'NO_SHRINK';
   quantity: number;
   unitPriceEur: number;
   lineTotal: number;
@@ -283,8 +282,7 @@ export async function generateInvoicePdf(payload: InvoicePayload): Promise<Uint8
 
   // Rows
   for (const item of payload.items) {
-    const variantLabel = item.variant === 'NO_SHRINK' ? ' (sin plástico)' : '';
-    const description = `${item.name}${variantLabel}`;
+    const description = item.name;
     const baseline = cursorY - 4.8 * MM;
     // Truncate very long descriptions so they never overflow into the quantity column.
     const maxDescW = colWidths.desc - 4 * MM;

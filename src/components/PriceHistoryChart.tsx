@@ -5,7 +5,7 @@
  *
  * Interactive SVG line chart that visualizes the historical purchase-price
  * evolution (JPY → EUR, pre-margin) of all products, with separate series
- * for each product variant (SHRINK, NO_SHRINK).
+ * for each product variant (SEALED, LIVE_OPENING).
  *
  * Design goals:
  *  - Zero external dependencies (no chart library) → implemented as a plain
@@ -17,7 +17,7 @@
  *    interpolation is generated.
  *  - Hover interaction reveals a tooltip with the exact date, EUR purchase
  *    price, original JPY price, exchange rate, and product name.
- *  - Variant selector (SHRINK / NO_SHRINK) filters the displayed series.
+ *  - Variant selector (SEALED / LIVE_OPENING) filters the displayed series.
  *  - Legend showing product colors.
  */
 
@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type ChartVariant = 'SHRINK' | 'NO_SHRINK';
+export type ChartVariant = 'SEALED' | 'LIVE_OPENING';
 
 interface ChartPoint {
   date: string; // YYYY-MM-DD
@@ -133,7 +133,7 @@ function pickTickIndices(n: number, target = 5): number[] {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function PriceHistoryChart({ refreshKey = 0 }: Props) {
-  const [variant, setVariant] = useState<ChartVariant>('SHRINK');
+  const [variant, setVariant] = useState<ChartVariant>('SEALED');
   const [products, setProducts] = useState<ProductSeries[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -403,7 +403,7 @@ export function PriceHistoryChart({ refreshKey = 0 }: Props) {
 
         {/* Variant selector — segmented control */}
         <div className="inline-flex rounded-xl border border-gray-300 overflow-hidden self-start">
-          {(['SHRINK', 'NO_SHRINK'] as const).map((v) => {
+          {(['SEALED', 'LIVE_OPENING'] as const).map((v) => {
             const active = variant === v;
             return (
               <button
@@ -415,7 +415,7 @@ export function PriceHistoryChart({ refreshKey = 0 }: Props) {
                 }`}
                 aria-pressed={active}
               >
-                {v === 'SHRINK' ? 'Shrink' : 'No Shrink'}
+                {v === 'SEALED' ? 'Sellado' : 'Apertura en Directo'}
               </button>
             );
           })}

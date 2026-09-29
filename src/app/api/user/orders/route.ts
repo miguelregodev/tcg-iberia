@@ -27,6 +27,7 @@ export async function GET() {
         email: true,
         totalAmount: true,
         status: true,
+        paymentStatus: true,
         createdAt: true,
         items: true,
       },

@@ -47,59 +47,59 @@ export function HitCardsClient({ product }: HitCardsClientProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       {/* Hero band */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-red-900 to-black text-white">
+      <div className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-40"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(220,38,38,0.4) 0%, transparent 60%)',
+              'radial-gradient(circle at 20% 20%, rgba(245,231,122,0.10) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(245,231,122,0.08) 0%, transparent 60%)',
           }}
         />
         <div className="container-custom px-4 relative z-10 py-10 md:py-16">
           <a
             href={`/product/${product.slug}`}
-            className="text-red-200 font-semibold hover:text-white inline-flex items-center gap-2 mb-6 text-sm transition-colors"
+            className="text-text-secondary font-semibold hover:text-premium-gold inline-flex items-center gap-2 mb-6 text-sm transition-colors"
           >
             ← Volver a {product.name}
           </a>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
-              <span className="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
+              <span className="inline-block bg-premium-gold/10 backdrop-blur-sm border border-premium-gold/20 text-premium-gold rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
                 Hit cards destacadas
               </span>
               <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl uppercase tracking-wider leading-tight">
                 Las mejores cartas
               </h1>
-              <p className="mt-2 text-gray-300 text-base md:text-lg max-w-2xl">
+              <p className="mt-2 text-text-secondary text-base md:text-lg max-w-2xl">
                 Explora las cartas más raras y codiciadas de{' '}
-                <span className="text-white font-semibold">{product.name}</span>.
+                <span className="text-text-primary font-semibold">{product.name}</span>.
               </p>
             </div>
 
             {hasHitCards && (
               <div className="grid grid-cols-3 gap-3 md:gap-4 text-center">
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 min-w-[90px]">
-                  <div className="text-xs uppercase tracking-wide text-gray-300">
+                <div className="bg-dark-surface border border-dark-border rounded-xl px-4 py-3 min-w-[90px]">
+                  <div className="text-xs uppercase tracking-wide text-text-secondary">
                     Cartas
                   </div>
-                  <div className="text-2xl font-bold">{hitCards.length}</div>
+                  <div className="text-2xl font-bold text-text-primary">{hitCards.length}</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 min-w-[90px]">
-                  <div className="text-xs uppercase tracking-wide text-gray-300">
+                <div className="bg-dark-surface border border-dark-border rounded-xl px-4 py-3 min-w-[90px]">
+                  <div className="text-xs uppercase tracking-wide text-text-secondary">
                     Top
                   </div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-bold text-premium-gold">
                     {currency.format(maxValue)}
                   </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 min-w-[90px]">
-                  <div className="text-xs uppercase tracking-wide text-gray-300">
+                <div className="bg-dark-surface border border-dark-border rounded-xl px-4 py-3 min-w-[90px]">
+                  <div className="text-xs uppercase tracking-wide text-text-secondary">
                     Total
                   </div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-bold text-premium-gold">
                     {currency.format(totalValue)}
                   </div>
                 </div>
@@ -111,12 +111,12 @@ export function HitCardsClient({ product }: HitCardsClientProps) {
 
       <div className="container-custom px-4 py-10 md:py-14">
         {!hasHitCards ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+          <div className="bg-dark-surface rounded-2xl border border-dark-border p-12 text-center shadow-sm">
             <div className="text-5xl mb-4">✨</div>
-            <p className="text-xl font-semibold text-gray-900 mb-2">
+            <p className="text-xl font-semibold text-text-primary mb-2">
               Aún no hay hit cards
             </p>
-            <p className="text-gray-500">
+            <p className="text-text-secondary">
               Vuelve pronto para descubrir las mejores cartas y ediciones
               especiales.
             </p>
@@ -134,25 +134,25 @@ export function HitCardsClient({ product }: HitCardsClientProps) {
         )}
 
         {/* Product Information Banner */}
-        <div className="mt-14 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="mt-14 bg-dark-surface rounded-2xl border border-dark-border shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row items-center gap-6 p-6 md:p-8">
             {product.imageUrl && (
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-28 h-36 md:w-32 md:h-40 object-contain bg-gray-50 rounded-xl border border-gray-200 p-2"
+                className="w-28 h-36 md:w-32 md:h-40 object-contain bg-dark-bgSecondary rounded-xl border border-dark-border p-2"
               />
             )}
             <div className="flex-1 text-center md:text-left">
-              <h3 className="text-xl md:text-2xl font-bold text-black mb-1">
+              <h3 className="text-xl md:text-2xl font-bold text-text-primary mb-1">
                 {product.name}
               </h3>
-              <p className="text-gray-600 text-sm md:text-base mb-4 line-clamp-2">
+              <p className="text-text-secondary text-sm md:text-base mb-4 line-clamp-2">
                 {product.description.split('\n')[0]}
               </p>
               <a
                 href={`/product/${product.slug}`}
-                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all hover:shadow-lg"
+                className="inline-flex items-center gap-2 btn btn-primary text-sm py-2.5"
               >
                 Ver producto
                 <span aria-hidden>→</span>
@@ -175,13 +175,13 @@ export function HitCardsClient({ product }: HitCardsClientProps) {
             <button
               type="button"
               onClick={() => setLightbox(null)}
-              className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-white text-black rounded-full w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-10"
+              className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-premium-gold text-dark-bg rounded-full w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shadow-elevated hover:scale-110 transition-transform z-10"
               aria-label="Cerrar"
             >
               ✕
             </button>
-            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-gradient-to-br from-gray-900 to-black p-6 md:p-10 flex items-center justify-center">
+            <div className="bg-dark-surface rounded-2xl overflow-hidden shadow-elevated border border-dark-border">
+              <div className="bg-dark-bgSecondary p-6 md:p-10 flex items-center justify-center">
                 <img
                   src={lightbox.imageUrl}
                   alt={lightbox.name}
@@ -197,15 +197,15 @@ export function HitCardsClient({ product }: HitCardsClientProps) {
                   >
                     {lightbox.type}
                   </span>
-                  <h3 className="text-xl md:text-2xl font-bold text-black mt-2">
+                  <h3 className="text-xl md:text-2xl font-bold text-text-primary mt-2">
                     {lightbox.name}
                   </h3>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                  <div className="text-xs uppercase tracking-wide text-text-secondary">
                     Precio de mercado
                   </div>
-                  <div className="text-2xl md:text-3xl font-bold text-red-600">
+                  <div className="text-2xl md:text-3xl font-bold text-premium-gold">
                     {currency.format(Number(lightbox.marketPrice))}
                   </div>
                 </div>
@@ -228,10 +228,10 @@ function HitCardComponent({ card, onOpen }: HitCardComponentProps) {
     <button
       type="button"
       onClick={onOpen}
-      className="group text-left bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-xl hover:-translate-y-0.5 hover:border-red-300 transition-all duration-300 flex flex-col"
+      className="group text-left bg-dark-surface rounded-xl overflow-hidden border border-dark-border hover:shadow-elevated hover:-translate-y-0.5 hover:border-premium-gold/30 transition-all duration-300 flex flex-col"
     >
       {/* Image Container */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 aspect-[3/4]">
+      <div className="relative overflow-hidden bg-dark-bgSecondary aspect-[3/4]">
         <img
           src={card.imageUrl}
           alt={card.name}
@@ -248,7 +248,7 @@ function HitCardComponent({ card, onOpen }: HitCardComponentProps) {
           </span>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
-          <span className="text-white text-xs font-semibold bg-white/15 backdrop-blur-sm border border-white/30 px-3 py-1 rounded-full">
+          <span className="text-text-primary text-xs font-semibold bg-white/15 backdrop-blur-sm border border-white/30 px-3 py-1 rounded-full">
             Ver detalle
           </span>
         </div>
@@ -256,14 +256,14 @@ function HitCardComponent({ card, onOpen }: HitCardComponentProps) {
 
       {/* Content Container */}
       <div className="p-3 flex-1 flex flex-col justify-between gap-2">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-red-600 transition-colors min-h-[2.5rem]">
+        <h3 className="text-sm font-semibold text-text-primary line-clamp-2 group-hover:text-premium-gold transition-colors min-h-[2.5rem]">
           {card.name}
         </h3>
         <div className="flex items-baseline justify-between">
-          <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+          <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">
             Mercado
           </span>
-          <span className="text-base font-bold text-red-600">
+          <span className="text-base font-bold text-premium-gold">
             {currency.format(Number(card.marketPrice))}
           </span>
         </div>

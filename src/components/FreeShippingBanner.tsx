@@ -10,7 +10,7 @@ export function FreeShippingBanner() {
   const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
 
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-[60px] z-40 shadow-sm">
+    <div className="bg-dark-bgSecondary border-b border-dark-border sticky top-[60px] z-40">
       <div className="container-custom px-4 py-3">
         <FreeShippingProgress
           state={freeShippingState}

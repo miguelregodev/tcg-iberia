@@ -1,10 +1,7 @@
 import { Suspense } from 'react';
 import { Navigation } from "@/components/Navigation";
-import { Recent } from "@/components/Recent";
-import { Featured } from "@/components/Featured";
-import { RecentProductCarousel } from "@/components/RecentProductCarousel";
-import { FeaturedProductCarousel } from "@/components/FeaturedProductCarousel";
-import { PreordersSection } from "@/components/PreordersSection";
+import { Hero } from "@/components/Hero";
+import { CategoryGrid } from "@/components/CategoryGrid";
 import { TrustSection } from "@/components/TrustSection";
 import { Footer } from "@/components/Footer";
 import { HomeClient } from './HomeClient';
@@ -16,11 +13,8 @@ export default function Home() {
         <HomeClient />
       </Suspense>
       <Navigation />
-      <Recent />
-      <RecentProductCarousel />
-      <PreordersSection />
-      <Featured />
-      <FeaturedProductCarousel />
+      <Hero />
+      <CategoryGrid />
       <TrustSection />
       <Footer />
     </>

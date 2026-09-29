@@ -103,9 +103,9 @@ const REQUEST_STATUS_LABEL: Record<B2bRequestStatus, string> = {
 };
 
 const REQUEST_STATUS_BADGE: Record<B2bRequestStatus, string> = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  REJECTED: 'bg-gray-100 text-gray-700',
+  PENDING: 'bg-warning-bg text-warning',
+  APPROVED: 'bg-success-bg text-success',
+  REJECTED: 'bg-dark-surfaceHover text-text-secondary',
 };
 
 const CUSTOMER_STATUS_LABEL: Record<B2bCustomerStatus, string> = {
@@ -115,13 +115,13 @@ const CUSTOMER_STATUS_LABEL: Record<B2bCustomerStatus, string> = {
 };
 
 const CUSTOMER_STATUS_BADGE: Record<B2bCustomerStatus, string> = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  ACTIVE: 'bg-green-100 text-green-800',
-  DISABLED: 'bg-gray-200 text-gray-700',
+  PENDING: 'bg-warning-bg text-warning',
+  ACTIVE: 'bg-success-bg text-success',
+  DISABLED: 'bg-dark-surfaceHover text-text-secondary',
 };
 
 const inputClass =
-  'w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500';
+  'w-full bg-dark-surface border border-dark-border rounded-lg px-3.5 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-premium-gold focus:border-premium-gold transition-colors disabled:bg-dark-bg disabled:text-text-muted';
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ export default function AdminB2bPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       <AdminNav />
 
       {/* Notifications */}
@@ -167,8 +167,8 @@ export default function AdminB2bPage() {
             key={n.id}
             className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
               n.type === 'success'
-                ? 'bg-green-600 text-white'
-                : 'bg-red-600 text-white'
+                ? 'bg-success text-dark-bg'
+                : 'bg-danger text-dark-bg'
             }`}
           >
             {n.message}
@@ -178,13 +178,13 @@ export default function AdminB2bPage() {
 
       <div className="container-custom px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">B2B</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-text-primary">B2B</h1>
+          <p className="text-sm text-text-secondary mt-1">
             Gestiona las solicitudes de cuenta mayorista y los clientes activos.
           </p>
         </div>
 
-        <div className="mb-6 flex border-b border-gray-200">
+        <div className="mb-6 flex border-b border-dark-border">
           {(['requests', 'customers', 'orders'] as const).map((t) => (
             <button
               key={t}
@@ -192,8 +192,8 @@ export default function AdminB2bPage() {
               onClick={() => setTab(t)}
               className={`px-4 py-2.5 -mb-px border-b-2 text-sm font-medium transition-colors ${
                 tab === t
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-premium-gold text-premium-gold'
+                  : 'border-transparent text-text-muted hover:text-text-secondary'
               }`}
             >
               {t === 'requests'
@@ -255,27 +255,27 @@ function RequestsTab({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-        <div className="p-4 flex flex-wrap items-center gap-3 border-b border-gray-100">
-          <label className="text-sm text-gray-600">Estado:</label>
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-sm">
+        <div className="p-4 flex flex-wrap items-center gap-3 border-b border-dark-border">
+          <label className="text-sm text-text-secondary">Estado:</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'ALL' | B2bRequestStatus)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="rounded-lg border border-dark-border px-3 py-2 text-sm bg-dark-bg text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
           >
             <option value="ALL">Todas</option>
             <option value="PENDING">Pendientes</option>
             <option value="APPROVED">Aprobadas</option>
             <option value="REJECTED">Rechazadas</option>
           </select>
-          <span className="ml-auto text-xs text-gray-500">
+          <span className="ml-auto text-xs text-text-muted">
             {requests.length} solicitudes
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+            <thead className="bg-dark-bgSecondary text-xs uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="px-4 py-3 text-left">Email</th>
                 <th className="px-4 py-3 text-left">Empresa</th>
@@ -284,27 +284,27 @@ function RequestsTab({
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-dark-border">
               {loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-text-muted">
                     Cargando…
                   </td>
                 </tr>
               )}
               {!loading && requests.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-text-muted">
                     No hay solicitudes para este filtro.
                   </td>
                 </tr>
               )}
               {!loading &&
                 requests.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{r.email}</td>
-                    <td className="px-4 py-3 text-gray-700">{r.companyName ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                  <tr key={r.id} className="hover:bg-dark-surfaceHover">
+                    <td className="px-4 py-3 font-medium text-text-primary">{r.email}</td>
+                    <td className="px-4 py-3 text-text-secondary">{r.companyName ?? '—'}</td>
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                       {formatDate(r.createdAt)}
                     </td>
                     <td className="px-4 py-3">
@@ -320,7 +320,7 @@ function RequestsTab({
                       <button
                         type="button"
                         onClick={() => setReviewing(r)}
-                        className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg bg-dark-surfaceHover text-text-primary hover:bg-dark-borderStrong"
                       >
                         Revisar
                       </button>
@@ -464,12 +464,12 @@ function RequestReviewModal({
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl animate-slideUp">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <div className="relative w-full max-w-3xl bg-dark-surface rounded-2xl shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Revisar solicitud</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              <span className="font-medium text-gray-700">{request.email}</span> ·{' '}
+            <h2 className="text-lg font-bold text-text-primary">Revisar solicitud</h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              <span className="font-medium text-text-primary">{request.email}</span> ·{' '}
               {formatDate(request.createdAt)} ·{' '}
               <span className={`px-1.5 py-0.5 rounded ${REQUEST_STATUS_BADGE[request.status]}`}>
                 {REQUEST_STATUS_LABEL[request.status]}
@@ -479,7 +479,7 @@ function RequestReviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 text-2xl leading-none"
+            className="text-text-muted hover:text-text-primary text-2xl leading-none"
             aria-label="Cerrar"
           >
             ×
@@ -513,9 +513,9 @@ function RequestReviewModal({
               checked={form.modelo036Verified}
               onChange={(e) => setForm((p) => ({ ...p, modelo036Verified: e.target.checked }))}
               disabled={readOnly}
-              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              className="h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold"
             />
-            <label htmlFor="modelo036" className="text-sm text-gray-700">
+            <label htmlFor="modelo036" className="text-sm text-text-primary">
               Modelo 036 verificado
             </label>
           </div>
@@ -634,7 +634,7 @@ function RequestReviewModal({
           </Field>
 
           {request.status === 'REJECTED' && request.rejectionReason && (
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
+            <div className="rounded-lg bg-dark-surfaceHover border border-dark-border p-4 text-sm text-text-secondary">
               <div className="font-semibold text-gray-700 mb-1">Motivo del rechazo:</div>
               <div className="text-gray-600 whitespace-pre-wrap">{request.rejectionReason}</div>
             </div>
@@ -662,7 +662,7 @@ function RequestReviewModal({
                 type="button"
                 onClick={reject}
                 disabled={rejecting || approving}
-                className="whitespace-nowrap px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                className="whitespace-nowrap px-4 py-2.5 rounded-lg border border-dark-border text-text-primary text-sm font-medium hover:bg-dark-surfaceHover disabled:opacity-50"
               >
                 {rejecting ? 'Rechazando…' : 'Rechazar'}
               </button>
@@ -672,7 +672,7 @@ function RequestReviewModal({
                 type="button"
                 onClick={save}
                 disabled={saving || approving || rejecting}
-                className="px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2.5 rounded-lg border border-dark-border text-text-primary text-sm font-medium hover:bg-dark-surfaceHover disabled:opacity-50"
               >
                 {saving ? 'Guardando…' : 'Guardar cambios'}
               </button>
@@ -819,7 +819,7 @@ function CustomersTab({
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+            <thead className="bg-dark-bgSecondary text-xs uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="px-4 py-3 text-left">Empresa</th>
                 <th className="px-4 py-3 text-left">Contacto</th>
@@ -831,32 +831,32 @@ function CustomersTab({
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-dark-border">
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-text-muted">
                     Cargando…
                   </td>
                 </tr>
               )}
               {!loading && customers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-text-muted">
                     Sin clientes.
                   </td>
                 </tr>
               )}
               {!loading &&
                 customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={c.id} className="hover:bg-dark-surfaceHover">
+                    <td className="px-4 py-3 font-medium text-text-primary">
                       <div className="max-w-[220px] truncate" title={c.companyName}>
                         {c.companyName}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{c.contactName}</td>
-                    <td className="px-4 py-3 text-gray-700">{c.email}</td>
-                    <td className="px-4 py-3 text-gray-700 font-mono text-xs">{c.vatNumber}</td>
+                    <td className="px-4 py-3 text-text-secondary">{c.contactName}</td>
+                    <td className="px-4 py-3 text-text-secondary">{c.email}</td>
+                    <td className="px-4 py-3 text-text-secondary font-mono text-xs">{c.vatNumber}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1133,7 +1133,7 @@ function CustomerEditModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50"
+            className="px-4 py-2.5 rounded-lg border border-dark-border text-text-primary text-sm font-medium hover:bg-dark-surfaceHover"
           >
             Cancelar
           </button>
@@ -1180,7 +1180,6 @@ type B2bOrderStatus = 'PENDING' | 'ACCEPTED' | 'PAID' | 'CANCELLED' | 'REJECTED'
 interface AdminOrderLine {
   productId: string;
   name: string;
-  variant?: 'SHRINK' | 'NO_SHRINK';
   quantity: number;
   unitPriceEur: number;
   lineTotal: number;
@@ -1360,7 +1359,7 @@ function OrdersTab({
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+          <thead className="bg-dark-bgSecondary text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-4 py-3 text-left">Pedido</th>
               <th className="px-4 py-3 text-left">Cliente</th>
@@ -1371,17 +1370,17 @@ function OrdersTab({
               <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-dark-border">
             {loading && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
                   Cargando…
                 </td>
               </tr>
             )}
             {!loading && orders.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
                   No hay pedidos para este filtro.
                 </td>
               </tr>
@@ -1391,11 +1390,11 @@ function OrdersTab({
                 const isOpen = expanded === o.id;
                 return (
                   <>
-                    <tr key={o.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-700">
+                    <tr key={o.id} className="hover:bg-dark-surfaceHover">
+                      <td className="px-4 py-3 font-mono text-xs text-text-secondary">
                         <button
                           type="button"
-                          className="text-red-600 hover:underline"
+                          className="text-premium-gold hover:underline"
                           onClick={() => setExpanded(isOpen ? null : o.id)}
                         >
                           {o.orderNumber}
@@ -1470,7 +1469,7 @@ function OrdersTab({
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr key={`${o.id}-detail`} className="bg-gray-50">
+                      <tr key={`${o.id}-detail`} className="bg-dark-surfaceHover">
                         <td colSpan={7} className="px-6 py-4">
                           <div className="grid md:grid-cols-2 gap-6">
                             <div>
@@ -1503,11 +1502,6 @@ function OrdersTab({
                                     <div className="min-w-0">
                                       <div className="truncate" title={it.name}>
                                         {it.name}
-                                        {it.variant === 'NO_SHRINK' && (
-                                          <span className="ml-1 text-xs text-gray-500">
-                                            (sin plástico)
-                                          </span>
-                                        )}
                                       </div>
                                       <div className="text-xs text-gray-500">
                                         {it.quantity} × {eurFmtAdmin.format(it.unitPriceEur)}

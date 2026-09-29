@@ -140,8 +140,8 @@ export default function RegistroPage() {
     autoComplete?: string,
   ) => (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
-        {label} <span className="text-red-600">*</span>
+      <label htmlFor={id} className="block text-sm font-medium text-text-secondary mb-1">
+        {label} <span className="text-premium-gold">*</span>
       </label>
       <input
         id={id}
@@ -151,35 +151,35 @@ export default function RegistroPage() {
         value={formData[id]}
         onChange={handleChange}
         disabled={loading}
-        className={`w-full bg-gray-50 border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 transition-colors ${
+        className={`w-full bg-dark-bgSecondary border rounded-lg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:ring-1 transition-colors ${
           errors[id]
-            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
-            : 'border-gray-300 focus:border-red-500 focus:ring-red-500'
+            ? 'border-danger focus:border-danger focus:ring-danger'
+            : 'border-dark-border focus:border-premium-gold focus:ring-premium-gold'
         }`}
       />
-      {errors[id] && <p className="mt-1 text-xs text-red-600">{errors[id]}</p>}
+      {errors[id] && <p className="mt-1 text-xs text-danger">{errors[id]}</p>}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-dark-bg">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm py-4 px-4 flex justify-center items-center">
+      <header className="bg-dark-bg border-b border-dark-border py-4 px-4 flex justify-center items-center">
         <Link href="/" className="flex items-center gap-2">
           <img src="/images/logo.png" alt="TCG Iberia" className="h-10 w-auto" />
-          <span className="text-lg md:text-2xl font-bold text-red-600">TCG Iberia</span>
+          <span className="text-lg md:text-2xl font-bold text-premium-gold">TCG Iberia</span>
         </Link>
       </header>
 
       <div className="section">
         <div className="container-custom max-w-2xl mx-auto">
           <h1 className="text-h2 text-center mb-2">Crear cuenta</h1>
-          <p className="text-center text-gray-500 mb-8">
+          <p className="text-center text-text-secondary mb-8">
             Únete a TCG Iberia y empieza a coleccionar.
           </p>
 
           {errors.general && (
-            <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <div className="mb-6 px-4 py-3 bg-danger-bg border border-danger/30 text-danger rounded-lg text-sm">
               {errors.general}
             </div>
           )}
@@ -220,9 +220,9 @@ export default function RegistroPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-text-secondary mt-6">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/?login=1" className="text-red-600 hover:text-red-700 font-semibold">
+            <Link href="/?login=1" className="text-premium-gold hover:text-premium-gold_dark font-semibold">
               Acceder
             </Link>
           </p>

@@ -7,10 +7,9 @@
  * Body: {
  *   productId: string;
  *   prices: {
- *     shrink: number;
- *     noShrink: number;
+ *     sealed: number;
+ *     liveOpening: number;
  *     b2b: number;
- *     b2bNoShrink: number;
  *   }
  * }
  *
@@ -46,34 +45,29 @@ export async function PATCH(request: NextRequest) {
       ? (body.prices as Record<string, unknown>)
       : null;
 
-  const shrinkRaw = pricesObject?.shrink ?? body.price;
-  const noShrinkRaw = pricesObject?.noShrink ?? null;
+  const sealedRaw = pricesObject?.sealed ?? body.price;
+  const liveOpeningRaw = pricesObject?.liveOpening ?? null;
   const b2bRaw = pricesObject?.b2b ?? null;
-  const b2bNoShrinkRaw = pricesObject?.b2bNoShrink ?? null;
 
-  const shrinkPrice = parseNumber(shrinkRaw);
-  if (shrinkPrice === null || Number.isNaN(shrinkPrice) || shrinkPrice < 0) {
-    return NextResponse.json({ error: '"prices.shrink" debe ser un número positivo.' }, { status: 400 });
+  const sealedPrice = parseNumber(sealedRaw);
+  if (sealedPrice === null || Number.isNaN(sealedPrice) || sealedPrice < 0) {
+    return NextResponse.json({ error: '"prices.sealed" debe ser un número positivo.' }, { status: 400 });
   }
 
-  const noShrinkPrice = parseNumber(noShrinkRaw);
+  const liveOpeningPrice = parseNumber(liveOpeningRaw);
   const b2bPrice = parseNumber(b2bRaw);
-  const b2bNoShrinkPrice = parseNumber(b2bNoShrinkRaw);
 
-  const roundedShrinkPrice = Math.round(shrinkPrice * 100) / 100;
-  const roundedNoShrinkPrice = noShrinkPrice === null ? null : Math.round(noShrinkPrice * 100) / 100;
+  const roundedSealedPrice = Math.round(sealedPrice * 100) / 100;
+  const roundedLiveOpeningPrice = liveOpeningPrice === null ? null : Math.round(liveOpeningPrice * 100) / 100;
   const roundedB2bPrice = b2bPrice === null ? null : Math.round(b2bPrice * 100) / 100;
-  const roundedB2bNoShrinkPrice =
-    b2bNoShrinkPrice === null ? null : Math.round(b2bNoShrinkPrice * 100) / 100;
 
   try {
     const product = await db.product.update({
       where: { id: productId },
       data: {
-        price: roundedShrinkPrice,
-        noShrinkPrice: roundedNoShrinkPrice,
+        price: roundedSealedPrice,
+        liveOpeningPrice: roundedLiveOpeningPrice,
         b2bPrice: roundedB2bPrice,
-        b2bPriceNoShrink: roundedB2bNoShrinkPrice,
         discountPercentage: null,
       },
       select: { id: true, name: true, price: true },

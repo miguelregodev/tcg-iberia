@@ -17,16 +17,16 @@ import type { Product } from '@/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PriceVariant = 'SHRINK' | 'NO_SHRINK';
+type PriceVariant = 'SEALED' | 'LIVE_OPENING';
 
 /** `${sheetProductName}:${variant}` — matches the server-side history key. */
 function historyKey(sheetProductName: string, variant: PriceVariant): string {
   return `${sheetProductName}:${variant}`;
 }
 
-/** Left → Shrink, Right → No Shrink. Mirrors the sheets parser convention. */
+/** Left → Sealed, Right → Live Opening. Mirrors the sheets parser convention. */
 function variantFromSourceGroup(group: 'left' | 'right'): PriceVariant {
-  return group === 'left' ? 'SHRINK' : 'NO_SHRINK';
+  return group === 'left' ? 'SEALED' : 'LIVE_OPENING';
 }
 
 interface TableRow extends ImportedRow {
@@ -40,11 +40,9 @@ interface CreateFromRow {
   rowKey: string;
   importedName: string;
   suggestedPrice: number;
-  suggestedNoShrinkPrice: number | null;
-  /** Auto-computed wholesale price for the SHRINK variant of the imported row. */
+  suggestedLiveOpeningPrice: number | null;
+  /** Auto-computed wholesale (B2B, Sellado) price for the imported row. */
   suggestedB2bPrice: number;
-  /** Auto-computed wholesale price for the NO_SHRINK variant (if present). */
-  suggestedB2bPriceNoShrink: number | null;
 }
 
 type NotificationType = 'success' | 'error';
@@ -71,20 +69,20 @@ const jpyFmt = new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JP
 function StatusBadge({ row }: { row: TableRow }) {
   if (row.priceUpdated) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+      <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2.5 py-0.5 text-xs font-medium text-success">
         ✔ Actualizado
       </span>
     );
   }
   if (row.matchedProductId) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+      <span className="inline-flex items-center gap-1 rounded-full bg-dark-surfaceHover px-2.5 py-0.5 text-xs font-medium text-premium-gold">
         ✅ {row.matchSource === 'manual' ? 'Manual' : `Automático ${row.matchScore ? `(${Math.round(row.matchScore * 100)}%)` : ''}`}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning">
       ⚠ Sin asignar
     </span>
   );
@@ -307,27 +305,22 @@ export default function PriceImportPage() {
       if (!exchangeRate) return;
       const eurCost = convertJpyToEur(row.jpyPrice, exchangeRate);
       const suggestedPrice = computeSellingPrice(eurCost, 25);
-      // Whether this row itself is a SHRINK or NO_SHRINK entry drives which
-      // B2B price we auto-fill. Left column → SHRINK, right column → NO_SHRINK
-      // (mirrors the sheets parser convention).
-      const isShrink = row.sourceGroup === 'left';
+      // B2B always quotes the Sellado wholesale price, computed from this row's
+      // own cost regardless of which sheet column it came from.
       const b2bForThisRow = computeB2bPrice(eurCost);
 
-      let suggestedNoShrinkPrice: number | null = null;
-      let suggestedB2bPriceNoShrink: number | null = null;
+      let suggestedLiveOpeningPrice: number | null = null;
       if (row.correspondingRightJpyPrice) {
         const rightEurCost = convertJpyToEur(row.correspondingRightJpyPrice, exchangeRate);
-        suggestedNoShrinkPrice = computeSellingPrice(rightEurCost, 25);
-        suggestedB2bPriceNoShrink = computeB2bPrice(rightEurCost);
+        suggestedLiveOpeningPrice = computeSellingPrice(rightEurCost, 25);
       }
 
       setCreateFromRow({
         rowKey: row.key,
         importedName: row.importedName,
         suggestedPrice,
-        suggestedNoShrinkPrice,
-        suggestedB2bPrice: isShrink ? b2bForThisRow : (suggestedB2bPriceNoShrink ?? b2bForThisRow),
-        suggestedB2bPriceNoShrink: isShrink ? suggestedB2bPriceNoShrink : b2bForThisRow,
+        suggestedLiveOpeningPrice,
+        suggestedB2bPrice: b2bForThisRow,
       });
     },
     [exchangeRate]
@@ -440,7 +433,7 @@ export default function PriceImportPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       <AdminNav />
 
       {/* Toast notifications */}
@@ -463,15 +456,15 @@ export default function PriceImportPage() {
       <div className="container-custom px-4 py-8">
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Administración de Precios</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-text-primary">Administración de Precios</h1>
+          <p className="mt-1 text-sm text-text-secondary">
             Importa precios desde Google Sheets y actualiza el catálogo de productos.
           </p>
         </div>
 
         {/* Import form */}
-        <div className="rounded-2xl bg-white border border-gray-200 p-6 mb-6 shadow-sm">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Importar desde Google Sheets</h2>
+        <div className="rounded-2xl bg-dark-surface border border-dark-border p-6 mb-6 shadow-sm">
+          <h2 className="text-base font-semibold text-text-primary mb-4">Importar desde Google Sheets</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="url"
@@ -479,7 +472,7 @@ export default function PriceImportPage() {
               onChange={(e) => setSheetsUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !loading) handleImport(); }}
               placeholder="https://docs.google.com/spreadsheets/d/…"
-              className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="flex-1 rounded-xl border border-dark-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-premium-gold focus:border-transparent bg-dark-bg text-text-primary"
               disabled={loading}
             />
             <button
@@ -499,17 +492,17 @@ export default function PriceImportPage() {
           </div>
 
           {importError && (
-            <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="mt-3 rounded-lg bg-danger-bg border border-danger px-4 py-3 text-sm text-danger">
               {importError}
             </div>
           )}
 
           {/* Exchange rate info */}
           {exchangeRate !== null && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
               <span>
                 Tasa de cambio:{' '}
-                <strong className="text-gray-700">1 JPY = {exchangeRate.toFixed(6)} EUR</strong>
+                <strong className="text-text-primary">1 JPY = {exchangeRate.toFixed(6)} EUR</strong>
               </span>
               <span>Fuente: {exchangeRateSource}</span>
             </div>
@@ -520,13 +513,13 @@ export default function PriceImportPage() {
         {rows.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: 'Total importados', value: stats.total, color: 'text-gray-800' },
+              { label: 'Total importados', value: stats.total, color: 'text-text-primary' },
               { label: 'Productos coincidentes', value: stats.matched, color: 'text-blue-700' },
               { label: 'Sin asignar', value: stats.unmatched, color: 'text-amber-700' },
               { label: 'Precios actualizados', value: stats.updated, color: 'text-green-700' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
-                <p className="text-xs text-gray-500">{label}</p>
+              <div key={label} className="rounded-xl bg-dark-surface border border-dark-border px-4 py-3 shadow-sm">
+                <p className="text-xs text-text-muted">{label}</p>
                 <p className={`text-2xl font-bold ${color}`}>{value}</p>
               </div>
             ))}
@@ -535,16 +528,16 @@ export default function PriceImportPage() {
 
         {/* Loading skeleton */}
         {loading && (
-          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-dark-border">
+              <div className="h-4 w-32 bg-dark-surfaceHover rounded animate-pulse" />
             </div>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex gap-4 px-4 py-3 border-b border-gray-50 last:border-b-0">
-                <div className="h-4 flex-1 bg-gray-100 rounded animate-pulse" />
-                <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
-                <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
-                <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-4 px-4 py-3 border-b border-dark-border last:border-b-0">
+                <div className="h-4 flex-1 bg-dark-surfaceHover rounded animate-pulse" />
+                <div className="h-4 w-20 bg-dark-surfaceHover rounded animate-pulse" />
+                <div className="h-4 w-20 bg-dark-surfaceHover rounded animate-pulse" />
+                <div className="h-4 w-24 bg-dark-surfaceHover rounded animate-pulse" />
               </div>
             ))}
           </div>
@@ -552,33 +545,33 @@ export default function PriceImportPage() {
 
         {/* Results table */}
         {!loading && rows.length > 0 && (
-          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+          <div className="rounded-2xl bg-dark-surface border border-dark-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                  <tr className="bg-dark-bgSecondary border-b border-dark-border">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Producto importado
                     </th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Precio JPY
                     </th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Precio compra (EUR)
                     </th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       P. sugerido (+25%)
                     </th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       PVP actual
                     </th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Producto en catálogo
                     </th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    <th className="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
                       Acciones
                     </th>
                   </tr>
@@ -600,22 +593,22 @@ export default function PriceImportPage() {
                     return (
                       <tr
                         key={row.key}
-                        className={`transition-colors hover:bg-gray-50 ${
-                          row.priceUpdated ? 'bg-green-50/50' : ''
+                        className={`transition-colors hover:bg-dark-surfaceHover ${
+                          row.priceUpdated ? 'bg-success-bg/10' : ''
                         }`}
                       >
                         {/* Imported name */}
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900 max-w-[200px] truncate" title={row.importedName}>
+                          <div className="font-medium text-text-primary max-w-[200px] truncate" title={row.importedName}>
                             {row.importedName}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-text-muted">
                             Fila {row.sourceRow} · {row.sourceGroup === 'left' ? 'Izquierda' : 'Derecha'}
                           </div>
                         </td>
 
                         {/* JPY price */}
-                        <td className="px-4 py-3 text-right font-mono text-gray-700 whitespace-nowrap">
+                        <td className="px-4 py-3 text-right font-mono text-text-secondary whitespace-nowrap">
                           {jpyFmt.format(row.jpyPrice)}
                         </td>
 
@@ -636,7 +629,7 @@ export default function PriceImportPage() {
                         </td>
 
                         {/* Suggested price */}
-                        <td className="px-4 py-3 text-right font-mono font-semibold text-gray-800 whitespace-nowrap">
+                        <td className="px-4 py-3 text-right font-mono font-semibold text-text-primary whitespace-nowrap">
                           {suggested !== null ? eur.format(suggested) : '—'}
                         </td>
 
@@ -655,18 +648,18 @@ export default function PriceImportPage() {
                           {row.matchedProductId ? (
                             <div>
                               <div
-                                className="font-medium text-gray-900 max-w-[220px] truncate"
+                                className="font-medium text-text-primary max-w-[220px] truncate"
                                 title={row.matchedProductName ?? ''}
                               >
                                 {row.matchedProductName}
                               </div>
                               {row.matchSource === 'fuzzy' && row.matchScore !== null && (
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-text-muted">
                                   Similitud: {Math.round(row.matchScore * 100)}%
                                 </div>
                               )}
                               {row.matchSource === 'manual' && (
-                                <div className="text-xs text-gray-400">Asignado manualmente</div>
+                                <div className="text-xs text-text-muted">Asignado manualmente</div>
                               )}
                             </div>
                           ) : (
@@ -701,8 +694,8 @@ export default function PriceImportPage() {
                               disabled={row.priceUpdated}
                               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
                                 row.priceUpdated
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : 'bg-red-600 text-white hover:bg-red-700'
+                                  ? 'bg-dark-surfaceHover text-text-muted cursor-not-allowed'
+                                  : 'bg-premium-gold text-dark-bg hover:bg-premium-gold_dark'
                               }`}
                             >
                               {row.priceUpdated ? 'Actualizado' : 'Actualizar precio'}
@@ -711,7 +704,7 @@ export default function PriceImportPage() {
                             <button
                               onClick={() => handleOpenCreateProduct(row)}
                               disabled={!exchangeRate}
-                              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-success text-success-bg hover:bg-success_dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               + Crear producto
                             </button>
@@ -724,7 +717,7 @@ export default function PriceImportPage() {
               </table>
             </div>
 
-            <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
+            <div className="px-4 py-3 border-t border-dark-border text-xs text-text-muted">
               {rows.length} productos importados · Tasa: 1 JPY = {exchangeRate?.toFixed(6) ?? '…'} EUR
             </div>
           </div>
@@ -752,14 +745,14 @@ export default function PriceImportPage() {
             {/* Header bar */}
             <div className="flex items-center justify-between rounded-t-2xl bg-white border-b border-gray-200 px-6 py-4">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Crear nuevo producto</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Producto importado: <span className="font-medium text-gray-700">{createFromRow.importedName}</span>
+                <h2 className="text-base font-bold text-text-primary">Crear nuevo producto</h2>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Producto importado: <span className="font-medium text-text-primary">{createFromRow.importedName}</span>
                 </p>
               </div>
               <button
                 onClick={() => setCreateFromRow(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors text-xl font-semibold leading-none"
+                className="text-text-muted hover:text-text-primary transition-colors text-xl font-semibold leading-none"
                 aria-label="Cerrar"
               >
                 ×
@@ -772,9 +765,8 @@ export default function PriceImportPage() {
                 initialData={{
                   name: createFromRow.importedName,
                   price: createFromRow.suggestedPrice,
-                  noShrinkPrice: createFromRow.suggestedNoShrinkPrice ?? undefined,
+                  liveOpeningPrice: createFromRow.suggestedLiveOpeningPrice ?? undefined,
                   b2bPrice: createFromRow.suggestedB2bPrice,
-                  b2bPriceNoShrink: createFromRow.suggestedB2bPriceNoShrink ?? undefined,
                   language: 'JAPANESE',
                 }}
                 onSuccess={handleProductCreated}

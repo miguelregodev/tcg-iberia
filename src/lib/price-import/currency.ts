@@ -90,10 +90,9 @@ export function snapToRetailPrice(price: number): number {
 
 /** Default profit margins used by the admin price update modal for each variant. */
 export const DEFAULT_PRICE_VARIANT_MARGINS = {
-  shrink: 25,
-  noShrink: 20,
+  sealed: 25,
+  liveOpening: 20,
   b2b: 15,
-  b2bNoShrink: 12,
 } as const;
 
 export type PriceVariantKey = keyof typeof DEFAULT_PRICE_VARIANT_MARGINS;
@@ -110,10 +109,9 @@ export interface VariantPriceBreakdown {
 }
 
 export interface VariantPriceBreakdownMap {
-  shrink: VariantPriceBreakdown;
-  noShrink: VariantPriceBreakdown;
+  sealed: VariantPriceBreakdown;
+  liveOpening: VariantPriceBreakdown;
   b2b: VariantPriceBreakdown;
-  b2bNoShrink: VariantPriceBreakdown;
 }
 
 function buildVariantBreakdown(eurCost: number, marginPercent: number): VariantPriceBreakdown {
@@ -141,20 +139,15 @@ export function computeVariantPriceBreakdown(
 ): VariantPriceBreakdownMap {
   const variantMargins = { ...DEFAULT_PRICE_VARIANT_MARGINS, ...margins };
   const resolvedVariantCosts = {
-    shrink: eurCost,
-    noShrink: variantCosts.noShrink ?? eurCost,
+    sealed: eurCost,
+    liveOpening: variantCosts.liveOpening ?? eurCost,
     b2b: eurCost,
-    b2bNoShrink: variantCosts.b2bNoShrink ?? variantCosts.noShrink ?? eurCost,
   } satisfies Record<PriceVariantKey, number>;
 
   return {
-    shrink: buildVariantBreakdown(resolvedVariantCosts.shrink, variantMargins.shrink),
-    noShrink: buildVariantBreakdown(resolvedVariantCosts.noShrink, variantMargins.noShrink),
+    sealed: buildVariantBreakdown(resolvedVariantCosts.sealed, variantMargins.sealed),
+    liveOpening: buildVariantBreakdown(resolvedVariantCosts.liveOpening, variantMargins.liveOpening),
     b2b: buildVariantBreakdown(resolvedVariantCosts.b2b, variantMargins.b2b),
-    b2bNoShrink: buildVariantBreakdown(
-      resolvedVariantCosts.b2bNoShrink,
-      variantMargins.b2bNoShrink
-    ),
   };
 }
 

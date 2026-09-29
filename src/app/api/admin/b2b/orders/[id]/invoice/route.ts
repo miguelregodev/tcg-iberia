@@ -18,7 +18,6 @@ interface RouteContext {
 
 interface StoredItem {
   productId: string;
-  variant: 'SHRINK' | 'NO_SHRINK';
   name: string;
   quantity: number;
   unitPriceEur: number;
@@ -48,7 +47,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const items = order.items as unknown as StoredItem[];
   const invoiceItems: InvoiceItem[] = items.map((i) => ({
     name: i.name,
-    variant: i.variant,
     quantity: i.quantity,
     unitPriceEur: i.unitPriceEur,
     lineTotal: i.lineTotal,

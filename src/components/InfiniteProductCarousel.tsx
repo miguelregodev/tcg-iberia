@@ -192,7 +192,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
 
   if (loading) {
     return (
-      <section id="catalog" className="section bg-white">
+      <section id="catalog" className="section bg-dark-bg">
         <div className="container-custom">
           <div className="h-64" aria-busy="true" />
         </div>
@@ -202,16 +202,16 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
 
   if (products.length === 0) {
     return (
-      <section id="catalog" className="section bg-white">
+      <section id="catalog" className="section bg-dark-bg">
         <div className="container-custom">
-          <p className="text-center text-gray-600">No products available</p>
+          <p className="text-center text-text-secondary">No products available</p>
         </div>
       </section>
     );
   }
 
   return (
-    <section id="catalog" className="section bg-white">
+    <section id="catalog" className="section bg-dark-bg">
       <div className="container-custom">
         <div className="relative">
           <button
@@ -223,7 +223,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
             <img
               src="/images/left-arrow.png"
               alt=""
-              className="w-6 h-6 bg-white/80 hover:bg-white shadow-md rounded-full transition"
+              className="w-6 h-6 icon-invert bg-dark-surface/80 hover:bg-dark-surface shadow-elevated rounded-full p-1 transition"
             />
           </button>
           <button
@@ -235,7 +235,7 @@ export function InfiniteProductCarousel({ endpoint }: Props) {
             <img
               src="/images/right-arrow.png"
               alt=""
-              className="w-6 h-6 bg-white/80 hover:bg-white shadow-md rounded-full transition"
+              className="w-6 h-6 icon-invert bg-dark-surface/80 hover:bg-dark-surface shadow-elevated rounded-full p-1 transition"
             />
           </button>
           <div

@@ -10,27 +10,48 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        white: '#FFFFFF',
-        red: {
-          500: '#DC2626',
-          600: '#EF4444',
-          700: '#B91C1C',
+        // Kept in sync with tailwind.config.js (the config actually loaded
+        // by PostCSS — .js takes precedence over .ts when both exist).
+        dark: {
+          bg: '#171625',
+          bgSecondary: '#1D1B2B',
+          surface: '#211F30',
+          surfaceHover: '#2A2740',
+          border: 'rgba(255,255,255,0.08)',
+          borderStrong: 'rgba(255,255,255,0.16)',
         },
-        black: '#000000',
-        gray: {
-          100: '#F3F4F6',
-          200: '#E5E7EB',
-          300: '#D1D5DB',
-          400: '#9CA3AF',
-          500: '#6B7280',
-          600: '#4B5563',
-          700: '#374151',
-          800: '#1F2937',
-          900: '#111827',
+        premium: {
+          gold: '#F5E77A',
+          gold_dark: '#E8D766',
+          red: '#E2685C',
+        },
+        text: {
+          primary: '#F5F3EA',
+          secondary: '#A6A3B5',
+          muted: '#736F86',
+        },
+        success: {
+          DEFAULT: '#5FBE87',
+          bg: 'rgba(95,190,135,0.12)',
+        },
+        warning: {
+          DEFAULT: '#E8B95B',
+          bg: 'rgba(232,185,91,0.12)',
+        },
+        danger: {
+          DEFAULT: '#E2685C',
+          bg: 'rgba(226,104,92,0.12)',
         },
       },
       fontFamily: {
-        sans: ['system-ui', 'sans-serif'],
+        sans: ['TypoSlabserif', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        card: '0.875rem',
+      },
+      boxShadow: {
+        elevated: '0 8px 30px rgba(0,0,0,0.35)',
+        accent: '0 0 0 1px rgba(245,231,122,0.4), 0 8px 24px rgba(245,231,122,0.08)',
       },
       animation: {
         fadeIn: 'fadeIn 0.3s ease-in',

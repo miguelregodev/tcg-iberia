@@ -34,15 +34,15 @@ export function CalendarHeader({ year, month, currentYear, currentMonth }: Props
   }
 
   return (
-    <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+    <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-dark-border bg-dark-surface">
       <button
         onClick={() => navigate(-1)}
         disabled={isAtMin}
         aria-label="Mes anterior"
-        className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
+        className="p-2 rounded-lg hover:bg-dark-surfaceHover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:outline-none"
       >
         <svg
-          className="w-5 h-5 text-gray-700"
+          className="w-5 h-5 text-text-secondary"
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"
@@ -55,7 +55,7 @@ export function CalendarHeader({ year, month, currentYear, currentMonth }: Props
         </svg>
       </button>
 
-      <h2 className="text-base sm:text-lg font-semibold text-gray-900 capitalize">
+      <h2 className="text-base sm:text-lg font-semibold text-text-primary capitalize">
         {monthLabel}
       </h2>
 
@@ -63,10 +63,10 @@ export function CalendarHeader({ year, month, currentYear, currentMonth }: Props
         onClick={() => navigate(1)}
         disabled={isAtMax}
         aria-label="Mes siguiente"
-        className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
+        className="p-2 rounded-lg hover:bg-dark-surfaceHover disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:outline-none"
       >
         <svg
-          className="w-5 h-5 text-gray-700"
+          className="w-5 h-5 text-text-secondary"
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"

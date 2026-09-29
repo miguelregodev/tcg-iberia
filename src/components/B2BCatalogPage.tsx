@@ -109,9 +109,7 @@ export function B2BCatalogPage({ language }: Props) {
     return products.filter((p) => {
       // Must have at least one B2B tariff
       const o = b2bOverrides.get(p.id);
-      const hasTariff =
-        !!(o?.b2bPrice && o.b2bPrice > 0) ||
-        !!(o?.b2bPriceNoShrink && o.b2bPriceNoShrink > 0);
+      const hasTariff = !!(o?.b2bPrice && o.b2bPrice > 0);
       if (!hasTariff) return false;
 
       // Language filter
@@ -134,8 +132,8 @@ export function B2BCatalogPage({ language }: Props) {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg">
+        <span className="h-8 w-8 rounded-full border-2 border-premium-gold border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -145,31 +143,31 @@ export function B2BCatalogPage({ language }: Props) {
   return (
     <>
       {/* Hero header */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-red-900 to-black text-white">
+      <section className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
         <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
+          className="absolute inset-0 opacity-40 pointer-events-none"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(220,38,38,0.4) 0%, transparent 60%)',
+              'radial-gradient(circle at 20% 20%, rgba(245,231,122,0.10) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(245,231,122,0.08) 0%, transparent 60%)',
           }}
         />
 
         <div className="container-custom px-4 relative z-10 py-10 md:py-16">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
-              <span className="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
+              <span className="inline-block bg-premium-gold/15 border border-premium-gold/30 text-premium-gold rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
                 Portal Mayorista
               </span>
               <h1 className="font-airstrike text-3xl md:text-5xl lg:text-6xl tracking-wider leading-tight">
                 catalogo b2b
               </h1>
-              <p className="mt-2 text-gray-300 text-base md:text-lg max-w-2xl">
+              <p className="mt-2 text-text-secondary text-base md:text-lg max-w-2xl">
                 Bienvenido{customer?.contactName ? `, ${customer.contactName}` : ''}. Aquí
                 encontrarás todos los productos con tarifas mayoristas activas.
               </p>
             </div>
             <div className="flex-shrink-0">
-              <span className="inline-flex items-center gap-2 bg-red-600/80 backdrop-blur-sm border border-red-400/40 rounded-xl px-4 py-2 text-sm font-semibold">
+              <span className="inline-flex items-center gap-2 bg-premium-gold/15 backdrop-blur-sm border border-premium-gold/30 text-premium-gold rounded-xl px-4 py-2 text-sm font-semibold">
                 🏢 {customer?.companyName ?? 'Cliente B2B'}
               </span>
             </div>
@@ -185,8 +183,8 @@ export function B2BCatalogPage({ language }: Props) {
                   href={buildLangHref(lang)}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border transition-colors ${
                     active
-                      ? 'bg-white text-red-700 border-white shadow-sm'
-                      : 'bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20'
+                      ? 'bg-premium-gold text-dark-bg border-premium-gold shadow-sm'
+                      : 'bg-dark-surfaceHover text-text-secondary border-dark-border hover:text-text-primary'
                   }`}
                 >
                   <img
@@ -203,10 +201,10 @@ export function B2BCatalogPage({ language }: Props) {
       </section>
 
       {/* Product grid */}
-      <section className="bg-gradient-to-b from-gray-50 via-white to-gray-50">
+      <section className="bg-dark-bg">
         <div className="container-custom px-4 py-10 md:py-14">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 text-red-700 text-sm">
+            <div className="bg-danger-bg border border-danger/30 rounded-lg p-4 mb-8 text-danger text-sm">
               {error}
             </div>
           )}
@@ -216,26 +214,26 @@ export function B2BCatalogPage({ language }: Props) {
               {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-2xl border border-gray-200 p-4 animate-pulse"
+                  className="bg-dark-surface rounded-2xl border border-dark-border p-4 animate-pulse"
                 >
-                  <div className="bg-gray-200 rounded-xl h-56 mb-4" />
-                  <div className="bg-gray-200 rounded h-5 mb-2 w-3/4" />
-                  <div className="bg-gray-200 rounded h-4 w-1/2" />
+                  <div className="bg-dark-surfaceHover rounded-xl h-56 mb-4" />
+                  <div className="bg-dark-surfaceHover rounded h-5 mb-2 w-3/4" />
+                  <div className="bg-dark-surfaceHover rounded h-4 w-1/2" />
                 </div>
               ))}
             </div>
           ) : visibleProducts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+            <div className="bg-dark-surface rounded-2xl border border-dark-border p-12 text-center shadow-sm">
               <div className="text-5xl mb-4">📦</div>
-              <p className="text-xl font-semibold text-gray-900 mb-2">
+              <p className="text-xl font-semibold text-text-primary mb-2">
                 No hay productos disponibles
               </p>
-              <p className="text-gray-500 mb-6">
+              <p className="text-text-secondary mb-6">
                 No hay productos con tarifas mayoristas en{' '}
                 {LANGUAGE_LABELS[activeLanguage]} todavía. Contacta con{' '}
                 <a
                   href="mailto:sales@tcgiberia.com"
-                  className="text-red-600 font-medium hover:underline"
+                  className="text-premium-gold font-medium hover:underline"
                 >
                   sales@tcgiberia.com
                 </a>{' '}
@@ -251,7 +249,7 @@ export function B2BCatalogPage({ language }: Props) {
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-text-secondary mb-6">
                 {visibleProducts.length} producto
                 {visibleProducts.length !== 1 ? 's' : ''} con tarifa mayorista en{' '}
                 {LANGUAGE_LABELS[activeLanguage]}
@@ -269,7 +267,6 @@ export function B2BCatalogPage({ language }: Props) {
                       <ProductCardB2B
                         product={product}
                         b2bPrice={o?.b2bPrice ?? Number(product.price)}
-                        b2bPriceNoShrink={o?.b2bPriceNoShrink ?? null}
                       />
                     </div>
                   );

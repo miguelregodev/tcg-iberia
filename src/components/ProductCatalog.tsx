@@ -49,14 +49,14 @@ export function ProductCatalog() {
           <div className="grid md:grid-cols-4 gap-6">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="card animate-pulse">
-                <div className="bg-gray-200 rounded h-64 mb-4" />
-                <div className="bg-gray-200 rounded h-6 mb-2" />
-                <div className="bg-gray-200 rounded h-4 w-2/3" />
+                <div className="bg-dark-surfaceHover rounded h-64 mb-4" />
+                <div className="bg-dark-surfaceHover rounded h-6 mb-2" />
+                <div className="bg-dark-surfaceHover rounded h-4 w-2/3" />
               </div>
             ))}
           </div>
         ) : products.length === 0 ? (
-          <p className="text-center text-gray-600">No products available</p>
+          <p className="text-center text-text-secondary">No products available</p>
         ) : (
           <div className="grid md:grid-cols-4 gap-6">
             {products.map(product => {
@@ -74,14 +74,14 @@ export function ProductCatalog() {
           <div className="grid md:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="card animate-pulse">
-                <div className="bg-gray-200 rounded h-64 mb-4" />
-                <div className="bg-gray-200 rounded h-6 mb-2" />
-                <div className="bg-gray-200 rounded h-4 w-2/3" />
+                <div className="bg-dark-surfaceHover rounded h-64 mb-4" />
+                <div className="bg-dark-surfaceHover rounded h-6 mb-2" />
+                <div className="bg-dark-surfaceHover rounded h-4 w-2/3" />
               </div>
             ))}
           </div>
         ) : products.length === 0 ? (
-          <p className="text-center text-gray-600">No products available</p>
+          <p className="text-center text-text-secondary">No products available</p>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {products.map(product => {

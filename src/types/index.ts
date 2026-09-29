@@ -7,16 +7,14 @@ export type Product = {
   description: string;
   price: number;
   discountPercentage: number | null;
-  noShrinkPrice: number | null;
-  /** Optional wholesale (B2B) price for the SHRINK variant. */
+  /** Optional public price for the "Apertura en directo" (live-opening) variant. */
+  liveOpeningPrice: number | null;
+  /** Optional wholesale (B2B) price. B2B customers only ever get the sealed variant. */
   b2bPrice: number | null;
-  /** Optional wholesale (B2B) price for the NO_SHRINK variant. */
-  b2bPriceNoShrink: number | null;
   notes: string | null;
   type: string | null;
   releaseDate: string | null;
   stock: number;
-  noShrinkStock: number;
   imageUrl: string | null;
   language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
   priority: number;
@@ -25,6 +23,11 @@ export type Product = {
   canPurchase: boolean;
   isPreorder: boolean;
   inventoryStatus: ProductInventoryStatus;
+  /** Shipping dimensions and weight for calculating zone-aware shipping costs */
+  weightGrams: number | null;
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
   createdAt: string;
   updatedAt: string;
   hitCards?: HitCard[];

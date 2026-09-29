@@ -150,12 +150,12 @@ export default function AdminProducts() {
   return (
     <>
       <AdminNav />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom section">
           <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
             <div>
               <h1 className="text-h2">Productos</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-text-muted mt-1">
                 {total === 0
                   ? 'Sin productos'
                   : `Mostrando ${rangeStart}-${rangeEnd} de ${total}`}
@@ -194,10 +194,10 @@ export default function AdminProducts() {
           )}
 
           {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="bg-dark-surface rounded-xl shadow-sm border border-dark-border p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="lg:col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                   Buscar
                 </label>
                 <input
@@ -208,11 +208,11 @@ export default function AdminProducts() {
                     setPage(1);
                   }}
                   placeholder="Nombre, slug, tipo..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-dark-border rounded-lg px-3 py-2 text-sm bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                   Idioma
                 </label>
                 <select
@@ -221,7 +221,7 @@ export default function AdminProducts() {
                     setLanguageFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-dark-border rounded-lg px-3 py-2 text-sm bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
                 >
                   <option value="">Todos</option>
                   <option value="ENGLISH">Inglés</option>
@@ -231,7 +231,7 @@ export default function AdminProducts() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                   Tipo
                 </label>
                 <select
@@ -240,7 +240,7 @@ export default function AdminProducts() {
                     setTypeFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-dark-border rounded-lg px-3 py-2 text-sm bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
                 >
                   <option value="">Todos</option>
                   {productTypes.map((t) => (
@@ -251,7 +251,7 @@ export default function AdminProducts() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                   Visibilidad
                 </label>
                 <select
@@ -262,7 +262,7 @@ export default function AdminProducts() {
                     );
                     setPage(1);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-dark-border rounded-lg px-3 py-2 text-sm bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
                 >
                   <option value="">Todos</option>
                   <option value="visible">Visibles</option>
@@ -274,7 +274,7 @@ export default function AdminProducts() {
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={resetFilters}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                  className="text-xs text-premium-gold hover:text-premium-gold_dark font-medium"
                 >
                   Limpiar filtros
                 </button>
@@ -285,7 +285,7 @@ export default function AdminProducts() {
           {/* Per-page selector */}
           <div className="flex justify-end mb-3 text-sm">
             <div className="flex items-center gap-2">
-              <label htmlFor="pageSize" className="text-gray-600 font-medium">
+              <label htmlFor="pageSize" className="text-text-secondary font-medium">
                 Productos por página:
               </label>
               <select
@@ -295,7 +295,7 @@ export default function AdminProducts() {
                   setPageSize(Number(e.target.value));
                   setPage(1);
                 }}
-                className="border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="border border-dark-border rounded-lg px-3 py-2 bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
               >
                 {PAGE_SIZE_OPTIONS.map((n) => (
                   <option key={n} value={n}>
@@ -307,10 +307,10 @@ export default function AdminProducts() {
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-dark-surface rounded-xl shadow-sm border border-dark-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+                <thead className="bg-dark-bgSecondary text-text-muted uppercase text-xs tracking-wide">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold w-16">
                       Imagen
@@ -329,9 +329,6 @@ export default function AdminProducts() {
                       Stock
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
-                      Stock Sin Plástico
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold">
                       Lanzamiento
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
@@ -345,12 +342,12 @@ export default function AdminProducts() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-dark-border">
                   {loading ? (
                     <tr>
                       <td
                         colSpan={11}
-                        className="px-4 py-12 text-center text-gray-500"
+                        className="px-4 py-12 text-center text-text-muted"
                       >
                         Cargando...
                       </td>
@@ -359,7 +356,7 @@ export default function AdminProducts() {
                     <tr>
                       <td
                         colSpan={11}
-                        className="px-4 py-12 text-center text-gray-500"
+                        className="px-4 py-12 text-center text-text-muted"
                       >
                         No hay productos.
                       </td>
@@ -374,29 +371,29 @@ export default function AdminProducts() {
                         product.stock > 0 && product.stock <= 5;
                       const outOfStock = product.stock === 0;
                       return (
-                        <tr key={product.id} className="hover:bg-gray-50">
+                        <tr key={product.id} className="hover:bg-dark-surfaceHover">
                           <td className="px-4 py-3">
                             {product.imageUrl ? (
                               <img
                                 src={product.imageUrl}
                                 alt={product.name}
-                                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                                className="w-12 h-12 object-cover rounded-lg border border-dark-border"
                               />
                             ) : (
-                              <div className="w-12 h-12 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                              <div className="w-12 h-12 bg-dark-surfaceHover rounded-lg border border-dark-border flex items-center justify-center text-text-muted text-xs">
                                 –
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 font-medium text-gray-900">
+                          <td className="px-4 py-3 font-medium text-text-primary">
                             <div className="line-clamp-2 max-w-[300px]">
                               {product.name}
                             </div>
-                            <div className="text-xs text-gray-500 font-mono">
+                            <div className="text-xs text-text-muted font-mono">
                               {product.slug}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-gray-600">
+                          <td className="px-4 py-3 text-text-secondary">
                             {product.type || '—'}
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -406,7 +403,7 @@ export default function AdminProducts() {
                                 alt={LANGUAGE_LABELS[product.language]}
                                 className="w-5 h-3 object-cover rounded-sm"
                               />
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-text-secondary">
                                 {LANGUAGE_LABELS[product.language] ??
                                   product.language}
                               </span>
@@ -415,15 +412,15 @@ export default function AdminProducts() {
                           <td className="px-4 py-3 text-right whitespace-nowrap">
                             {product.discountPercentage ? (
                               <div>
-                                <div className="font-bold text-gray-900">
+                                <div className="font-bold text-text-primary">
                                   {currency.format(finalPrice)}
                                 </div>
-                                <div className="text-xs text-gray-400 line-through">
+                                <div className="text-xs text-text-muted line-through">
                                   {currency.format(Number(product.price))}
                                 </div>
                               </div>
                             ) : (
-                              <span className="font-bold text-gray-900">
+                              <span className="font-bold text-text-primary">
                                 {currency.format(Number(product.price))}
                               </span>
                             )}
@@ -432,29 +429,16 @@ export default function AdminProducts() {
                             <span
                               className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 outOfStock
-                                  ? 'bg-red-100 text-red-700'
+                                  ? 'bg-danger-bg text-danger'
                                   : lowStock
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : 'bg-green-100 text-green-700'
+                                  ? 'bg-warning-bg text-warning'
+                                  : 'bg-success-bg text-success'
                               }`}
                             >
                               {product.stock}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                outOfStock
-                                  ? 'bg-red-100 text-red-700'
-                                  : lowStock
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : 'bg-green-100 text-green-700'
-                              }`}
-                            >
-                              {product.noShrinkStock}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-600 text-xs whitespace-nowrap">
+                          <td className="px-4 py-3 text-center text-text-secondary text-xs whitespace-nowrap">
                             {product.releaseDate
                               ? dateFormatter.format(new Date(product.releaseDate))
                               : '—'}
@@ -464,11 +448,11 @@ export default function AdminProducts() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             {product.visible ? (
-                              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-success-bg text-success">
                                 Sí
                               </span>
                             ) : (
-                              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-dark-surfaceHover text-text-secondary">
                                 No
                               </span>
                             )}
@@ -477,20 +461,20 @@ export default function AdminProducts() {
                             <div className="inline-flex items-center gap-2">
                               <button
                                 onClick={() => handleEdit(product)}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-surfaceHover text-text-primary hover:bg-dark-borderStrong transition-colors"
                               >
                                 Editar
                               </button>
                               <button
                                 onClick={() => handleDuplicate(product)}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-surfaceHover text-premium-gold hover:bg-dark-borderStrong transition-colors"
                                 title="Crear una copia de este producto"
                               >
                                 Duplicar
                               </button>
                               <button
                                 onClick={() => handleDelete(product.id)}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-surfaceHover text-danger hover:bg-dark-borderStrong transition-colors"
                               >
                                 Eliminar
                               </button>
@@ -507,35 +491,35 @@ export default function AdminProducts() {
 
           {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-text-secondary">
               Página {safePage} de {totalPages}
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(1)}
                 disabled={safePage <= 1}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm border border-dark-border rounded-lg bg-dark-surface hover:bg-dark-surfaceHover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary"
               >
                 «
               </button>
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm border border-dark-border rounded-lg bg-dark-surface hover:bg-dark-surfaceHover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary"
               >
                 ‹ Anterior
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm border border-dark-border rounded-lg bg-dark-surface hover:bg-dark-surfaceHover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary"
               >
                 Siguiente ›
               </button>
               <button
                 onClick={() => setPage(totalPages)}
                 disabled={safePage >= totalPages}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm border border-dark-border rounded-lg bg-dark-surface hover:bg-dark-surfaceHover disabled:opacity-40 disabled:cursor-not-allowed text-text-primary"
               >
                 »
               </button>

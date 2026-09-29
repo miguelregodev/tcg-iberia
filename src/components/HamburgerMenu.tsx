@@ -28,6 +28,9 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'booster-packs', label: 'Sobres', category: 'booster-packs' },
   { key: 'booster-bundles', label: 'Booster Bundles', category: 'booster-bundles' },
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
+  { key: 'accesorios', label: 'Accesorios', href: '/accesorios' },
+  { key: 'mystery-packs', label: 'Mystery Packs', href: '/mystery-packs' },
+  { key: 'psa', label: 'PSA', href: '/psa' },
   { key: 'releases-calendar', label: 'Calendario de Lanzamientos', href: '/releases-calendar' },
   { key: 'b2b', label: 'B2B', action: 'b2b' },
 ];
@@ -43,7 +46,7 @@ function ChevronIcon({ open }: { open: boolean }) {
       strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`transition-transform duration-300 ease-out ${open ? 'rotate-180 text-red-600' : 'text-gray-400 group-hover:text-red-500'}`}
+      className={`transition-transform duration-300 ease-out ${open ? 'rotate-180 text-premium-gold' : 'text-text-muted group-hover:text-premium-gold'}`}
     >
       <polyline points="6 9 12 15 18 9" />
     </svg>
@@ -59,9 +62,9 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
   };
 
   return (
-    <div className="relative bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-menu-slide">
+    <div className="relative bg-dark-surface/95 backdrop-blur-md border border-dark-border rounded-xl shadow-elevated overflow-hidden animate-menu-slide">
       {/* Top accent gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-premium-gold to-transparent" />
 
       <div className="px-2 py-3 space-y-1">
         {MENU_ITEMS.map((item, index) => {
@@ -79,13 +82,13 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
                   <Link
                     href="/b2b-catalog"
                     onClick={onClose}
-                    className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-gray-700 overflow-hidden transition-colors hover:text-red-600"
+                    className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-text-secondary overflow-hidden transition-colors hover:text-premium-gold"
                   >
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
-                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-dark-surfaceHover via-dark-surfaceHover to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-premium-gold scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
                     <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
                       {item.label}
-                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
                         {customer?.companyName ?? 'Mayorista'}
                       </span>
                     </span>
@@ -102,13 +105,13 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
                     onClose();
                     onOpenB2B?.();
                   }}
-                  className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-gray-700 overflow-hidden transition-colors hover:text-red-600"
+                  className="group relative w-full text-left flex items-center px-4 py-3 rounded-lg font-medium text-text-secondary overflow-hidden transition-colors hover:text-premium-gold"
                 >
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
-                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-dark-surfaceHover via-dark-surfaceHover to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-premium-gold scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
                   <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
                     {item.label}
-                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
                       Mayorista
                     </span>
                   </span>
@@ -125,11 +128,11 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
                 style={animationStyle}
               >
                 <Link href={item.href} onClick={onClose}>
-                  <div className="group relative flex items-center px-4 py-3 rounded-lg text-gray-700 font-medium cursor-pointer overflow-hidden transition-colors hover:text-red-600">
+                  <div className="group relative flex items-center px-4 py-3 rounded-lg text-text-secondary font-medium cursor-pointer overflow-hidden transition-colors hover:text-premium-gold">
                     {/* Sliding background */}
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-dark-surfaceHover via-dark-surfaceHover to-transparent transition-transform duration-300 ease-out group-hover:translate-x-0" />
                     {/* Left accent bar */}
-                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-premium-gold scale-y-0 origin-center transition-transform duration-300 ease-out group-hover:scale-y-100" />
                     <span className="relative z-10 transition-transform duration-300 group-hover:translate-x-1">
                       {item.label}
                     </span>
@@ -149,18 +152,18 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
                 onClick={() => toggleSubmenu(item.key)}
                 aria-expanded={isExpanded}
                 className={`group relative w-full text-left flex justify-between items-center px-4 py-3 rounded-lg font-medium overflow-hidden transition-colors ${
-                  isExpanded ? 'text-red-600 bg-red-50/60' : 'text-gray-700 hover:text-red-600'
+                  isExpanded ? 'text-premium-gold bg-dark-surfaceHover' : 'text-text-secondary hover:text-premium-gold'
                 }`}
               >
                 {/* Sliding background on hover */}
                 <span
-                  className={`absolute inset-0 bg-gradient-to-r from-red-50 via-red-50 to-transparent transition-transform duration-300 ease-out ${
+                  className={`absolute inset-0 bg-gradient-to-r from-dark-surfaceHover via-dark-surfaceHover to-transparent transition-transform duration-300 ease-out ${
                     isExpanded ? 'translate-x-0' : '-translate-x-full group-hover:translate-x-0'
                   }`}
                 />
                 {/* Left accent bar */}
                 <span
-                  className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-red-500 origin-center transition-transform duration-300 ease-out ${
+                  className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-premium-gold origin-center transition-transform duration-300 ease-out ${
                     isExpanded ? 'scale-y-100' : 'scale-y-0 group-hover:scale-y-100'
                   }`}
                 />

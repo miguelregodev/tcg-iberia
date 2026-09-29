@@ -47,8 +47,8 @@ export function MiCuentaNav({ userName }: Props) {
   return (
     <div className="card p-0 overflow-hidden">
       {/* User header */}
-      <div className="bg-red-600 text-white px-6 py-5">
-        <p className="text-sm opacity-80">
+      <div className="bg-dark-bgSecondary border-b border-dark-border text-text-primary px-6 py-5">
+        <p className="text-sm text-premium-gold">
           {isB2B ? 'Portal mayorista' : 'Mi cuenta'}
         </p>
         <p className="font-bold text-lg truncate">{userName}</p>
@@ -63,8 +63,8 @@ export function MiCuentaNav({ userName }: Props) {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   pathname === item.href
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-red-600'
+                    ? 'bg-premium-gold/15 text-premium-gold'
+                    : 'text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold'
                 }`}
               >
                 <span>{item.icon}</span>
@@ -72,13 +72,13 @@ export function MiCuentaNav({ userName }: Props) {
               </Link>
             ))}
 
-            <hr className="my-2 border-gray-100" />
+            <hr className="my-2 border-dark-border" />
           </>
         )}
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-red-600 transition-colors text-left"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold transition-colors text-left"
         >
           <span>🚪</span>
           {isB2B ? 'Cerrar sesión B2B' : 'Cerrar Sesión'}

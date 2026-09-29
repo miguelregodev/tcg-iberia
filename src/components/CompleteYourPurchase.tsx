@@ -65,9 +65,9 @@ function SuggestionCard({ product }: { product: Product }) {
     : getProductPurchaseLabel(inventoryState);
 
   return (
-    <div className="group flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all overflow-hidden w-full h-full">
+    <div className="group flex flex-col bg-dark-surface rounded-2xl border border-dark-border shadow-sm hover:border-premium-gold/30 hover:shadow-elevated transition-all overflow-hidden w-full h-full">
       <Link href={`/product/${product.slug}`} className="flex flex-col flex-1">
-        <div className="relative h-48 bg-gray-50 overflow-hidden flex-shrink-0">
+        <div className="relative h-48 bg-dark-bgSecondary overflow-hidden flex-shrink-0">
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -75,9 +75,9 @@ function SuggestionCard({ product }: { product: Product }) {
               className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="w-full h-full bg-gray-100" />
+            <div className="w-full h-full bg-dark-surfaceHover" />
           )}
-          <div className="absolute top-3 left-3 bg-white rounded-lg p-1.5 shadow-md">
+          <div className="absolute top-3 left-3 bg-dark-surface/90 backdrop-blur rounded-lg p-1.5 shadow-elevated border border-dark-border">
             <img
               src={flagInfo.path}
               alt={flagInfo.name}
@@ -86,26 +86,26 @@ function SuggestionCard({ product }: { product: Product }) {
             />
           </div>
           {product.discountPercentage ? (
-            <div className="absolute top-3 right-3 bg-red-600 text-white px-2.5 py-1 rounded-full font-bold text-xs shadow-md">
+            <div className="absolute top-3 right-3 bg-premium-gold text-dark-bg px-2.5 py-1 rounded-full font-bold text-xs shadow-md">
               -{Number(product.discountPercentage)}%
             </div>
           ) : null}
         </div>
         <div className="p-4 flex flex-col gap-2 flex-1">
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-red-600 transition-colors h-10">
+          <h3 className="text-sm font-semibold text-text-primary line-clamp-2 group-hover:text-premium-gold transition-colors h-10">
             {product.name}
           </h3>
           {inventoryState.isPreorder && releaseDate ? (
-            <p className="text-xs font-semibold text-gray-600">
+            <p className="text-xs font-semibold text-text-secondary">
               Lanzamiento: {releaseDate}
             </p>
           ) : null}
           <div className="flex items-baseline gap-2 h-7">
-            <span className="text-sm font-bold text-black">
+            <span className="text-sm font-bold text-premium-gold">
               {finalPrice.toFixed(2)}€
             </span>
             {product.discountPercentage ? (
-              <span className="text-[10px] text-gray-400 line-through">
+              <span className="text-[10px] text-text-muted line-through">
                 {Number(product.price).toFixed(2)}€
               </span>
             ) : null}
@@ -113,14 +113,14 @@ function SuggestionCard({ product }: { product: Product }) {
         </div>
       </Link>
       <div className="px-4 pb-4">
-        <p className={`mb-2 text-xs font-semibold ${
+        <p className={`mb-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
           inventoryState.status === 'preorder'
-            ? 'text-blue-700'
+            ? 'bg-premium-gold/15 text-premium-gold'
             : inventoryState.status === 'available'
-            ? 'text-green-600'
+            ? 'bg-success-bg text-success'
             : inventoryState.status === 'low_stock'
-            ? 'text-orange-600'
-            : 'text-red-600'
+            ? 'bg-warning-bg text-warning'
+            : 'bg-danger-bg text-danger'
         }`}>
           {getProductStatusLabel(inventoryState)}
         </p>
@@ -130,17 +130,17 @@ function SuggestionCard({ product }: { product: Product }) {
           disabled={buttonDisabled}
           className={`w-full font-semibold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 ${
             buttonDisabled
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              ? 'bg-dark-surfaceHover text-text-muted cursor-not-allowed'
               : justAdded
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md'
+              ? 'bg-success text-dark-bg'
+              : 'bg-premium-gold text-dark-bg hover:bg-premium-gold_dark hover:shadow-md'
           }`}
         >
           {!buttonDisabled && !justAdded && (
             <img
               src="/images/add-to-cart.png"
               alt=""
-              className="w-4 h-4"
+              className="w-4 h-4 icon-invert"
             />
           )}
           {buttonLabel}
@@ -330,14 +330,14 @@ export function CompleteYourPurchase({
   }
 
   return (
-    <section className="py-12 border-t border-gray-200">
+    <section className="py-12 border-t border-dark-border">
       <div className="container-custom px-4">
         <div className="mb-8 text-center">
-          <h2 className="font-airstrike text-2xl md:text-4xl uppercase tracking-wider text-black">
+          <h2 className="font-airstrike text-2xl md:text-4xl uppercase tracking-wider text-text-primary">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-2 text-sm md:text-base text-gray-500">{subtitle}</p>
+            <p className="mt-2 text-sm md:text-base text-text-secondary">{subtitle}</p>
           )}
         </div>
 
@@ -351,7 +351,7 @@ export function CompleteYourPurchase({
             <img
               src="/images/left-arrow.png"
               alt=""
-              className="w-8 h-8 bg-white shadow-md rounded-full hover:scale-110 transition"
+              className="w-8 h-8 icon-invert bg-dark-surface shadow-elevated rounded-full p-1.5 hover:scale-110 transition"
             />
           </button>
           <button
@@ -363,7 +363,7 @@ export function CompleteYourPurchase({
             <img
               src="/images/right-arrow.png"
               alt=""
-              className="w-8 h-8 bg-white shadow-md rounded-full hover:scale-110 transition"
+              className="w-8 h-8 icon-invert bg-dark-surface shadow-elevated rounded-full p-1.5 hover:scale-110 transition"
             />
           </button>
 

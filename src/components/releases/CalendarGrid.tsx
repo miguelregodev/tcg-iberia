@@ -12,13 +12,13 @@ export function CalendarGrid({ grid, onProductClick }: Props) {
   return (
     <div role="grid" aria-label="Calendario de lanzamientos">
       {/* Day-of-week header row */}
-      <div className="grid grid-cols-7 border-b border-gray-200" role="row">
+      <div className="grid grid-cols-7 border-b border-dark-border" role="row">
         {DAY_LABELS.map((label) => (
           <div
             key={label}
             role="columnheader"
             aria-label={label}
-            className="py-2 sm:py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            className="py-2 sm:py-3 text-center text-xs font-semibold text-text-secondary uppercase tracking-wide"
           >
             {label}
           </div>
@@ -29,7 +29,7 @@ export function CalendarGrid({ grid, onProductClick }: Props) {
       {grid.map((week, weekIndex) => (
         <div
           key={weekIndex}
-          className="grid grid-cols-7 border-b border-gray-100 last:border-b-0"
+          className="grid grid-cols-7 border-b border-dark-border last:border-b-0"
           role="row"
         >
           {week.map((day) => (
