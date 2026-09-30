@@ -20,6 +20,8 @@ interface Props {
   productId: string;
   publicPrice: number;
   discountPercentage?: number | null;
+  /** Optional lower price for the "Apertura en directo" variant — when present, catalog shows "Desde" + lowest price. */
+  liveOpeningPrice?: number | null;
   /** Optional class overrides for the price container. */
   className?: string;
 }
@@ -28,6 +30,7 @@ export function ProductPriceDisplay({
   productId,
   publicPrice,
   discountPercentage,
+  liveOpeningPrice,
   className,
 }: Props) {
   const { isB2B } = useB2BSession();
@@ -42,14 +45,21 @@ export function ProductPriceDisplay({
   const finalPublic = discounted
     ? publicPrice * (1 - (discountPercentage ?? 0) / 100)
     : publicPrice;
-  const displayPrice = usingB2B ? price : finalPublic;
+  const hasLiveOpening = !usingB2B && liveOpeningPrice != null;
+  const lowestPrice = hasLiveOpening
+    ? Math.min(finalPublic, liveOpeningPrice as number)
+    : finalPublic;
+  const displayPrice = usingB2B ? price : lowestPrice;
 
   return (
     <div className={className ?? 'flex items-center gap-2'}>
+      {hasLiveOpening && (
+        <span className="text-[11px] text-text-muted">Desde</span>
+      )}
       <p className="text-premium-gold font-bold text-sm">
         {displayPrice.toFixed(2)}€
       </p>
-      {discounted && (
+      {discounted && !hasLiveOpening && (
         <p className="text-[11px] text-text-muted line-through">
           {publicPrice.toFixed(2)}€
         </p>

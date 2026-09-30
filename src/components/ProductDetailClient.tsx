@@ -29,7 +29,9 @@ function getLanguageFlag(language: string): { path: string; name: string } {
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [variant, setVariant] = useState<'sealed' | 'live'>('sealed');
+  const [variant, setVariant] = useState<'sealed' | 'live'>(
+    product.liveOpeningPrice != null ? 'live' : 'sealed'
+  );
   const { addToCart, items } = useCart();
   const { isB2B } = useB2BSession();
   const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);

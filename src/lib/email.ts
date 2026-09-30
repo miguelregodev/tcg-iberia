@@ -18,6 +18,8 @@ export interface OrderEmailItem {
   quantity: number;
   price: number;
   discountPercentage?: number | null;
+  /** Variant chosen by the customer, when the product offers both. */
+  variant?: 'sealed' | 'live' | null;
 }
 
 export interface OrderEmailPayload {
@@ -225,12 +227,15 @@ function itemsTableHtml(items: OrderEmailItem[]): string {
         item.discountPercentage && item.discountPercentage > 0
           ? `<div style="display:inline-block;margin-top:4px;padding:2px 8px;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:999px;font-size:11px;font-weight:600;">-${escapeHtml(item.discountPercentage)}%</div>`
           : '';
+      const variantBadge = item.variant
+        ? `<div style="display:inline-block;margin-top:4px;margin-right:6px;padding:2px 8px;background:${BRAND.bg};color:${BRAND.textMuted};border:1px solid ${BRAND.border};border-radius:999px;font-size:11px;font-weight:600;">${item.variant === 'live' ? 'Apertura en Directo' : 'Sellado'}</div>`
+        : '';
       return `
         <tr>
           <td style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};">
             <div style="font-size:14px;font-weight:600;color:${BRAND.text};line-height:1.3;">${escapeHtml(item.name)}</div>
             <div style="font-size:12px;color:${BRAND.textMuted};margin-top:4px;">${escapeHtml(item.quantity)} &times; ${formatCurrency(item.price)}</div>
-            ${discountBadge}
+            ${variantBadge}${discountBadge}
           </td>
           <td align="right" style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};font-size:14px;font-weight:600;color:${BRAND.text};white-space:nowrap;">${formatCurrency(subtotal)}</td>
         </tr>`;
@@ -399,7 +404,7 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
 function buildCustomerText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${i.name}${i.variant ? ` (${i.variant === 'live' ? 'Apertura en Directo' : 'Sellado'})` : ''}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
@@ -426,7 +431,7 @@ function buildCustomerText(payload: OrderEmailPayload): string {
 
 function buildAdminText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${i.name}${i.variant ? ` (${i.variant === 'live' ? 'Apertura en Directo' : 'Sellado'})` : ''}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
