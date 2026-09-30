@@ -234,6 +234,7 @@ export async function POST(request: NextRequest) {
               quantity: it.quantity,
               price: it.price,
               discountPercentage: it.discountPercentage,
+              variant: it.id.endsWith('_live') ? 'live' : 'sealed',
             })),
             paymentStatus: session.payment_status || 'unknown',
             shipping: {

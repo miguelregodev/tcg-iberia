@@ -51,6 +51,7 @@ export function ProductCard({ product }: { product: Product }) {
             productId={product.id}
             publicPrice={Number(product.price)}
             discountPercentage={product.discountPercentage}
+            liveOpeningPrice={product.liveOpeningPrice}
           />
         </div>
         
