@@ -248,7 +248,7 @@ export function ProductListPage({
             </div>
           ) : visibleProducts.length === 0 ? (
             <div className="bg-dark-surface rounded-2xl border border-dark-border p-12 text-center shadow-sm">
-              <p className="text-7xl md:text-8xl font-airstrike text-premium-gold mb-6 tracking-wider">
+              <p className="text-4xl sm:text-6xl md:text-8xl font-airstrike text-premium-gold mb-6 tracking-wider">
                 Próximamente
               </p>
               <p className="text-text-secondary mb-8 text-lg">

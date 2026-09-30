@@ -184,11 +184,13 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
           quantity?: number;
           price?: number;
           discountPercentage?: number;
+          id?: string;
         }>).map((item) => ({
           name: item.name || '',
           quantity: item.quantity || 0,
           price: item.price || 0,
           discountPercentage: item.discountPercentage,
+          variant: item.id?.endsWith('_live') ? 'live' : 'sealed',
         })),
         paymentStatus: 'paid',
         shippingCost,
