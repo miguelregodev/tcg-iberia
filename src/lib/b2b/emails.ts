@@ -67,6 +67,13 @@ function getTransporter(): nodemailer.Transporter | null {
   return transporter;
 }
 
+// Strips accidental wrapping quotes from env values (Vercel dashboard doesn't
+// strip them like dotenv does), which otherwise breaks the SMTP MAIL FROM command.
+function getFromAddress(fallback: string): string {
+  const raw = process.env.SMTP_FROM || fallback;
+  return raw.trim().replace(/^["']+|["']+$/g, '');
+}
+
 function escapeHtml(input: string | number | null | undefined): string {
   if (input === null || input === undefined) return '';
   return String(input)
@@ -136,7 +143,7 @@ export async function sendB2bDocumentationRequestEmail(email: string): Promise<v
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const salesEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const content = `
@@ -248,7 +255,7 @@ export async function sendB2bActivationEmail(params: {
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const salesEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const expiresText = params.expiresAt.toLocaleString('es-ES', {
@@ -332,7 +339,7 @@ export async function sendB2bAccountReadyEmail(params: {
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const salesEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const content = `
@@ -389,7 +396,7 @@ export async function sendB2bAccountDisabledEmail(params: {
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const salesEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const content = `
@@ -426,7 +433,7 @@ export async function sendB2bAccountReactivatedEmail(params: {
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const salesEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const content = `
@@ -463,7 +470,7 @@ export async function sendB2bRequestAdminNotification(email: string): Promise<vo
   const transporter = getTransporter();
   if (!transporter) return;
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <sales@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -579,7 +586,7 @@ function orderTotalsBlock(subtotal: number, iva: number, total: number): string 
 export async function sendB2bOrderRequestEmail(ctx: OrderContext): Promise<void> {
   const transporter = getTransporter();
   if (!transporter) return;
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
   const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -643,7 +650,7 @@ export async function sendB2bOrderAcceptedEmail(params: {
 }): Promise<void> {
   const transporter = getTransporter();
   if (!transporter) return;
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
 
   const content = `
     <tr>
@@ -692,7 +699,7 @@ export async function sendB2bOrderCancelledEmail(params: {
 }): Promise<void> {
   const transporter = getTransporter();
   if (!transporter) return;
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
   const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
 
   const content = `

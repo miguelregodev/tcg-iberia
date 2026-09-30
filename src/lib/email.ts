@@ -83,6 +83,13 @@ if (!globalForMailer._tcgMailer) {
   globalForMailer._tcgMailer = { transporter: null };
 }
 
+// Strips accidental wrapping quotes from env values (Vercel dashboard doesn't
+// strip them like dotenv does), which otherwise breaks the SMTP MAIL FROM command.
+function getFromAddress(fallback: string): string {
+  const raw = process.env.SMTP_FROM || fallback;
+  return raw.trim().replace(/^["']+|["']+$/g, '');
+}
+
 function getTransporter(): nodemailer.Transporter | null {
   if (globalForMailer._tcgMailer!.transporter) {
     return globalForMailer._tcgMailer!.transporter;
@@ -537,7 +544,7 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
     return;
   }
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
   const adminEmail = (process.env.ADMIN_EMAIL || 'sales@tcgiberia.com').trim().toLowerCase();
   const customerEmail = (payload.email || '').trim().toLowerCase();
 
@@ -607,7 +614,7 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
     return;
   }
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
   const toEmail = (payload.to || '').trim().toLowerCase();
 
   // Validate email format
@@ -735,7 +742,7 @@ export async function sendShippingNotificationEmail(payload: ShippingNotificatio
     return;
   }
 
-  const from = process.env.SMTP_FROM || 'TCG Iberia <noreply@tcgiberia.com>';
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
   const toEmail = (payload.email || '').trim().toLowerCase();
 
   // Validate email format
