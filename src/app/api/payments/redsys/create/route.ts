@@ -23,13 +23,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { auth } from '@/lib/auth';
 import { captureServerError } from '@/lib/observability/sentry';
 import { calculateSubtotal } from '@/lib/shipping/free-shipping';
-import { calculateShippingCost } from '@/lib/shipping/shipping-calculator';
-import { isCanaryIslandsPostalCode } from '@/lib/shipping/postal-codes';
+import { resolveShippingCost } from '@/lib/shipping/resolve-shipping-cost';
 import { SHIPPING_CONFIG } from '@/lib/shipping/config';
 import { isOrderItemSnapshot } from '@/lib/orders/items';
+import { RETRIABLE_PAYMENT_STATUSES } from '@/lib/orders/retry';
 import { getRedsysConfig, getRedsysApiUrl } from '@/lib/payments/redsys/config';
+import { nextRedsysOrderId } from '@/lib/payments/redsys/orderId';
 import {
   generateSignature,
   toBase64,
@@ -63,16 +65,12 @@ interface CustomerData {
 interface CreateRedsysPaymentRequest {
   items: CheckoutItem[];
   customerData?: CustomerData;
-}
-
-async function getNextRedsysOrderId(): Promise<string> {
-  const sequence = await db.sequence.upsert({
-    where: { name: 'REDSYS_ORDER' },
-    create: { name: 'REDSYS_ORDER', value: 1 },
-    update: { value: { increment: 1 } },
-  });
-
-  return String(sequence.value).padStart(12, '0');
+  /** "Agrupar Envío" checkbox — only honored for authenticated customers (see POST handler). */
+  groupedShipping?: boolean;
+  /** Client-persisted cart id. When an open (unpaid) order already exists for this cart,
+   * it's updated in place instead of creating a duplicate — covers failed/abandoned
+   * payment retries and "added more items, retry" without ever stacking new orders. */
+  cartId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -82,6 +80,12 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreateRedsysPaymentRequest;
     const { items, customerData } = body;
     customerEmail = customerData?.email;
+
+    // Never trust the client flag alone: grouped shipping requires an authenticated
+    // session. Guests (and any tampered request) silently fall back to immediate shipping.
+    const session = await auth();
+    const isAuthenticated = Boolean(session?.user?.id);
+    const groupedShipping = Boolean(body.groupedShipping) && isAuthenticated;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -138,35 +142,29 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Calculate shipping cost based on postal code (Canary Islands, Baleares, etc.)
-    const shippingResult = calculateShippingCost(
-      shippingItems,
-      customerData.shippingPostalCode,
-      subtotal,
-      SHIPPING_CONFIG.freeShippingThreshold
-    );
-
-    // Use calculated shipping cost, default to standard if calculation unavailable
-    // But always respect free shipping threshold
-    let shippingCost: number;
-    if (shippingResult.available) {
-      shippingCost = shippingResult.price || 0;
-    } else {
-      // Shipping calculation unavailable (e.g., missing dimensions)
-      // Check if order qualifies for free shipping before using fallback cost
-      const qualifiesForFreeShipping = !isCanaryIslandsPostalCode(customerData.shippingPostalCode) && 
-                                       subtotal >= SHIPPING_CONFIG.freeShippingThreshold;
-      shippingCost = qualifiesForFreeShipping ? 0 : SHIPPING_CONFIG.standardShippingCost;
-    }
+    // Grouped shipping ('Agrupar Envío'): the customer explicitly defers this order's
+    // shipment, so no shipping fee is collected now. The fee is computed once — from the
+    // combined merchandise value of whichever orders end up in the consolidated shipment —
+    // and collected via a single payment when the customer requests shipment later
+    // (see /api/user/shipments/request). This guarantees the customer is never charged
+    // shipping twice, without requiring any refund capability.
+    const shippingCost = groupedShipping
+      ? 0
+      : resolveShippingCost(
+          shippingItems,
+          customerData.shippingPostalCode,
+          subtotal,
+          SHIPPING_CONFIG.freeShippingThreshold
+        );
     const totalAmount = subtotal + shippingCost;
     const totalAmountCents = Math.round(totalAmount * 100);
 
     // Get Redsys configuration
     const config = getRedsysConfig();
 
-    // Generate order number (customer-facing)
-    const generateOrderNumber = async (): Promise<string> => {
-      const sequence = await db.sequence.upsert({
+    // Generate order number (customer-facing); reused across retries of the same cart.
+    const generateOrderNumber = async (tx: Prisma.TransactionClient): Promise<string> => {
+      const sequence = await tx.sequence.upsert({
         where: { name: 'ORDER' },
         create: { name: 'ORDER', value: 1 },
         update: { value: { increment: 1 } },
@@ -180,38 +178,81 @@ export async function POST(request: NextRequest) {
       return `TCG-${timestamp}-${sequenceStr}`;
     };
 
-    const orderNumber = await generateOrderNumber();
-    const redsysOrderId = await getNextRedsysOrderId();
+    const redsysOrderId = await nextRedsysOrderId();
+    const normalizedEmail = customerData.email.toLowerCase();
+    const cartId = typeof body.cartId === 'string' && body.cartId.length > 0 ? body.cartId : null;
 
-    // Create order with PENDING_PAYMENT status
+    // Create or reuse the order with PENDING_PAYMENT status
     const order = await db.$transaction(async (tx) => {
-      // Link customer if exists
-      const linkedUser = customerEmail
-        ? await tx.user.findUnique({
-            where: { email: customerEmail },
+      // Prefer the authenticated session's user id, but verify it still exists (a JWT
+      // session can outlive its User row, e.g. after a DB reset/account deletion) to
+      // avoid a foreign key violation; fall back to matching by email otherwise.
+      const sessionUserId = session?.user?.id
+        ? (await tx.user.findUnique({ where: { id: session.user.id }, select: { id: true } }))?.id
+        : undefined;
+      const linkedUserId = sessionUserId
+        ?? (customerEmail
+          ? (await tx.user.findUnique({ where: { email: customerEmail }, select: { id: true } }))?.id
+          : null);
+
+      // Retry/resume support: if this cart already has an open (unpaid) order owned by
+      // the same customer, update it in place instead of creating a duplicate — this is
+      // what makes failed-payment retries, abandoned-checkout retries, and "added more
+      // items then retried" all land on the SAME order instead of stacking new ones.
+      const existingOrder = cartId
+        ? await tx.order.findFirst({
+            where: {
+              cartId,
+              email: normalizedEmail,
+              userId: linkedUserId ?? null,
+              paymentStatus: { in: [...RETRIABLE_PAYMENT_STATUSES] },
+            },
             select: { id: true },
           })
         : null;
 
+      const sharedData = {
+        redsysOrderId,
+        paymentProvider: 'redsys',
+        paymentStatus: 'PENDING_PAYMENT' as const,
+        userId: linkedUserId ?? null,
+        fullName: customerData.fullName,
+        email: normalizedEmail,
+        phone: customerData.phone,
+        shippingAddress: customerData.shippingAddress,
+        shippingPostalCode: customerData.shippingPostalCode,
+        shippingCity: customerData.shippingCity,
+        shippingLocality: customerData.shippingLocality,
+        shippingProvince: customerData.shippingProvince,
+        totalAmount: String(totalAmount),
+        status: 'PROCESSING' as const,
+        shippingMode: groupedShipping ? ('GROUPED' as const) : ('IMMEDIATE' as const),
+        items: items as unknown as Prisma.InputJsonValue,
+        // Clear any stale attempt data left over from a previous failed/abandoned try.
+        redsysTransactionId: null,
+        redsysResponseCode: null,
+        redsysAuthCode: null,
+        paymentAmount: null,
+        paymentPaidAt: null,
+      };
+
+      if (existingOrder) {
+        return tx.order.update({
+          where: { id: existingOrder.id },
+          data: sharedData,
+          select: {
+            id: true,
+            orderNumber: true,
+            redsysOrderId: true,
+            totalAmount: true,
+            email: true,
+          },
+        });
+      }
+
+      const orderNumber = await generateOrderNumber(tx);
       return tx.order.create({
-        data: {
-          orderNumber,
-          redsysOrderId,
-          paymentProvider: 'redsys',
-          paymentStatus: 'PENDING_PAYMENT',
-          userId: linkedUser?.id ?? null,
-          fullName: customerData.fullName,
-          email: customerData.email.toLowerCase(),
-          phone: customerData.phone,
-          shippingAddress: customerData.shippingAddress,
-          shippingPostalCode: customerData.shippingPostalCode,
-          shippingCity: customerData.shippingCity,
-          shippingLocality: customerData.shippingLocality,
-          shippingProvince: customerData.shippingProvince,
-          totalAmount: String(totalAmount),
-          status: 'PROCESSING',
-          items: items as unknown as Prisma.InputJsonValue,
-        },
+        data: { ...sharedData, orderNumber, cartId },
         select: {
           id: true,
           orderNumber: true,
@@ -221,6 +262,8 @@ export async function POST(request: NextRequest) {
         },
       });
     });
+
+    const orderNumber = order.orderNumber;
 
     // Get origin for redirect URLs (browser redirects can stay on localhost in dev)
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

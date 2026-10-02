@@ -3,7 +3,7 @@ export function TrustSection() {
     {
       title: 'Productos Auténticos Verificados',
       description:
-        'Cada carta verificada y autenticada por profesionales certificados.',
+        'Cada producto es verificado para garantizar su autenticidad.',
       icon: '✓',
     },
     {

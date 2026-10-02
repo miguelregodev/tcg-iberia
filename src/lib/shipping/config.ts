@@ -5,6 +5,8 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+export { parseNumber };
+
 const thresholdFromEnv =
   process.env.NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD ?? process.env.FREE_SHIPPING_THRESHOLD;
 const shippingCostFromEnv =

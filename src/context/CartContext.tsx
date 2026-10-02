@@ -17,6 +17,11 @@ interface CartContextType {
   totalPrice: number;
   shippingCost: number;
   finalPrice: number;
+  /** Stable id for the current shopping cart, persisted in localStorage. Sent to checkout
+   * so a retried/abandoned payment attempt updates the same Order instead of duplicating it. */
+  cartId: string;
+  /** True once the cart has finished loading from localStorage on mount. */
+  isHydrated: boolean;
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -25,12 +30,21 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'tcg-iberia-cart';
+const CART_ID_STORAGE_KEY = 'tcg-iberia-cart-id';
+
+function generateCartId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `cart_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [cartId, setCartId] = useState<string>('');
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load cart from localStorage on mount (client-side only)
+  // Load cart (and cart id) from localStorage on mount (client-side only)
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
@@ -38,6 +52,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(savedCart) as CartItem[];
         setItems(parsed);
       }
+
+      let storedCartId = localStorage.getItem(CART_ID_STORAGE_KEY);
+      if (!storedCartId) {
+        storedCartId = generateCartId();
+        localStorage.setItem(CART_ID_STORAGE_KEY, storedCartId);
+      }
+      setCartId(storedCartId);
     } catch (err) {
       console.error('Failed to load cart from localStorage:', err);
     }
@@ -162,6 +183,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([]);
+    // A fresh cart id marks this shopping session as fully closed (e.g. after a
+    // successful payment) so a later checkout always starts a brand-new order.
+    try {
+      const newCartId = generateCartId();
+      localStorage.setItem(CART_ID_STORAGE_KEY, newCartId);
+      setCartId(newCartId);
+    } catch (err) {
+      console.error('Failed to reset cart id in localStorage:', err);
+    }
   }, []);
 
   const value: CartContextType = {
@@ -170,6 +200,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     totalPrice,
     shippingCost,
     finalPrice,
+    cartId,
+    isHydrated,
     addToCart,
     removeFromCart,
     updateQuantity,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -18,13 +18,28 @@ import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } fr
 export function CheckoutForm() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, totalPrice, shippingCost: defaultShippingCost, finalPrice } = useCart();
+  const {
+    items,
+    totalPrice,
+    totalQuantity,
+    shippingCost: defaultShippingCost,
+    finalPrice,
+    cartId,
+    isHydrated,
+    updateQuantity,
+  } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stockWarning, setStockWarning] = useState<string[] | null>(null);
   const [postalCodeFilled, setPostalCodeFilled] = useState(false);
   const [postalCodeError, setPostalCodeError] = useState<string | null>(null);
   const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
   const [isCanaryZone, setIsCanaryZone] = useState(false);
+  const [groupedShipping, setGroupedShipping] = useState(false);
+  const didRunInitialStockCheck = useRef(false);
+
+  const isAuthenticated = status === 'authenticated';
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -38,6 +53,12 @@ export function CheckoutForm() {
   });
 
   const freeShippingState = useMemo(() => getFreeShippingState(totalPrice), [totalPrice]);
+
+  const effectiveTotal = useMemo(() => {
+    if (groupedShipping) return totalPrice;
+    if (postalCodeFilled && calculatedShippingCost !== null) return totalPrice + calculatedShippingCost;
+    return finalPrice;
+  }, [groupedShipping, totalPrice, postalCodeFilled, calculatedShippingCost, finalPrice]);
 
   // Recalculate shipping cost when cart items change (and postal code is already filled)
   useEffect(() => {
@@ -100,13 +121,79 @@ export function CheckoutForm() {
     };
   }, [session?.user?.email, status]);
 
+  // Re-validates current cart items against live stock. Any item that's no longer
+  // purchasable (out of stock / unpublished / deleted) gets its quantity zeroed out
+  // (removing it from the cart), triggering the shipping-cost recalculation effect
+  // above. Returns whether every item was valid, plus the names that were removed.
+  const validateCartStock = useCallback(async (): Promise<{ ok: boolean; removedNames: string[] }> => {
+    if (items.length === 0) return { ok: true, removedNames: [] };
+
+    const realIds = Array.from(new Set(items.map((item) => item.product.id.replace(/_live$/, ''))));
+
+    try {
+      const response = await fetch('/api/products/stock-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds: realIds }),
+      });
+
+      if (!response.ok) {
+        // Fail open: don't block checkout on a transient stock-check error.
+        return { ok: true, removedNames: [] };
+      }
+
+      const { data } = (await response.json()) as { data: { id: string; canPurchase: boolean }[] };
+      const canPurchaseById = new Map(data.map((d) => [d.id, d.canPurchase]));
+
+      const removedNames: string[] = [];
+      for (const item of items) {
+        const realId = item.product.id.replace(/_live$/, '');
+        if (!canPurchaseById.get(realId)) {
+          removedNames.push(item.product.name);
+          updateQuantity(item.product.id, 0);
+        }
+      }
+
+      return { ok: removedNames.length === 0, removedNames };
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { module: 'checkout', action: 'validate_stock' },
+      });
+      // Fail open: don't block checkout on a transient network error.
+      return { ok: true, removedNames: [] };
+    }
+  }, [items, updateQuantity]);
+
+  // Run the stock check once, right after the cart finishes loading from localStorage.
+  useEffect(() => {
+    if (!isHydrated || didRunInitialStockCheck.current) return;
+    didRunInitialStockCheck.current = true;
+
+    validateCartStock().then(({ removedNames }) => {
+      if (removedNames.length > 0) {
+        setStockWarning(removedNames);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated]);
+
   if (items.length === 0) {
     return (
-      <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8 text-center">
-        <p className="text-text-secondary text-lg mb-4">Tu carrito está vacío</p>
-        <Link href="/" className="text-premium-gold hover:text-premium-gold_dark font-semibold">
-          Volver a la tienda
-        </Link>
+      <div className="max-w-6xl mx-auto space-y-4">
+        {stockWarning && stockWarning.length > 0 && (
+          <div className="p-4 bg-warning-bg border border-warning/30 rounded-lg text-center">
+            <p className="text-warning font-semibold mb-1">Algunos productos ya no están disponibles</p>
+            <p className="text-warning text-sm">
+              Hemos eliminado de tu pedido: {stockWarning.join(', ')}.
+            </p>
+          </div>
+        )}
+        <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8 text-center">
+          <p className="text-text-secondary text-lg mb-4">Tu carrito está vacío</p>
+          <Link href="/" className="text-premium-gold hover:text-premium-gold_dark font-semibold">
+            Volver a la tienda
+          </Link>
+        </div>
       </div>
     );
   }
@@ -160,8 +247,22 @@ export function CheckoutForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsProcessing(true);
     setError(null);
+    setStockWarning(null);
+
+    // Re-validate stock right before paying: if anything went out of stock since the
+    // cart was loaded (or since the last check), zero it out, warn the customer, and
+    // stop here — do NOT redirect to Redsys. The customer must review and submit again.
+    setIsValidatingStock(true);
+    const { ok, removedNames } = await validateCartStock();
+    setIsValidatingStock(false);
+
+    if (!ok) {
+      setStockWarning(removedNames);
+      return;
+    }
+
+    setIsProcessing(true);
 
     trackCheckoutStarted({
       amount: finalPrice,
@@ -200,6 +301,8 @@ export function CheckoutForm() {
         body: JSON.stringify({
           items: checkoutItems,
           customerData: formData,
+          groupedShipping: isAuthenticated && groupedShipping,
+          cartId,
         }),
       });
 
@@ -270,6 +373,15 @@ export function CheckoutForm() {
         <div className="md:col-span-2">
           <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {stockWarning && stockWarning.length > 0 && (
+                <div className="p-4 bg-warning-bg border border-warning/30 rounded-lg">
+                  <p className="text-warning font-semibold mb-1">Algunos productos ya no están disponibles</p>
+                  <p className="text-warning text-sm">
+                    Hemos eliminado de tu pedido: {stockWarning.join(', ')}. Revisa tu pedido antes de continuar.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div className="p-4 bg-danger-bg border border-danger/30 rounded-lg">
                   <p className="text-danger font-semibold">{error}</p>
@@ -435,10 +547,14 @@ export function CheckoutForm() {
               {/* Pay Button */}
               <button
                 type="submit"
-                disabled={isProcessing}
+                disabled={isProcessing || isValidatingStock || totalQuantity === 0}
                 className="btn btn-primary w-full py-3 px-4 disabled:opacity-60"
               >
-                {isProcessing ? 'Procesando...' : `Pagar de forma segura ${finalPrice.toFixed(2)}€`}
+                {isValidatingStock
+                  ? 'Comprobando disponibilidad...'
+                  : isProcessing
+                  ? 'Procesando...'
+                  : `Pagar de forma segura ${effectiveTotal.toFixed(2)}€`}
               </button>
 
               {/* Back Link */}
@@ -527,13 +643,15 @@ export function CheckoutForm() {
                 <span className="font-semibold text-text-primary">{totalPrice.toFixed(2)}€</span>
               </div>
               <div className={`flex justify-between text-sm ${
-                postalCodeFilled ? 'text-success font-semibold' : 'text-text-secondary'
+                groupedShipping ? 'text-premium-gold font-semibold' : postalCodeFilled ? 'text-success font-semibold' : 'text-text-secondary'
               }`}>
-                <span>Envío {postalCodeFilled && '(Confirmado)'}</span>
+                <span>Envío {groupedShipping ? '(Agrupado)' : postalCodeFilled && '(Confirmado)'}</span>
                 <span className={`font-semibold ${
-                  postalCodeFilled ? 'text-success' : 'text-text-primary'
+                  groupedShipping ? 'text-premium-gold' : postalCodeFilled ? 'text-success' : 'text-text-primary'
                 }`}>
-                  {calculatedShippingCost === null
+                  {groupedShipping
+                    ? 'Gratis ahora'
+                    : calculatedShippingCost === null
                     ? defaultShippingCost === 0
                       ? 'Gratis'
                       : `${defaultShippingCost.toFixed(2)}€`
@@ -546,13 +664,39 @@ export function CheckoutForm() {
               <div className="flex justify-between text-sm font-bold text-text-primary pt-2 border-t border-dark-border">
                 <span>Total:</span>
                 <span className="text-premium-gold text-sm">
-                  {postalCodeFilled && calculatedShippingCost !== null
-                    ? (totalPrice + calculatedShippingCost).toFixed(2)
-                    : finalPrice.toFixed(2)
-                  }€
+                  {effectiveTotal.toFixed(2)}€
                 </span>
               </div>
             </div>
+
+            {/* "Agrupar Envío" — only offered to authenticated customers (guest checkout unaffected) */}
+            {isAuthenticated && (
+              <div className="mt-4 border border-dark-border rounded-lg p-4 bg-dark-bgSecondary">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={groupedShipping}
+                    onChange={(e) => setGroupedShipping(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold accent-[#F5E77A]"
+                    aria-describedby="grouped-shipping-help"
+                  />
+                  <span className="text-sm font-semibold text-text-primary">Agrupar Envío</span>
+                </label>
+                <p id="grouped-shipping-help" className="mt-2 text-xs text-text-secondary leading-relaxed">
+                  Retrasa el envío de este pedido para poder agruparlo con futuras compras y ahorrar en
+                  gastos de envío. Podrás solicitar el envío cuando quieras desde &ldquo;Mis pedidos&rdquo;.{' '}
+                  <Link href="/envio-agrupado" className="text-premium-gold underline-offset-4 hover:underline">
+                    Más información
+                  </Link>
+                </p>
+                {groupedShipping && (
+                  <p className="mt-2 text-xs font-semibold text-premium-gold">
+                    Este pedido no se enviará todavía. Se pagará igualmente en su totalidad ahora; el envío
+                    quedará pendiente hasta que lo solicites.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
@@ -9,6 +10,7 @@ import { FavoriteButton } from './FavoriteButton';
 import { StockAlertButton } from './StockAlertButton';
 import { trackPreorderViewed, trackProductViewed } from '@/lib/analytics/events';
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
+import { getEstimatedDeliveryRange } from '@/lib/shipping/delivery-estimate';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
 
@@ -38,6 +40,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const b2bSealedPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
   const releaseDate = formatReleaseDate(product.releaseDate);
+  const estimatedDeliveryRange = getEstimatedDeliveryRange();
   
 
   const hasLiveOpening = product.liveOpeningPrice != null;
@@ -441,7 +444,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>
-                  <strong>Envío rápido</strong>
+                  <strong>Entrega el {estimatedDeliveryRange}</strong>, excepto si eliges{' '}
+                  <Link
+                    href="/envio-agrupado"
+                    className="text-premium-gold underline-offset-4 hover:underline"
+                  >
+                    envío agrupado
+                  </Link>
                 </span>
               </div>
               <div className="flex items-center gap-3">

@@ -18,8 +18,6 @@ export interface OrderEmailItem {
   quantity: number;
   price: number;
   discountPercentage?: number | null;
-  /** Variant chosen by the customer, when the product offers both. */
-  variant?: 'sealed' | 'live' | null;
 }
 
 export interface OrderEmailPayload {
@@ -50,6 +48,28 @@ export interface StockAlertEmailPayload {
     price: number;
     discountPercentage?: number | null;
   };
+}
+
+export interface ShipmentRequestEmailPayload {
+  shipmentNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  shipping: {
+    address: string;
+    postalCode: string;
+    city: string;
+    locality: string;
+    province: string;
+  };
+  merchandiseTotal: number;
+  shippingCost: number;
+  requiresPayment: boolean;
+  orders: Array<{
+    orderNumber: string;
+    totalAmount: number;
+    items: OrderEmailItem[];
+  }>;
 }
 
 export interface ShippingNotificationPayload {
@@ -227,15 +247,12 @@ function itemsTableHtml(items: OrderEmailItem[]): string {
         item.discountPercentage && item.discountPercentage > 0
           ? `<div style="display:inline-block;margin-top:4px;padding:2px 8px;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:999px;font-size:11px;font-weight:600;">-${escapeHtml(item.discountPercentage)}%</div>`
           : '';
-      const variantBadge = item.variant
-        ? `<div style="display:inline-block;margin-top:4px;margin-right:6px;padding:2px 8px;background:${BRAND.bg};color:${BRAND.textMuted};border:1px solid ${BRAND.border};border-radius:999px;font-size:11px;font-weight:600;">${item.variant === 'live' ? 'Apertura en Directo' : 'Sellado'}</div>`
-        : '';
       return `
         <tr>
           <td style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};">
             <div style="font-size:14px;font-weight:600;color:${BRAND.text};line-height:1.3;">${escapeHtml(item.name)}</div>
             <div style="font-size:12px;color:${BRAND.textMuted};margin-top:4px;">${escapeHtml(item.quantity)} &times; ${formatCurrency(item.price)}</div>
-            ${variantBadge}${discountBadge}
+            ${discountBadge}
           </td>
           <td align="right" style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};font-size:14px;font-weight:600;color:${BRAND.text};white-space:nowrap;">${formatCurrency(subtotal)}</td>
         </tr>`;
@@ -404,7 +421,7 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
 function buildCustomerText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}${i.variant ? ` (${i.variant === 'live' ? 'Apertura en Directo' : 'Sellado'})` : ''}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
@@ -431,7 +448,7 @@ function buildCustomerText(payload: OrderEmailPayload): string {
 
 function buildAdminText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}${i.variant ? ` (${i.variant === 'live' ? 'Apertura en Directo' : 'Sellado'})` : ''}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
@@ -607,6 +624,138 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
       console.log(`[email] ✓ ${emailType} email sent to ${recipient}`);
     }
   });
+}
+
+// --- Shipment request (admin) email ---
+
+function buildShipmentRequestAdminHtml(payload: ShipmentRequestEmailPayload): string {
+  const statusBadge = payload.requiresPayment
+    ? { label: 'PAGO PENDIENTE', bg: '#FEF3C7', fg: BRAND.warning }
+    : { label: 'ENV\u00cdO GRATIS', bg: '#DCFCE7', fg: BRAND.success };
+
+  const ordersBlock = payload.orders
+    .map(
+      (order) => `
+        <div style="font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};font-weight:700;margin:20px 0 4px 0;">Pedido ${escapeHtml(order.orderNumber)} &middot; ${formatCurrency(order.totalAmount)}</div>
+        ${itemsTableHtml(order.items)}
+      `
+    )
+    .join('');
+
+  const content = `
+    <tr>
+      <td style="padding:32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+          <tr>
+            <td style="font-family:${FONT_STACK};font-size:14px;color:${BRAND.text};">
+              <strong>Solicitud de env&iacute;o agrupado</strong>
+              <div style="font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};margin-top:4px;">${escapeHtml(payload.shipmentNumber)}</div>
+            </td>
+            <td align="right">
+              <span style="display:inline-block;padding:6px 14px;background:${statusBadge.bg};color:${statusBadge.fg};font-family:${FONT_STACK};font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border-radius:999px;">${escapeHtml(statusBadge.label)}</span>
+            </td>
+          </tr>
+        </table>
+
+        <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 8px 0;">Cliente</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:14px 20px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">
+              <span style="color:${BRAND.textMuted};display:inline-block;width:90px;">Nombre</span>
+              <strong style="color:${BRAND.text};">${escapeHtml(payload.fullName)}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 20px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">
+              <span style="color:${BRAND.textMuted};display:inline-block;width:90px;">Email</span>
+              <a href="mailto:${escapeHtml(payload.email)}" style="color:${BRAND.primary};text-decoration:none;font-weight:600;">${escapeHtml(payload.email)}</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 20px;border-bottom:1px solid ${BRAND.border};font-family:${FONT_STACK};font-size:13px;">
+              <span style="color:${BRAND.textMuted};display:inline-block;width:90px;">Tel&eacute;fono</span>
+              <a href="tel:${escapeHtml(payload.phone)}" style="color:${BRAND.primary};text-decoration:none;font-weight:600;">${escapeHtml(payload.phone)}</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 20px;background:${BRAND.bg};font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};line-height:1.6;">
+              <div style="font-size:11px;letter-spacing:0.12em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:700;margin-bottom:6px;">Direcci&oacute;n de env&iacute;o</div>
+              ${escapeHtml(payload.shipping.address)}<br/>
+              ${escapeHtml(payload.shipping.postalCode)} ${escapeHtml(payload.shipping.city)}<br/>
+              ${escapeHtml(payload.shipping.locality)}${payload.shipping.locality && payload.shipping.province ? ', ' : ''}${escapeHtml(payload.shipping.province)}
+            </td>
+          </tr>
+        </table>
+
+        <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Pedidos a enviar (${payload.orders.length})</div>
+        ${ordersBlock}
+        ${totalBreakdownHtml(payload.merchandiseTotal, payload.shippingCost, payload.merchandiseTotal + payload.shippingCost)}
+      </td>
+    </tr>
+  `;
+
+  return htmlShell('Solicitud de env\u00edo agrupado', content);
+}
+
+function buildShipmentRequestAdminText(payload: ShipmentRequestEmailPayload): string {
+  const orderLines = payload.orders.flatMap((order) => [
+    `Pedido ${order.orderNumber} (${formatCurrency(order.totalAmount)}):`,
+    ...order.items.map((i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`),
+  ]);
+
+  return [
+    `Solicitud de envio agrupado: ${payload.shipmentNumber}`,
+    `Estado: ${payload.requiresPayment ? 'Pago pendiente' : 'Envio gratis'}`,
+    '',
+    `Cliente: ${payload.fullName}`,
+    `Email:   ${payload.email}`,
+    `Telefono:${payload.phone}`,
+    '',
+    'Direccion de envio:',
+    `  ${payload.shipping.address}`,
+    `  ${payload.shipping.postalCode} ${payload.shipping.city}`,
+    `  ${payload.shipping.locality}${payload.shipping.locality && payload.shipping.province ? ', ' : ''}${payload.shipping.province}`,
+    '',
+    `Pedidos a enviar (${payload.orders.length}):`,
+    ...orderLines,
+    '',
+    `Mercancia: ${formatCurrency(payload.merchandiseTotal)}`,
+    `Envio:     ${formatCurrency(payload.shippingCost)}`,
+  ].join('\n');
+}
+
+/** Notifies the sales inbox whenever a customer requests a grouped shipment, so the
+ * team can verify the consolidated order/product list before preparing the package. */
+export async function sendShipmentRequestAdminNotification(payload: ShipmentRequestEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error(
+      `[email] Cannot send shipment request notification for ${payload.shipmentNumber}: ` +
+      `SMTP not configured. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD in environment.`
+    );
+    return;
+  }
+
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const adminEmail = (process.env.ADMIN_EMAIL || 'sales@tcgiberia.com').trim().toLowerCase();
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: adminEmail,
+      replyTo: payload.email,
+      subject: `Solicitud de env\u00edo agrupado ${payload.shipmentNumber} - ${payload.fullName}`,
+      html: buildShipmentRequestAdminHtml(payload),
+      text: buildShipmentRequestAdminText(payload),
+    });
+    console.log(`[email] \u2713 Shipment request notification sent to ${adminEmail} for ${payload.shipmentNumber}`);
+  } catch (error) {
+    console.error(
+      `[email] Failed to send shipment request notification to ${adminEmail}\n` +
+      `Shipment: ${payload.shipmentNumber}\n` +
+      `Error: ${String(error)}`
+    );
+  }
 }
 
 export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Promise<void> {
