@@ -5,6 +5,7 @@ import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { trackFavoriteRemoved } from '@/lib/analytics/events';
 import { useCart } from '@/context/CartContext';
+import { ProductPriceDisplay } from '@/components/ProductPriceDisplay';
 import type { Product } from '@/types';
 
 interface FavoriteProduct {
@@ -13,6 +14,7 @@ interface FavoriteProduct {
   slug: string;
   price: number;
   discountPercentage: number | null;
+  liveOpeningPrice: number | null;
   imageUrl: string | null;
   stock: number;
   type: string | null;
@@ -56,7 +58,7 @@ export default function FavoritosPage() {
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [addedToCart, setAddedToCart] = useState<string | null>(null);
-  const { addToCart } = useCart();
+  const { addToCart, items } = useCart();
 
   const handleAddToCart = (product: FavoriteProduct) => {
     const cartProduct: Product = {
@@ -78,7 +80,7 @@ export default function FavoritosPage() {
       canPurchase: product.stock > 0,
       isPreorder: false,
       inventoryStatus: product.stock === 0 ? 'out_of_stock' : product.stock <= 5 ? 'low_stock' : 'available',
-      liveOpeningPrice: null,
+      liveOpeningPrice: product.liveOpeningPrice,
       b2bPrice: null,
       weightGrams: product.weightGrams,
       lengthCm: product.lengthCm,
@@ -177,9 +179,13 @@ export default function FavoritosPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {favorites.map((fav) => {
               const product = fav.product;
-              const finalPrice = product.discountPercentage
-                ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
-                : Number(product.price);
+              // Sellado and Apertura en Directo (`_live`) lines share one stock pool.
+              const inCartQuantity = items
+                .filter((i) => i.product.id === product.id || i.product.id === `${product.id}_live`)
+                .reduce((sum, i) => sum + i.quantity, 0);
+              const outOfStock = product.stock === 0;
+              const stockExhaustedInCart = !outOfStock && inCartQuantity >= product.stock;
+              const addToCartDisabled = outOfStock || stockExhaustedInCart;
 
               return (
                 <div
@@ -220,16 +226,13 @@ export default function FavoritosPage() {
                     </Link>
 
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <div>
-                        <span className="text-premium-gold font-bold text-lg">
-                          {finalPrice.toFixed(2)} €
-                        </span>
-                        {product.discountPercentage && (
-                          <span className="ml-2 text-xs text-text-muted line-through">
-                            {Number(product.price).toFixed(2)} €
-                          </span>
-                        )}
-                      </div>
+                      <ProductPriceDisplay
+                        productId={product.id}
+                        publicPrice={Number(product.price)}
+                        discountPercentage={product.discountPercentage}
+                        liveOpeningPrice={product.liveOpeningPrice}
+                        priceClassName="text-premium-gold font-bold text-lg"
+                      />
                       <StockBadge stock={product.stock} />
                     </div>
 
@@ -242,9 +245,15 @@ export default function FavoritosPage() {
                       </Link>
                       <button
                         onClick={() => handleAddToCart(product)}
-                        disabled={product.stock === 0}
+                        disabled={addToCartDisabled}
                         aria-label={`Añadir ${product.name} al carrito`}
-                        title={product.stock === 0 ? 'Agotado' : 'Añadir al carrito'}
+                        title={
+                          outOfStock
+                            ? 'Agotado'
+                            : stockExhaustedInCart
+                              ? 'Ya tienes todo el stock disponible en el carrito'
+                              : 'Añadir al carrito'
+                        }
                         className="p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-muted hover:text-premium-gold hover:bg-dark-surfaceHover"
                       >
                         {addedToCart === product.id ? (

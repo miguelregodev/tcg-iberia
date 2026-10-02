@@ -68,9 +68,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // No discount for B2B users
   const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
 
-  // How many of THIS variant are already in the cart.
-  const inCartQuantity =
-    items.find((it) => it.product.id === variantProduct.id)?.quantity ?? 0;
+  // Sellado and Apertura en Directo share one stock pool, so both cart lines
+  // (base id and `_live` suffixed id) count against the same limit.
+  const inCartQuantity = items
+    .filter((it) => it.product.id === product.id || it.product.id === `${product.id}_live`)
+    .reduce((sum, it) => sum + it.quantity, 0);
   const quantityLimit = getProductQuantityLimit(inventoryState);
   const maxAddable = quantityLimit === null
     ? Number.POSITIVE_INFINITY

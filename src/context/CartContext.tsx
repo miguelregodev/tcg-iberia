@@ -39,6 +39,19 @@ function generateCartId(): string {
   return `cart_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+// Sellado and Apertura en Directo (`_live` suffix) are separate cart lines but
+// draw from the same physical stock, so quantity caps must be computed jointly.
+function getBaseProductId(productId: string): string {
+  return productId.replace(/_live$/, '');
+}
+
+function getOtherVariantQuantity(items: CartItem[], productId: string): number {
+  const baseId = getBaseProductId(productId);
+  return items
+    .filter(item => item.product.id !== productId && getBaseProductId(item.product.id) === baseId)
+    .reduce((sum, item) => sum + item.quantity, 0);
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [cartId, setCartId] = useState<string>('');
@@ -108,12 +121,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
       const stock = Math.max(0, Number(product.stock) || 0);
       const quantityLimit = getProductQuantityLimit(state);
+      const sharedStockUsed = getOtherVariantQuantity(prevItems, product.id);
+      const availableStock = Math.max(0, stock - sharedStockUsed);
       const existingItem = prevItems.find(item => item.product.id === product.id);
       if (existingItem) {
         const desired = existingItem.quantity + quantity;
         const capped = quantityLimit === null
           ? Math.max(1, desired)
-          : Math.min(stock, Math.max(1, desired));
+          : Math.min(availableStock, Math.max(1, desired));
         if (capped === existingItem.quantity) return prevItems;
         return prevItems.map(item =>
           item.product.id === product.id
@@ -123,7 +138,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       const initialQty = quantityLimit === null
         ? Math.max(1, quantity)
-        : Math.min(stock, Math.max(1, quantity));
+        : Math.min(availableStock, Math.max(1, quantity));
       if (initialQty <= 0) return prevItems;
 
       trackProductAddedToCart({
@@ -175,7 +190,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
         const stock = Math.max(0, Number(item.product.stock) || 0);
         const quantityLimit = getProductQuantityLimit(state);
-        const capped = quantityLimit === null ? quantity : Math.min(stock, quantity);
+        const sharedStockUsed = getOtherVariantQuantity(prevItems, item.product.id);
+        const availableStock = Math.max(0, stock - sharedStockUsed);
+        const capped = quantityLimit === null ? quantity : Math.min(availableStock, quantity);
         return { ...item, quantity: capped };
       })
     );

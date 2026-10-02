@@ -3,6 +3,8 @@ import { Metadata } from 'next';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { ProductDetailClient } from '@/components/ProductDetailClient';
+import { Breadcrumbs, type BreadcrumbItem } from '@/components/Breadcrumbs';
+import { getCategoryForProductType } from '@/lib/products/categories';
 import { publicProductWithHitCardsSelect, serializePublicProduct } from '@/lib/products/serialization';
 
 export async function generateMetadata({
@@ -66,10 +68,17 @@ export default async function ProductDetail({
   }
 
   const serializedProduct = serializePublicProduct(product);
+  const category = getCategoryForProductType(serializedProduct.type);
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Inicio', href: '/' },
+    ...(category ? [{ label: category.label, href: category.href }] : []),
+    { label: serializedProduct.name },
+  ];
 
   return (
     <>
       <Navigation />
+      <Breadcrumbs items={breadcrumbItems} />
       <ProductDetailClient product={serializedProduct} />
       <Footer />
     </>

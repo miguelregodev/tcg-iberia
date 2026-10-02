@@ -211,7 +211,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                     });
                     const releaseDate = formatReleaseDate(item.product.releaseDate);
                     const quantityLimit = getProductQuantityLimit(inventoryState);
-                    const atMax = quantityLimit !== null && item.quantity >= quantityLimit;
+                    // Sellado and Apertura en Directo lines share one stock pool.
+                    const baseId = item.product.id.replace(/_live$/, '');
+                    const otherVariantQuantity = items
+                      .filter((i) => i.product.id !== item.product.id && i.product.id.replace(/_live$/, '') === baseId)
+                      .reduce((sum, i) => sum + i.quantity, 0);
+                    const atMax = quantityLimit !== null && item.quantity + otherVariantQuantity >= quantityLimit;
 
                     return (
                       <div

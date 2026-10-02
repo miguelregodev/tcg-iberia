@@ -8,6 +8,7 @@ import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
+import { Breadcrumbs } from './Breadcrumbs';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -159,6 +160,8 @@ export function ProductListPage({
 
   return (
     <>
+      <Breadcrumbs items={[{ label: 'Inicio', href: '/' }, { label: title }]} />
+
       {/* Hero header */}
       <section className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
         <div

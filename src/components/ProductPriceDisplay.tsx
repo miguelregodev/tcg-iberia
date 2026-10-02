@@ -24,6 +24,8 @@ interface Props {
   liveOpeningPrice?: number | null;
   /** Optional class overrides for the price container. */
   className?: string;
+  /** Optional class override for the price text itself (defaults to the compact catalog-card size). */
+  priceClassName?: string;
 }
 
 export function ProductPriceDisplay({
@@ -32,6 +34,7 @@ export function ProductPriceDisplay({
   discountPercentage,
   liveOpeningPrice,
   className,
+  priceClassName,
 }: Props) {
   const { isB2B } = useB2BSession();
   const overrides = useB2BPrices(isB2B ? [productId] : []);
@@ -56,7 +59,7 @@ export function ProductPriceDisplay({
       {hasLiveOpening && (
         <span className="text-[11px] text-text-muted">Desde</span>
       )}
-      <p className="text-premium-gold font-bold text-sm">
+      <p className={priceClassName ?? 'text-premium-gold font-bold text-sm'}>
         {displayPrice.toFixed(2)}€
       </p>
       {discounted && !hasLiveOpening && (

@@ -244,6 +244,22 @@ export default function PedidosPage() {
 
   const [retryingShipmentId, setRetryingShipmentId] = useState<string | null>(null);
   const [cancellingShipmentId, setCancellingShipmentId] = useState<string | null>(null);
+  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
+
+  const retryOrderPayment = async (orderId: string) => {
+    setRetryingOrderId(orderId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/user/orders/${orderId}/retry-payment`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'No se pudo reintentar el pago del pedido.');
+      submitRedsysForm(json);
+    } catch (err) {
+      Sentry.captureException(err, { tags: { module: 'mi-cuenta', section: 'pedidos_reintentar_pago' } });
+      setError(err instanceof Error ? err.message : 'No se pudo reintentar el pago del pedido.');
+      setRetryingOrderId(null);
+    }
+  };
 
   const retryShipmentPayment = async (shipmentId: string) => {
     setRetryingShipmentId(shipmentId);
@@ -337,15 +353,19 @@ export default function PedidosPage() {
                     >
                       {STATUS_LABEL[order.status]}
                     </span>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${PAYMENT_STATUS_STYLE[order.paymentStatus]}`}
-                    >
-                      {PAYMENT_STATUS_LABEL[order.paymentStatus]}
-                    </span>
-                    {groupedLabel && (
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${groupedLabel.className}`}>
-                        {groupedLabel.label}
-                      </span>
+                    {order.status !== 'CANCELLED' && (
+                      <>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${PAYMENT_STATUS_STYLE[order.paymentStatus]}`}
+                        >
+                          {PAYMENT_STATUS_LABEL[order.paymentStatus]}
+                        </span>
+                        {groupedLabel && (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${groupedLabel.className}`}>
+                            {groupedLabel.label}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                   <span className="text-sm font-bold text-premium-gold">
@@ -367,7 +387,20 @@ export default function PedidosPage() {
               {/* Order Items - Expandable */}
               {expandedOrders[order.id] && (
                 <div className="border-t border-dark-border bg-dark-bgSecondary p-5">
-                  {order.shippingMode === 'GROUPED' && (
+                  {order.paymentStatus === 'PENDING_PAYMENT' && order.status !== 'CANCELLED' && (
+                    <div className="mb-4 rounded-lg border border-warning/30 bg-warning-bg p-3 text-xs text-text-secondary">
+                      <p className="font-semibold text-warning mb-1">Pago pendiente</p>
+                      <p>Completa el pago para confirmar este pedido.</p>
+                      <button
+                        onClick={() => retryOrderPayment(order.id)}
+                        disabled={retryingOrderId === order.id}
+                        className="btn btn-primary mt-3 text-xs py-2 px-4 disabled:opacity-50"
+                      >
+                        {retryingOrderId === order.id ? 'Procesando...' : 'Pagar ahora'}
+                      </button>
+                    </div>
+                  )}
+                  {order.shippingMode === 'GROUPED' && order.status !== 'CANCELLED' && (
                     <div className="mb-4 rounded-lg border border-premium-gold/30 bg-premium-gold/10 p-3 text-xs text-text-secondary">
                       <p className="font-semibold text-premium-gold mb-1">Envío: {groupedLabel?.label ?? 'Agrupado'}</p>
                       {!order.shipmentId ? (
@@ -470,16 +503,20 @@ export default function PedidosPage() {
                           <span>Subtotal</span>
                           <span>{itemsSubtotal.toFixed(2)} €</span>
                         </div>
-                        <div className="flex justify-between text-text-secondary">
-                          <span>Envío</span>
-                          <span>
-                            {order.shippingMode === 'GROUPED'
-                              ? 'Pendiente de solicitar'
-                              : shippingCost <= 0
-                              ? 'Gratis'
-                              : `${shippingCost.toFixed(2)} €`}
-                          </span>
-                        </div>
+                        {order.status !== 'CANCELLED' && (
+                          <div className="flex justify-between text-text-secondary">
+                            <span>Envío</span>
+                            <span>
+                              {order.shippingMode === 'GROUPED'
+                                ? order.shipmentId
+                                  ? 'Solicitado'
+                                  : 'Pendiente de solicitar'
+                                : shippingCost <= 0
+                                ? 'Gratis'
+                                : `${shippingCost.toFixed(2)} €`}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-semibold text-text-primary pt-1 border-t border-dark-border">
                           <span>Total</span>
                           <span>{order.totalAmount.toFixed(2)} €</span>
