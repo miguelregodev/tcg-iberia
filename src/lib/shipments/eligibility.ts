@@ -5,7 +5,7 @@
  */
 
 export type ShippingModeValue = 'IMMEDIATE' | 'GROUPED';
-export type OrderStatusValue = 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type OrderStatusValue = 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'DEVUELTO';
 export type PaymentStatusValue = 'PENDING_PAYMENT' | 'PAID' | 'PAYMENT_FAILED' | 'CANCELLED';
 
 export interface GroupableOrder {
