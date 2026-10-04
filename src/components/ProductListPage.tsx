@@ -60,6 +60,7 @@ export function ProductListPage({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,13 +114,21 @@ export function ProductListPage({
   //     swap in prices on ProductCard.
   const { isB2B } = useB2BSession();
   const b2bOverrides = useB2BPrices(isB2B ? products.map((p) => p.id) : []);
-  const visibleProducts = useMemo(() => {
+  const b2bFilteredProducts = useMemo(() => {
     if (!isB2B) return products;
     return products.filter((p) => {
       const o = b2bOverrides.get(p.id);
       return !!(o?.b2bPrice && o.b2bPrice > 0);
     });
   }, [isB2B, products, b2bOverrides]);
+  const inStockCount = useMemo(
+    () => b2bFilteredProducts.filter((p) => p.available).length,
+    [b2bFilteredProducts],
+  );
+  const visibleProducts = useMemo(() => {
+    if (!inStockOnly) return b2bFilteredProducts;
+    return b2bFilteredProducts.filter((p) => p.available);
+  }, [b2bFilteredProducts, inStockOnly]);
 
   // Wait for the overrides to arrive before showing "empty" — otherwise the
   // page would flicker "no products" for B2B users on first render.
@@ -227,6 +236,23 @@ export function ProductListPage({
               })}
             </div>
           )}
+
+          {/* In-stock-only filter — always available, independent of language pills */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setInStockOnly((v) => !v)}
+              aria-pressed={inStockOnly}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border transition-colors ${
+                inStockOnly
+                  ? 'bg-premium-gold text-dark-bg border-premium-gold shadow-sm'
+                  : 'bg-dark-surfaceHover text-text-secondary border-dark-border hover:text-text-primary'
+              }`}
+            >
+              {inStockOnly && <span aria-hidden="true">✓</span>}
+              Disponible ({inStockCount})
+            </button>
+          </div>
         </div>
       </section>
 
