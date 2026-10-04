@@ -39,6 +39,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);
   const b2bSealedPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
+  // Accesorios aren't region/language-specific, so the flag badge doesn't apply.
+  const showLanguageFlag = !product.type?.toLowerCase().includes('accesorio');
   const releaseDate = formatReleaseDate(product.releaseDate);
   const estimatedDeliveryRange = getEstimatedDeliveryRange();
   
@@ -67,6 +69,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     : variantProduct.price;
   // No discount for B2B users
   const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
+
+  // How much cheaper "Apertura en Directo" is vs. the Sellado price, shown
+  // next to the toggle so the customer sees the incentive for live-opening.
+  const sealedPriceForComparison = b2bSealedPrice ?? Number(product.price);
+  const liveSavingsAmount = hasLiveOpening
+    ? sealedPriceForComparison - Number(product.liveOpeningPrice)
+    : 0;
+  const liveSavingsPercent = hasLiveOpening && sealedPriceForComparison > 0
+    ? Math.round((liveSavingsAmount / sealedPriceForComparison) * 100)
+    : 0;
 
   // Sellado and Apertura en Directo share one stock pool, so both cart lines
   // (base id and `_live` suffixed id) count against the same limit.
@@ -179,14 +191,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   />
 
                   {/* Language Flag */}
-                  <div className="absolute top-4 left-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
-                    <img
-                      src={flagInfo.path}
-                      alt={flagInfo.name}
-                      title={flagInfo.name}
-                      className="w-8 h-5 object-cover rounded"
-                    />
-                  </div>
+                  {showLanguageFlag && (
+                    <div className="absolute top-4 left-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
+                      <img
+                        src={flagInfo.path}
+                        alt={flagInfo.name}
+                        title={flagInfo.name}
+                        className="w-8 h-5 object-cover rounded"
+                      />
+                    </div>
+                  )}
 
                   {/* Badge Overlay */}
                   {product.discountPercentage && (
@@ -315,6 +329,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </span>
                     <span className="text-[11px] font-semibold text-danger">
                       Ahorras {savingsAmount}€
+                    </span>
+                  </div>
+                )}
+                {variant === 'live' && liveSavingsAmount > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-text-muted line-through">
+                      {sealedPriceForComparison.toFixed(2)}€
+                    </span>
+                    <span className="text-[11px] font-semibold text-success">
+                      -{liveSavingsPercent}% (ahorras {liveSavingsAmount.toFixed(2)}€)
                     </span>
                   </div>
                 )}

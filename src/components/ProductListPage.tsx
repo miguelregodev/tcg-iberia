@@ -27,6 +27,8 @@ interface ProductListPageProps {
   allowedLanguages?: Language[];
   /** Show language filter pills. Defaults to true. */
   showLanguageFilters?: boolean;
+  /** Show the language flag badge on each product card. Defaults to true. */
+  showLanguageFlag?: boolean;
 }
 
 const LANGUAGE_LABELS: Record<Language, string> = {
@@ -53,6 +55,7 @@ export function ProductListPage({
   eyebrow,
   allowedLanguages,
   showLanguageFilters = true,
+  showLanguageFlag = true,
 }: ProductListPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -277,6 +280,7 @@ export function ProductListPage({
               visibleCount={visibleCount}
               sentinelRef={sentinelRef}
               hasMore={hasMore}
+              showLanguageFlag={showLanguageFlag}
             />
           )}
         </div>

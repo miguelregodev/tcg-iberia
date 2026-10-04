@@ -23,6 +23,7 @@ export default async function AccesoriosPage({ searchParams }: PageProps) {
         eyebrow="Accesorios"
         subtitle="Accesorios para proteger y organizar tu colección de cartas."
         showLanguageFilters={false}
+        showLanguageFlag={false}
       />
       <Footer />
     </>

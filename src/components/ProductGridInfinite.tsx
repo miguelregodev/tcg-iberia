@@ -14,6 +14,8 @@ interface ProductGridInfiniteProps {
   sentinelRef: (node: HTMLDivElement | null) => void;
   /** Whether there are more items beyond the current visibleCount. */
   hasMore: boolean;
+  /** Show the language flag badge on each card. Defaults to true. */
+  showLanguageFlag?: boolean;
 }
 
 /**
@@ -24,13 +26,15 @@ interface ProductGridInfiniteProps {
 const AnimatedCard = memo(function AnimatedCard({
   product,
   animationDelay,
+  showLanguageFlag,
 }: {
   product: Product;
   animationDelay: number;
+  showLanguageFlag: boolean;
 }) {
   return (
     <div className="product-reveal" style={{ animationDelay: `${animationDelay}ms` }}>
-      <ProductCard product={product} />
+      <ProductCard product={product} showLanguageFlag={showLanguageFlag} />
     </div>
   );
 });
@@ -46,6 +50,7 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
   visibleCount,
   sentinelRef,
   hasMore,
+  showLanguageFlag = true,
 }: ProductGridInfiniteProps) {
   const visible = products.slice(0, visibleCount);
 
@@ -56,7 +61,7 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
           // Stagger delay within each batch: 0 → 60 → 120 … → max 600 ms.
           const delay = Math.min((index % PRODUCTS_PER_BATCH) * 60, 600);
           return (
-            <AnimatedCard key={product.id} product={product} animationDelay={delay} />
+            <AnimatedCard key={product.id} product={product} animationDelay={delay} showLanguageFlag={showLanguageFlag} />
           );
         })}
       </div>
