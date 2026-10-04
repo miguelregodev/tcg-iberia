@@ -29,7 +29,7 @@ export default function PoliticaReembolsoPage() {
                   <li>El producto debe estar en su estado original y sin usar</li>
                   <li>Todos los embalajes originales deben estar intactos</li>
                   <li>Debe incluir todos los accesorios y documentación original</li>
-                  <li>No aplica a productos personalizados o bajo pedido</li>
+                  <li>No aplica a productos personalizados, bajo reserva, mistery o como apertura en directo</li>
                   <li>La compra debió realizarse en un plazo máximo de 14 días</li>
                 </ul>
               </section>
@@ -52,7 +52,7 @@ export default function PoliticaReembolsoPage() {
                 <h2 className="text-h4 text-text-primary mb-4">Artículos de Preventa</h2>
                 <p className="text-text-secondary">
                   Los productos en pre-order no pueden ser cancelados ni reembolsados, a menos que el pedido sea modificado o cancelado por motivos ajenos a TCG Iberia. Si esto sucede, te contactaremos para informarte de la situación y discutir las opciones para tu pedido.
-                  Los artículos que tengan como depósito una pequeña cantidad del total como pago por la reserva, en caso de que el comprador no responda en el momento del pago final tiene un plazo de 15 días para efectuar el pago total o perderá tanto el derecho a adquirir el artículo como el depósito que puso para la reserva.
+                  Los artículos que tengan como depósito una pequeña cantidad del total como pago por la reserva, en caso de que el comprador no responda en el momento del pago final tiene un plazo de 7 días para efectuar el pago total o perderá tanto el derecho a adquirir el artículo como el depósito que puso para la reserva.
                   Debido a la alta demanda de algunos artículos podemos sufrir cambios en los pedidos y nos reservamos el derecho a poder cancelar o modificar cualquier artículo en pre-order.
                 </p>
               </section>
@@ -60,9 +60,9 @@ export default function PoliticaReembolsoPage() {
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Artículos dañados o defectuosos</h2>
                 <p className="text-text-secondary">
-                  Si recibes un producto dañado o defectuoso, contáctanos dentro de los 7 días siguientes a la entrega a través de sales@tcgiberia.com, con fotos del daño y una descripción del problema. Revisaremos tu caso y, si es aprobado, te enviaremos un reemplazo o te reembolsaremos el precio completo del producto. En este caso, también reembolsaremos los gastos de envío.
+                  Si recibes un producto dañado o defectuoso, contáctanos dentro de las 48h (dos días) siguientes a la entrega a través de sales@tcgiberia.com, con fotos del daño y una descripción del problema. Revisaremos tu caso y, si es aprobado, te enviaremos un reemplazo o te reembolsaremos el precio completo del producto. En este caso, también reembolsaremos los gastos de envío.
                   Bajo ninguna circunstancia se rembolsara el dinero si una vez recibido el pedido el producto es sacado de su precinto.
-                (Si se trata de un artículo TCG bajo ningún concepto se devolverá el dinero si uno de los sobres de la caja son abiertos)
+                (Si se trata de un artículo TCG bajo ningún concepto se devolverá el dinero si la caja está abierta)
                 </p>
               </section>
             </div>

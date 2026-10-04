@@ -270,6 +270,36 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     Apertura en Directo — {Number(product.liveOpeningPrice).toFixed(2)}€
                   </button>
                 </div>
+
+                {/* Live-opening warning — only shown when this variant is selected */}
+                {variant === 'live' && (
+                  <div
+                    role="alert"
+                    className="mt-3 rounded-lg border border-warning/30 bg-warning-bg p-3 text-xs text-warning space-y-2"
+                  >
+                    <p className="font-bold">⚠️ Este producto se abrirá en directo</p>
+                    <p>
+                      Al seleccionar &quot;Apertura en Directo&quot;, aceptas que el producto se abrirá
+                      durante el LIVE de TikTok o Twitch en curso si hay uno activo, o durante el próximo LIVE si
+                      no hay ninguno en curso en este momento.
+                    </p>
+                    <p>
+                      Los productos seleccionados como &quot;Apertura en Directo&quot; nunca se envían
+                      precintados.
+                    </p>
+                    <p>
+                      Si no quieres que tu producto se abra en directo, selecciona &quot;Sellado&quot;.
+                    </p>
+                    <p>
+                      <Link
+                        href="/politica-apertura-en-directo"
+                        className="font-semibold underline hover:text-premium-gold transition-colors"
+                      >
+                        Consulta las condiciones de &quot;Apertura en Directo&quot;
+                      </Link>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

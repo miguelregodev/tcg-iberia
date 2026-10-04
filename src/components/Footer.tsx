@@ -32,6 +32,7 @@ export function Footer() {
               <li><a href="/politica-reembolso" className="hover:text-premium-gold transition-colors">Política de Reembolso</a></li>
               <li><a href="/politica-envio" className="hover:text-premium-gold transition-colors">Política de Envío</a></li>
               <li><a href="/politica-cancelacion" className="hover:text-premium-gold transition-colors">Política de Cancelación</a></li>
+              <li><a href="/politica-apertura-en-directo" className="hover:text-premium-gold transition-colors">Condiciones de Apertura en Directo</a></li>
               <li><a href="/preferencias-cookies" className="hover:text-premium-gold transition-colors">Preferencias de Cookies</a></li>
             </ul>
           </div>
