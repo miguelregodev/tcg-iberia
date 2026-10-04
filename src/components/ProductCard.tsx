@@ -29,9 +29,9 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
   const releaseDate = formatReleaseDate(product.releaseDate);
   return (
     <Link href={`/product/${product.slug}`} className="h-full">
-      <div className="card card-hover cursor-pointer group h-full flex flex-col">
+      <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
         {product.imageUrl && (
-          <div className="mb-4 h-64 bg-dark-bgSecondary rounded-lg overflow-hidden relative flex-shrink-0">
+          <div className="mb-4 h-64 rounded-lg overflow-hidden relative flex-shrink-0">
             <img
               src={product.imageUrl}
               alt={product.name}
