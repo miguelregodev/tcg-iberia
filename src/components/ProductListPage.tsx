@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductGridInfinite } from './ProductGridInfinite';
 import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
@@ -156,18 +157,13 @@ export function ProductListPage({
     total: visibleProducts.length,
   });
 
-  // Build language-pill href, preserving the current path.
+  // Build language-pill href, preserving the current path. Derived from
+  // usePathname() (not window.location) so the server-rendered HTML and the
+  // client's first render produce the exact same string, avoiding a
+  // hydration mismatch.
+  const pathname = usePathname();
   const buildLangHref = (lang: Language | null) => {
-    if (typeof window === 'undefined') {
-      return lang ? `?language=${lang}` : '?';
-    }
-    const url = new URL(window.location.href);
-    if (lang) {
-      url.searchParams.set('language', lang);
-    } else {
-      url.searchParams.delete('language');
-    }
-    return url.pathname + (url.search || '');
+    return lang ? `${pathname}?language=${lang}` : pathname;
   };
 
   return (

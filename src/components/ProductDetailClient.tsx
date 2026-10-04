@@ -183,35 +183,29 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Main Image */}
             {product.imageUrl && (
               <div className="relative group">
-                <div className="relative bg-dark-surface rounded-2xl shadow-elevated overflow-hidden border border-dark-border h-96 lg:h-[500px] flex items-center justify-center">
+                <div className="relative overflow-hidden h-96 lg:h-[500px] flex items-center justify-center">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-300"
                   />
 
+                  {/* Badge Overlay */}
+                  {product.discountPercentage && (
+                    <div className="absolute top-4 left-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
+                      -{Number(product.discountPercentage)}%
+                    </div>
+                  )}
+
                   {/* Language Flag */}
                   {showLanguageFlag && (
-                    <div className="absolute top-4 left-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
+                    <div className="absolute top-4 right-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
                       <img
                         src={flagInfo.path}
                         alt={flagInfo.name}
                         title={flagInfo.name}
                         className="w-8 h-5 object-cover rounded"
                       />
-                    </div>
-                  )}
-
-                  {/* Badge Overlay */}
-                  {product.discountPercentage && (
-                    <div className="absolute top-4 right-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
-                      -{Number(product.discountPercentage)}%
-                    </div>
-                  )}
-
-                  {inventoryState.isLowStock && !isB2B && (
-                    <div className="absolute bottom-4 right-4 bg-warning text-dark-bg px-3 py-1 rounded-full font-semibold text-xs shadow-elevated">
-                      Últimas unidades
                     </div>
                   )}
                 </div>
