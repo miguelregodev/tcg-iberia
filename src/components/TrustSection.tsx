@@ -69,6 +69,14 @@ export function TrustSection() {
             >
               Envíanos un email
             </a>
+            <a
+              href="https://chat.whatsapp.com/J5H9HSmPe70L2M3jMStnWW"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+            >
+              Nuestra Comunidad
+            </a>
           </div>
         </div>
       </div>

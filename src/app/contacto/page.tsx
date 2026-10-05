@@ -44,16 +44,16 @@ export default function ContactoPage() {
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Horario de Atención</h2>
                 <ul className="list-disc list-inside space-y-2 text-text-secondary">
-                  <li>Lunes a viernes: 9:00 - 18:00</li>
-                  <li>Sábado: 10:00 - 14:00</li>
-                  <li>Domingo: Cerrado</li>
+                  <li>Lunes a viernes: 9:00 - 23:59</li>
+                  <li>Sábado: 10:00 - 20:00</li>
+                  <li>Domingo: 12:00 - 23:59</li>
                 </ul>
               </section>
 
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Tiempo de Respuesta</h2>
                 <p className="text-text-secondary">
-                  Nos esforzamos en responder a todos los mensajes en un plazo de 24 horas durante los días hábiles.
+                  Nos esforzamos en responder a todos los mensajes en un plazo de 24 horas.
                 </p>
               </section>
             </div>

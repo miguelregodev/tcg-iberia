@@ -23,6 +23,7 @@ const PRODUCT_TYPES = [
   { value: 'Elite Trainer Box', label: 'Elite Trainer Box' },
   { value: 'Mystery', label: 'Mystery Packs' },
   { value: 'PSA', label: 'PSA' },
+  { value: 'Raw', label: 'Raw' },
   { value: 'Single Card', label: 'Carta individual' },
   { value: 'Accesorios', label: 'Accesorios' },
 ];

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
+import { ProductPriceDisplay } from './ProductPriceDisplay';
 
 const SCROLL_STEP = 300;
 const ANIMATION_MS = 400;
@@ -41,10 +42,6 @@ function SuggestionCard({ product }: { product: Product }) {
   const quantityLimit = getProductQuantityLimit(inventoryState);
   const reachedMax = quantityLimit !== null && inCartQuantity >= quantityLimit;
   const isSoldOut = !inventoryState.canPurchase;
-
-  const finalPrice = product.discountPercentage
-    ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
-    : Number(product.price);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -100,16 +97,14 @@ function SuggestionCard({ product }: { product: Product }) {
               Lanzamiento: {releaseDate}
             </p>
           ) : null}
-          <div className="flex items-baseline gap-2 h-7">
-            <span className="text-sm font-bold text-premium-gold">
-              {finalPrice.toFixed(2)}€
-            </span>
-            {product.discountPercentage ? (
-              <span className="text-[10px] text-text-muted line-through">
-                {Number(product.price).toFixed(2)}€
-              </span>
-            ) : null}
-          </div>
+          <ProductPriceDisplay
+            productId={product.id}
+            publicPrice={Number(product.price)}
+            discountPercentage={product.discountPercentage}
+            liveOpeningPrice={product.liveOpeningPrice}
+            className="flex items-baseline gap-2 h-7"
+            priceClassName="text-sm font-bold text-premium-gold"
+          />
         </div>
       </Link>
       <div className="px-4 pb-4">

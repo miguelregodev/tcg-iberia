@@ -13,11 +13,19 @@ interface HamburgerMenuProps {
 
 type Category = 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
 
+interface MenuChild {
+  key: string;
+  label: string;
+  href: string;
+}
+
 interface MenuItem {
   key: string;
   label: string;
   href?: string;
   category?: Category;
+  /** Static submenu of plain links (no language filtering), e.g. Singles -> PSA / Raw. */
+  children?: MenuChild[];
   /** Custom action instead of navigation (e.g. open a modal). */
   action?: 'b2b';
 }
@@ -30,7 +38,14 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
   { key: 'accesorios', label: 'Accesorios', href: '/accesorios' },
   { key: 'mystery-packs', label: 'Mystery Packs', href: '/mystery-packs' },
-  { key: 'psa', label: 'PSA', href: '/psa' },
+  {
+    key: 'singles',
+    label: 'Singles',
+    children: [
+      { key: 'psa', label: 'PSA', href: '/psa' },
+      { key: 'raw', label: 'Raw', href: '/raw' },
+    ],
+  },
   { key: 'releases-calendar', label: 'Calendario de Lanzamientos', href: '/releases-calendar' },
   { key: 'b2b', label: 'B2B', action: 'b2b' },
 ];
@@ -178,6 +193,27 @@ export function HamburgerMenu({ onClose, onOpenB2B }: HamburgerMenuProps) {
               {isExpanded && item.category && (
                 <div className="animate-accordion">
                   <LanguageSubmenu category={item.category} onClose={onClose} />
+                </div>
+              )}
+
+              {isExpanded && item.children && (
+                <div className="animate-accordion ml-4 mt-1 mb-2 pl-4 pr-2 py-2 space-y-0.5 border-l-2 border-premium-gold/40 bg-gradient-to-r from-dark-surfaceHover/60 to-transparent rounded-r-lg">
+                  {item.children.map((child, index) => (
+                    <div
+                      key={child.key}
+                      className="animate-menu-item"
+                      style={{ animationDelay: `${index * 60}ms` }}
+                    >
+                      <Link href={child.href} onClick={onClose}>
+                        <div className="group relative flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer overflow-hidden transition-colors">
+                          <span className="absolute inset-0 -translate-x-full bg-dark-surfaceHover shadow-sm transition-transform duration-300 ease-out group-hover:translate-x-0" />
+                          <span className="relative z-10 text-sm text-text-secondary font-medium tracking-wide transition-all duration-300 group-hover:text-premium-gold group-hover:translate-x-0.5">
+                            {child.label}
+                          </span>
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

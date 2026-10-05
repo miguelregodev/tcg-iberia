@@ -27,6 +27,7 @@ describe('getCategoryForProductType', () => {
     expect(getCategoryForProductType('Booster Pack')?.href).toBe('/booster-packs');
     expect(getCategoryForProductType('Mystery')?.href).toBe('/mystery-packs');
     expect(getCategoryForProductType('PSA')?.href).toBe('/psa');
+    expect(getCategoryForProductType('Raw')?.href).toBe('/raw');
     expect(getCategoryForProductType('Accesorios')?.href).toBe('/accesorios');
   });
 

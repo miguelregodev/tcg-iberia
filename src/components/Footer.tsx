@@ -13,6 +13,7 @@ export function Footer() {
             <ul className="space-y-2 text-text-secondary text-sm">
               <li><a href="mailto:sales@tcgiberia.com" className="hover:text-premium-gold transition-colors">Email</a></li>
               <li><a href="https://wa.me/34689178762" className="hover:text-premium-gold transition-colors">WhatsApp</a></li>
+              <li><a href="https://chat.whatsapp.com/J5H9HSmPe70L2M3jMStnWW" target="_blank" rel="noopener noreferrer" className="hover:text-premium-gold transition-colors">Nuestra Comunidad</a></li>
               <li><a href="/contacto" className="hover:text-premium-gold transition-colors">Información de Contacto</a></li>
             </ul>
           </div>

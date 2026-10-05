@@ -141,16 +141,16 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
 
       {/* Modal */}
       <div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4"
         onClick={onClose}
       >
         <div
-          className="bg-dark-surface border border-dark-border rounded-2xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-auto"
+          className="bg-dark-surface border border-dark-border rounded-2xl shadow-elevated w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-text-primary">
+          <div className="flex-shrink-0 bg-dark-surface border-b border-dark-border px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center">
+            <h2 className="text-lg sm:text-2xl font-bold text-text-primary">
               Tu Bolsa
             </h2>
             <button
@@ -159,7 +159,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
               aria-label="Close modal"
             >
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5 sm:w-6 sm:h-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -174,11 +174,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
             </button>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
             {error && (
-              <div className="mb-4 p-4 bg-danger-bg border border-danger/30 rounded-lg">
-                <p className="text-danger text-sm font-semibold">Error: {error}</p>
+              <div className="mb-4 p-3 sm:p-4 bg-danger-bg border border-danger/30 rounded-lg">
+                <p className="text-danger text-xs sm:text-sm font-semibold">Error: {error}</p>
               </div>
             )}
 
@@ -197,11 +197,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                 <FreeShippingProgress
                   state={freeShippingState}
                   context="mini_cart"
-                  className="mb-6"
+                  className="mb-4 sm:mb-6"
                 />
 
                 {/* Items List */}
-                <div className="space-y-4 mb-6">
+                <div className="space-y-2 sm:space-y-4">
                   {items.map(item => {
                     const finalUnitPrice = effectiveUnitPrice(item);
                     const itemTotal = finalUnitPrice * item.quantity;
@@ -221,27 +221,27 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                     return (
                       <div
                         key={item.product.id}
-                        className="flex gap-4 items-start border border-dark-border rounded-lg p-4"
+                        className="flex gap-2 sm:gap-4 items-start border border-dark-border rounded-lg p-2 sm:p-4"
                       >
                         {/* Product Image */}
                         {item.product.imageUrl && (
-                          <div className="flex-shrink-0 w-24 h-24 bg-dark-bgSecondary rounded-lg overflow-hidden">
+                          <div className="flex-shrink-0 w-14 h-14 sm:w-24 sm:h-24 bg-dark-bgSecondary rounded-lg overflow-hidden">
                             <img
                               src={item.product.imageUrl}
                               alt={item.product.name}
-                              className="w-full h-full object-contain p-2"
+                              className="w-full h-full object-contain p-1 sm:p-2"
                             />
                           </div>
                         )}
 
                         {/* Product Details */}
                         <div className="flex-grow min-w-0">
-                          <h3 className="font-bold text-text-primary mb-1 line-clamp-2">
+                          <h3 className="text-xs sm:text-base font-bold text-text-primary mb-0.5 sm:mb-1 line-clamp-2">
                             {item.product.name}
                           </h3>
                           {/* Variant badge */}
                           {(item.product.id.endsWith('_live') || item.product.liveOpeningPrice != null) && (
-                            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${
+                            <span className={`inline-block text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full mb-0.5 sm:mb-1 ${
                               item.product.id.endsWith('_live')
                                 ? 'bg-warning-bg text-warning'
                                 : 'bg-premium-gold/15 text-premium-gold'
@@ -249,7 +249,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                               {item.product.id.endsWith('_live') ? 'Apertura en Directo' : 'Sellado'}
                             </span>
                           )}
-                          <p className={`text-xs font-semibold mb-1 ${
+                          <p className={`text-[10px] sm:text-xs font-semibold mb-0.5 sm:mb-1 ${
                             inventoryState.isPreorder ? 'text-premium-gold' : 'text-text-secondary'
                           }`}>
                             {isB2B
@@ -259,11 +259,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                               : getProductStatusLabel(inventoryState)}
                           </p>
                           {inventoryState.isPreorder && releaseDate ? (
-                            <p className="text-xs text-text-secondary mb-1">
+                            <p className="text-[10px] sm:text-xs text-text-secondary mb-0.5 sm:mb-1">
                               Lanzamiento: {releaseDate}
                             </p>
                           ) : null}
-                          <p className="text-sm text-text-secondary mb-2">
+                          <p className="text-xs sm:text-sm text-text-secondary mb-1 sm:mb-2">
                             {finalUnitPrice.toFixed(2)}€ / ud
                             {isB2B && (
                               <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
@@ -272,13 +272,13 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                             )}
                           </p>
                           {!isB2B && item.product.discountPercentage && (
-                            <p className="text-xs text-premium-gold font-semibold mb-2">
+                            <p className="text-[10px] sm:text-xs text-premium-gold font-semibold mb-1 sm:mb-2">
                               -{item.product.discountPercentage}% discount applied
                             </p>
                           )}
 
                           {/* Quantity Selector */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2">
                             <button
                               onClick={() =>
                                 updateQuantity(
@@ -286,11 +286,11 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                                   item.quantity - 1
                                 )
                               }
-                              className="px-3 py-1 border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors"
+                              className="px-2 py-0.5 sm:px-3 sm:py-1 text-xs sm:text-base border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors"
                             >
                               −
                             </button>
-                            <span className="px-4 py-1 font-semibold text-text-primary min-w-12 text-center">
+                            <span className="px-2 sm:px-4 py-0.5 sm:py-1 text-xs sm:text-base font-semibold text-text-primary min-w-8 sm:min-w-12 text-center">
                               {item.quantity}
                             </span>
                             <button
@@ -302,7 +302,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                               }
                               disabled={atMax}
                               aria-label="Aumentar cantidad"
-                              className="px-3 py-1 border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-2 py-0.5 sm:px-3 sm:py-1 text-xs sm:text-base border border-dark-border rounded hover:bg-dark-surfaceHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               +
                             </button>
@@ -311,12 +311,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
 
                         {/* Price and Remove */}
                         <div className="flex-shrink-0 text-right">
-                          <p className="text-sm font-bold text-text-primary mb-3">
+                          <p className="text-xs sm:text-sm font-bold text-text-primary mb-1.5 sm:mb-3">
                             {itemTotal.toFixed(2)}€
                           </p>
                           <button
                             onClick={() => removeFromCart(item.product.id)}
-                            className="text-danger hover:opacity-80 text-sm font-semibold transition-colors"
+                            className="text-danger hover:opacity-80 text-xs sm:text-sm font-semibold transition-colors"
                           >
                             Eliminar
                           </button>
@@ -325,119 +325,121 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                     );
                   })}
                 </div>
-
-                {/* Summary */}
-                <div className="border-t border-dark-border pt-6">
-                  {isB2B ? (
-                    <>
-                      <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-4 mb-4">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-premium-gold uppercase tracking-wide mb-3">
-                          <span className="inline-block h-2 w-2 rounded-full bg-premium-gold" />
-                          Solicitud mayorista B2B
-                          {customer?.companyName && (
-                            <span className="ml-1 text-text-secondary normal-case font-medium">
-                              · {customer.companyName}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-text-secondary">Base imponible:</span>
-                          <span className="font-semibold text-text-primary">
-                            {b2bSubtotal.toFixed(2)}€
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-text-secondary">IVA (21%):</span>
-                          <span className="font-semibold text-text-primary">
-                            {b2bIva.toFixed(2)}€
-                          </span>
-                        </div>
-                        <div className="border-t border-dark-border pt-3 flex justify-between items-center">
-                          <span className="text-sm font-bold text-text-primary">Total:</span>
-                          <span className="text-lg font-bold text-premium-gold">
-                            {b2bTotal.toFixed(2)}€
-                          </span>
-                        </div>
-                        <p className="text-xs text-text-muted mt-2">
-                          El envío se calcula por separado en la factura. El pedido se
-                          preparará una vez la factura haya sido abonada.
-                        </p>
-                      </div>
-
-                      {b2bSuccess ? (
-                        <div className="mb-4 p-4 bg-success-bg border border-success/30 rounded-lg text-sm text-success">
-                          {b2bSuccess}
-                        </div>
-                      ) : (
-                        <>
-                          <label
-                            htmlFor="b2b-notes"
-                            className="block text-sm font-medium text-text-secondary mb-1"
-                          >
-                            Notas para el equipo comercial (opcional)
-                          </label>
-                          <textarea
-                            id="b2b-notes"
-                            value={b2bNotes}
-                            onChange={(e) => setB2bNotes(e.target.value)}
-                            rows={2}
-                            maxLength={2000}
-                            placeholder="Instrucciones especiales, plazos, etc."
-                            className="w-full mb-4 rounded-lg border border-dark-border bg-dark-bgSecondary text-text-primary placeholder-text-muted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-premium-gold"
-                          />
-                          <button
-                            onClick={handleB2bSubmit}
-                            disabled={isSubmittingB2B || items.length === 0}
-                            className="w-full btn btn-primary disabled:opacity-60"
-                          >
-                            {isSubmittingB2B ? 'Enviando…' : 'Solicitar Pedido'}
-                          </button>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-4 mb-6">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-text-secondary">Total:</span>
-                          <span className="font-semibold text-text-primary">
-                            {(totalPrice / 1.21).toFixed(2)}€
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-text-secondary">IVA:</span>
-                          <span className="font-semibold text-text-primary">
-                            {(totalPrice - totalPrice / 1.21).toFixed(2)}€
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-text-secondary">Envío:</span>
-                          <span className="font-semibold text-text-primary">
-                            {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
-                          </span>
-                        </div>
-                        <div className="border-t border-dark-border pt-3 flex justify-between items-center">
-                          <span className="text-sm font-bold text-text-primary">Total:</span>
-                          <span className="text-lg font-bold text-premium-gold">
-                            {finalPrice.toFixed(2)}€
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Checkout Button */}
-                      <button
-                        onClick={handleCheckout}
-                        disabled={isCheckingOut || items.length === 0}
-                        className="w-full btn btn-primary disabled:opacity-60"
-                      >
-                        {isCheckingOut ? 'Procesando...' : 'Ir a Pagar'}
-                      </button>
-                    </>
-                  )}
-                </div>
               </>
             )}
           </div>
+
+          {/* Footer: summary + checkout stay visible without scrolling */}
+          {items.length > 0 && (
+            <div className="flex-shrink-0 border-t border-dark-border p-3 sm:p-6">
+              {isB2B ? (
+                <>
+                  <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
+                    <div className="flex items-center gap-2 text-[11px] sm:text-xs font-semibold text-premium-gold uppercase tracking-wide mb-2 sm:mb-3">
+                      <span className="inline-block h-2 w-2 rounded-full bg-premium-gold" />
+                      Solicitud mayorista B2B
+                      {customer?.companyName && (
+                        <span className="ml-1 text-text-secondary normal-case font-medium">
+                          · {customer.companyName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5 sm:mb-2 text-xs sm:text-base">
+                      <span className="text-text-secondary">Base imponible:</span>
+                      <span className="font-semibold text-text-primary">
+                        {b2bSubtotal.toFixed(2)}€
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5 sm:mb-2 text-xs sm:text-base">
+                      <span className="text-text-secondary">IVA (21%):</span>
+                      <span className="font-semibold text-text-primary">
+                        {b2bIva.toFixed(2)}€
+                      </span>
+                    </div>
+                    <div className="border-t border-dark-border pt-2 sm:pt-3 flex justify-between items-center">
+                      <span className="text-xs sm:text-sm font-bold text-text-primary">Total:</span>
+                      <span className="text-base sm:text-lg font-bold text-premium-gold">
+                        {b2bTotal.toFixed(2)}€
+                      </span>
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-text-muted mt-2">
+                      El envío se calcula por separado en la factura. El pedido se
+                      preparará una vez la factura haya sido abonada.
+                    </p>
+                  </div>
+
+                  {b2bSuccess ? (
+                    <div className="mb-4 p-3 sm:p-4 bg-success-bg border border-success/30 rounded-lg text-xs sm:text-sm text-success">
+                      {b2bSuccess}
+                    </div>
+                  ) : (
+                    <>
+                      <label
+                        htmlFor="b2b-notes"
+                        className="block text-xs sm:text-sm font-medium text-text-secondary mb-1"
+                      >
+                        Notas para el equipo comercial (opcional)
+                      </label>
+                      <textarea
+                        id="b2b-notes"
+                        value={b2bNotes}
+                        onChange={(e) => setB2bNotes(e.target.value)}
+                        rows={2}
+                        maxLength={2000}
+                        placeholder="Instrucciones especiales, plazos, etc."
+                        className="w-full mb-3 sm:mb-4 rounded-lg border border-dark-border bg-dark-bgSecondary text-text-primary placeholder-text-muted px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-premium-gold"
+                      />
+                      <button
+                        onClick={handleB2bSubmit}
+                        disabled={isSubmittingB2B || items.length === 0}
+                        className="w-full btn btn-primary disabled:opacity-60 text-sm sm:text-base py-2 sm:py-2.5"
+                      >
+                        {isSubmittingB2B ? 'Enviando…' : 'Solicitar Pedido'}
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="bg-dark-bgSecondary border border-dark-border rounded-lg p-3 sm:p-4 mb-3 sm:mb-6">
+                    <div className="flex justify-between items-center mb-1.5 sm:mb-3 text-xs sm:text-base">
+                      <span className="text-text-secondary">Total:</span>
+                      <span className="font-semibold text-text-primary">
+                        {(totalPrice / 1.21).toFixed(2)}€
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5 sm:mb-3 text-xs sm:text-base">
+                      <span className="text-text-secondary">IVA:</span>
+                      <span className="font-semibold text-text-primary">
+                        {(totalPrice - totalPrice / 1.21).toFixed(2)}€
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1.5 sm:mb-3 text-xs sm:text-base">
+                      <span className="text-text-secondary">Envío:</span>
+                      <span className="font-semibold text-text-primary">
+                        {shippingCost === 0 ? 'Gratis' : `${shippingCost.toFixed(2)}€`}
+                      </span>
+                    </div>
+                    <div className="border-t border-dark-border pt-2 sm:pt-3 flex justify-between items-center">
+                      <span className="text-xs sm:text-sm font-bold text-text-primary">Total:</span>
+                      <span className="text-base sm:text-lg font-bold text-premium-gold">
+                        {finalPrice.toFixed(2)}€
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Checkout Button */}
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isCheckingOut || items.length === 0}
+                    className="w-full btn btn-primary disabled:opacity-60 text-sm sm:text-base py-2 sm:py-2.5"
+                  >
+                    {isCheckingOut ? 'Procesando...' : 'Ir a Pagar'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

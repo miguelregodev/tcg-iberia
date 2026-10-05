@@ -24,6 +24,7 @@ const CATEGORY_RULES: CategoryRule[] = [
   { label: 'Booster Packs', href: '/booster-packs', match: 'pack' },
   { label: 'Mystery Packs', href: '/mystery-packs', match: 'mystery' },
   { label: 'PSA', href: '/psa', match: 'psa' },
+  { label: 'Raw', href: '/raw', match: 'raw' },
   { label: 'Accesorios', href: '/accesorios', match: 'accesorios' },
 ];
 
