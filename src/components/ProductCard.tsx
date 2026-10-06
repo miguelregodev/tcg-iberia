@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Product } from '@/types';
 import { formatReleaseDate, getProductInventoryState } from '@/lib/products/state';
+import { getCategoryForProductType } from '@/lib/products/categories';
 import { ProductPriceDisplay } from './ProductPriceDisplay';
 import { InventoryStatusLabel } from './InventoryStatusLabel';
 
@@ -27,11 +28,18 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
     releaseDate: product.releaseDate,
   });
   const releaseDate = formatReleaseDate(product.releaseDate);
+  // Graded/raw single cards are portrait photos, so they get a 9:16 frame instead of the default.
+  const categoryHref = getCategoryForProductType(product.type)?.href;
+  const isPortraitImage = categoryHref === '/psa' || categoryHref === '/raw';
   return (
     <Link href={`/product/${product.slug}`} className="h-full">
       <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
         {product.imageUrl && (
-          <div className="mb-4 h-64 rounded-lg overflow-hidden relative flex-shrink-0">
+          <div
+            className={`mb-4 rounded-lg overflow-hidden relative flex-shrink-0 ${
+              isPortraitImage ? 'aspect-[5/7]' : 'h-64'
+            }`}
+          >
             <img
               src={product.imageUrl}
               alt={product.name}
