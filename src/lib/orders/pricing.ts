@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import type { OrderItemSnapshot } from './items';
 
 // Cart ids for the live-opening variant carry a `_live` suffix over the real product id.
@@ -13,9 +14,9 @@ export type PricedOrderItemsResult =
       products: Array<{
         id: string;
         weightGrams: number | null;
-        lengthCm: number | null;
-        widthCm: number | null;
-        heightCm: number | null;
+        lengthCm: Prisma.Decimal | null;
+        widthCm: Prisma.Decimal | null;
+        heightCm: Prisma.Decimal | null;
       }>;
     }
   | { ok: false; error: string };
