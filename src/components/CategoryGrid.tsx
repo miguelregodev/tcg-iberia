@@ -17,6 +17,7 @@ const CATEGORIES: CategoryDef[] = [
   { key: 'etbs', label: 'Elite Trainer Boxes', href: '/etbs', image: '/images/etb.webp' },
   { key: 'mystery-packs', label: 'Mystery Packs', href: '/mystery-packs', image: '/images/mistery-pack.png' },
   { key: 'psa', label: 'PSA', href: '/psa', image: '/images/psa.png' },
+  { key: 'raw', label: 'Raw', href: '/raw', image: '/images/charizard-vstar.png' },
 ];
 
 /** "Shop by Category" — displays category icons from /public/images. */
@@ -47,7 +48,7 @@ export async function CategoryGrid() {
         </div>
 
         {/* Tablet/desktop: grid */}
-        <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
+        <div className="hidden sm:grid grid-cols-3 lg:grid-cols-7 gap-6 md:gap-8">
           {CATEGORIES.map((category) => (
             <CategoryCard
               key={category.key}

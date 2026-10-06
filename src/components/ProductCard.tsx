@@ -14,7 +14,13 @@ function getLanguageFlag(language: string): { path: string; name: string } {
   return flags[language] || flags.ENGLISH;
 }
 
-export function ProductCard({ product }: { product: Product }) {
+interface ProductCardProps {
+  product: Product;
+  /** Show the language flag badge on the product image. Defaults to true. */
+  showLanguageFlag?: boolean;
+}
+
+export function ProductCard({ product, showLanguageFlag = true }: ProductCardProps) {
   const flagInfo = getLanguageFlag(product.language);
   const inventoryState = getProductInventoryState({
     stock: product.stock,
@@ -23,22 +29,24 @@ export function ProductCard({ product }: { product: Product }) {
   const releaseDate = formatReleaseDate(product.releaseDate);
   return (
     <Link href={`/product/${product.slug}`} className="h-full">
-      <div className="card card-hover cursor-pointer group h-full flex flex-col">
+      <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
         {product.imageUrl && (
-          <div className="mb-4 h-64 bg-dark-bgSecondary rounded-lg overflow-hidden relative flex-shrink-0">
+          <div className="mb-4 h-64 rounded-lg overflow-hidden relative flex-shrink-0">
             <img
               src={product.imageUrl}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
-            <div className="absolute top-3 right-3 bg-dark-surface/90 backdrop-blur rounded-lg p-1.5 shadow-elevated border border-dark-border">
-              <img
-                src={flagInfo.path}
-                alt={flagInfo.name}
-                title={flagInfo.name}
-                className="w-6 h-4 object-cover rounded"
-              />
-            </div>
+            {showLanguageFlag && (
+              <div className="absolute top-3 right-3 bg-dark-surface/90 backdrop-blur rounded-lg p-1.5 shadow-elevated border border-dark-border">
+                <img
+                  src={flagInfo.path}
+                  alt={flagInfo.name}
+                  title={flagInfo.name}
+                  className="w-6 h-4 object-cover rounded"
+                />
+              </div>
+            )}
           </div>
         )}
         

@@ -5,7 +5,7 @@
  */
 
 import { isCanaryIslandsPostalCode } from './postal-codes';
-import { SHIPPING_CONFIG } from './config';
+import { SHIPPING_CONFIG, parseNumber } from './config';
 
 export interface ClientShippingItem {
   quantity: number;
@@ -50,12 +50,12 @@ export function estimateShippingCost(
 
 // Canary Islands shipping prices (higher due to distance)
 const SHIPPING_CONFIG_CANARY = {
-  tier1: 10.99,  // ≤2kg
-  tier2: 14.99,  // 2-5kg
+  tier1: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_CANARY_TIER1, 10.99), // ≤2kg
+  tier2: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_CANARY_TIER2, 14.99), // 2-5kg
 } as const;
 
 // Standard zone shipping prices
 const SHIPPING_CONFIG_STANDARD = {
-  tier1: 4.99,   // ≤2kg
-  tier2: 5.99,   // 2-5kg
+  tier1: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_STANDARD_TIER1, 3.99), // ≤2kg
+  tier2: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_STANDARD_TIER2, 4.99), // 2-5kg
 } as const;

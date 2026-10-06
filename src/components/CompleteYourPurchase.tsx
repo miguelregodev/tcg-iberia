@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
+import { ProductPriceDisplay } from './ProductPriceDisplay';
 
 const SCROLL_STEP = 300;
 const ANIMATION_MS = 400;
@@ -41,10 +42,6 @@ function SuggestionCard({ product }: { product: Product }) {
   const quantityLimit = getProductQuantityLimit(inventoryState);
   const reachedMax = quantityLimit !== null && inCartQuantity >= quantityLimit;
   const isSoldOut = !inventoryState.canPurchase;
-
-  const finalPrice = product.discountPercentage
-    ? Number(product.price) * (1 - Number(product.discountPercentage) / 100)
-    : Number(product.price);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -100,16 +97,14 @@ function SuggestionCard({ product }: { product: Product }) {
               Lanzamiento: {releaseDate}
             </p>
           ) : null}
-          <div className="flex items-baseline gap-2 h-7">
-            <span className="text-sm font-bold text-premium-gold">
-              {finalPrice.toFixed(2)}€
-            </span>
-            {product.discountPercentage ? (
-              <span className="text-[10px] text-text-muted line-through">
-                {Number(product.price).toFixed(2)}€
-              </span>
-            ) : null}
-          </div>
+          <ProductPriceDisplay
+            productId={product.id}
+            publicPrice={Number(product.price)}
+            discountPercentage={product.discountPercentage}
+            liveOpeningPrice={product.liveOpeningPrice}
+            className="flex items-baseline gap-2 h-7"
+            priceClassName="text-sm font-bold text-premium-gold"
+          />
         </div>
       </Link>
       <div className="px-4 pb-4">
@@ -159,13 +154,9 @@ export function CompleteYourPurchase({
   const carouselRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const targetScrollRef = useRef<number | null>(null);
-  const isWrappingRef = useRef(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const extendedProducts =
-    products.length > 0 ? [...products, ...products, ...products] : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -191,21 +182,6 @@ export function CompleteYourPurchase({
     };
   }, [excludeId, limit]);
 
-  // Center on the middle copy whenever the product list (re)loads.
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el || products.length === 0) return;
-
-    const center = () => {
-      const oneCopy = el.scrollWidth / 3;
-      el.scrollLeft = oneCopy;
-      targetScrollRef.current = null;
-    };
-
-    const id = requestAnimationFrame(center);
-    return () => cancelAnimationFrame(id);
-  }, [products]);
-
   useEffect(() => {
     return () => {
       if (animationFrameRef.current !== null) {
@@ -213,29 +189,6 @@ export function CompleteYourPurchase({
       }
     };
   }, []);
-
-  const wrapIfNeeded = (el: HTMLDivElement) => {
-    const oneCopy = el.scrollWidth / 3;
-    if (el.scrollLeft < oneCopy * 0.5) {
-      isWrappingRef.current = true;
-      el.scrollLeft += oneCopy;
-      if (targetScrollRef.current !== null) {
-        targetScrollRef.current += oneCopy;
-      }
-      requestAnimationFrame(() => {
-        isWrappingRef.current = false;
-      });
-    } else if (el.scrollLeft >= oneCopy * 2.5) {
-      isWrappingRef.current = true;
-      el.scrollLeft -= oneCopy;
-      if (targetScrollRef.current !== null) {
-        targetScrollRef.current -= oneCopy;
-      }
-      requestAnimationFrame(() => {
-        isWrappingRef.current = false;
-      });
-    }
-  };
 
   const animateTo = (el: HTMLDivElement, target: number) => {
     if (animationFrameRef.current !== null) {
@@ -260,16 +213,10 @@ export function CompleteYourPurchase({
       const liveDistance = liveTarget - startScroll;
       el.scrollLeft = startScroll + liveDistance * eased;
 
-      const oneCopy = el.scrollWidth / 3;
-      if (el.scrollLeft < oneCopy * 0.5 || el.scrollLeft >= oneCopy * 2.5) {
-        wrapIfNeeded(el);
-      }
-
       if (t < 1) {
         animationFrameRef.current = requestAnimationFrame(step);
       } else {
         animationFrameRef.current = null;
-        wrapIfNeeded(el);
       }
     };
 
@@ -281,24 +228,8 @@ export function CompleteYourPurchase({
     if (!el || products.length === 0) return;
 
     const base = targetScrollRef.current ?? el.scrollLeft;
-    let target = base + delta;
-
-    const oneCopy = el.scrollWidth / 3;
-    if (target < oneCopy * 0.5) {
-      isWrappingRef.current = true;
-      el.scrollLeft += oneCopy;
-      target += oneCopy;
-      requestAnimationFrame(() => {
-        isWrappingRef.current = false;
-      });
-    } else if (target >= oneCopy * 2.5) {
-      isWrappingRef.current = true;
-      el.scrollLeft -= oneCopy;
-      target -= oneCopy;
-      requestAnimationFrame(() => {
-        isWrappingRef.current = false;
-      });
-    }
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const target = Math.min(Math.max(base + delta, 0), maxScroll);
 
     targetScrollRef.current = target;
     animateTo(el, target);
@@ -306,14 +237,6 @@ export function CompleteYourPurchase({
 
   const handleScrollLeft = () => scrollByStep(-SCROLL_STEP);
   const handleScrollRight = () => scrollByStep(SCROLL_STEP);
-
-  const handleScroll = () => {
-    const el = carouselRef.current;
-    if (!el || products.length === 0) return;
-    if (isWrappingRef.current) return;
-    if (animationFrameRef.current !== null) return;
-    wrapIfNeeded(el);
-  };
 
   if (loading) {
     return (
@@ -369,12 +292,11 @@ export function CompleteYourPurchase({
 
           <div
             ref={carouselRef}
-            onScroll={handleScroll}
             className="flex gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-2 items-stretch"
           >
-            {extendedProducts.map((product, index) => (
+            {products.map((product) => (
               <div
-                key={`${product.id}-${index}`}
+                key={product.id}
                 className="flex-shrink-0 w-[220px] md:w-[260px] h-[420px] flex"
               >
                 <SuggestionCard product={product} />

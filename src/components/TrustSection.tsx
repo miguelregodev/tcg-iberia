@@ -3,7 +3,7 @@ export function TrustSection() {
     {
       title: 'Productos Auténticos Verificados',
       description:
-        'Cada carta verificada y autenticada por profesionales certificados.',
+        'Cada producto es verificado para garantizar su autenticidad.',
       icon: '✓',
     },
     {
@@ -68,6 +68,14 @@ export function TrustSection() {
               className="btn btn-secondary"
             >
               Envíanos un email
+            </a>
+            <a
+              href="https://chat.whatsapp.com/J5H9HSmPe70L2M3jMStnWW"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+            >
+              Nuestra Comunidad
             </a>
           </div>
         </div>

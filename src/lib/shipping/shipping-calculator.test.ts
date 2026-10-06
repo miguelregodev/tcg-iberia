@@ -48,7 +48,7 @@ describe('Shipping Calculator', () => {
       heightCm: 20,
     };
 
-    it('should charge €4.99 for 1500g / 30x20x20', () => {
+    it('should charge €3.99 for 1500g / 30x20x20', () => {
       const result = calculateShippingCost(
         [item],
         '28001',
@@ -56,12 +56,12 @@ describe('Shipping Calculator', () => {
         FREE_SHIPPING_THRESHOLD
       );
       expect(result.available).toBe(true);
-      expect(result.price).toBe(4.99);
+      expect(result.price).toBe(3.99);
       expect(result.isFree).toBe(false);
       expect(result.zone).toBe('STANDARD');
     });
 
-    it('should charge €4.99 for exactly 2000g', () => {
+    it('should charge €3.99 for exactly 2000g', () => {
       const result = calculateShippingCost(
         [{ ...item, weightGrams: 2000 }],
         '28001',
@@ -69,7 +69,7 @@ describe('Shipping Calculator', () => {
         FREE_SHIPPING_THRESHOLD
       );
       expect(result.available).toBe(true);
-      expect(result.price).toBe(4.99);
+      expect(result.price).toBe(3.99);
     });
 
     it('should be free if subtotal >= €200', () => {
@@ -92,7 +92,7 @@ describe('Shipping Calculator', () => {
         FREE_SHIPPING_THRESHOLD
       );
       expect(result.available).toBe(true);
-      expect(result.price).toBe(4.99);
+      expect(result.price).toBe(3.99);
     });
   });
 

@@ -45,6 +45,11 @@ import {
   handlePaymentFailure,
   verifyPaymentAmount,
 } from '@/lib/payments/paymentService';
+import {
+  handleShipmentPaymentSuccess,
+  handleShipmentPaymentFailure,
+  verifyShipmentPaymentAmount,
+} from '@/lib/payments/shipmentPaymentService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,22 +157,88 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
-      console.error('Order not found', { redsysOrderId });
-
-      captureServerError({
-        error: new Error('Order not found for Redsys notification'),
-        module: 'redsys_notification_order_lookup',
-        extra: {
-          redsysOrderId,
-          responseCode,
-        },
+      // Not a regular order payment — check whether it's a grouped-shipment fee payment
+      // (see /api/user/shipments/request, which reuses this same notification endpoint).
+      const shipment = await db.shipment.findFirst({
+        where: { redsysOrderId },
+        select: { id: true, shipmentNumber: true, shippingCost: true, paymentStatus: true },
       });
 
-      // Return 200 OK to Redsys (acknowledge receipt) but don't process
-      return NextResponse.json(
-        { received: true },
-        { status: 200 }
-      );
+      if (!shipment) {
+        console.error('Order/Shipment not found', { redsysOrderId });
+
+        captureServerError({
+          error: new Error('Order/Shipment not found for Redsys notification'),
+          module: 'redsys_notification_order_lookup',
+          extra: {
+            redsysOrderId,
+            responseCode,
+          },
+        });
+
+        // Return 200 OK to Redsys (acknowledge receipt) but don't process
+        return NextResponse.json(
+          { received: true },
+          { status: 200 }
+        );
+      }
+
+      const shipmentPaymentAmount = extractRedsysAmount(params);
+      const shipmentTransactionId = extractRedsysTransactionReference(params);
+      const shipmentAuthCode = extractRedsysAuthCode(params);
+
+      try {
+        verifyShipmentPaymentAmount(shipment, shipmentPaymentAmount);
+      } catch (error) {
+        captureServerError({
+          error,
+          module: 'redsys_notification_shipment_amount_verify',
+          extra: { shipmentId: shipment.id, redsysOrderId, responseCode },
+        });
+        await handleShipmentPaymentFailure({
+          shipmentId: shipment.id,
+          shipmentNumber: shipment.shipmentNumber,
+          reason: 'Amount mismatch',
+        });
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+
+      try {
+        if (isRedsysResponseSuccess(responseCode)) {
+          await handleShipmentPaymentSuccess({
+            shipmentId: shipment.id,
+            shipmentNumber: shipment.shipmentNumber,
+            paymentAmount: shipmentPaymentAmount,
+            paymentCurrency: extractRedsysCurrency(params),
+            transactionId: shipmentTransactionId,
+          });
+        } else {
+          await handleShipmentPaymentFailure({
+            shipmentId: shipment.id,
+            shipmentNumber: shipment.shipmentNumber,
+            reason: isRedsysResponseCancelled(responseCode)
+              ? 'User cancelled payment'
+              : `Payment declined: ${responseCode}`,
+          });
+        }
+
+        await db.shipment.update({
+          where: { id: shipment.id },
+          data: {
+            redsysTransactionId: shipmentTransactionId,
+            redsysResponseCode: responseCode,
+            redsysAuthCode: shipmentAuthCode,
+          },
+        });
+      } catch (error) {
+        captureServerError({
+          error,
+          module: 'redsys_notification_shipment_payment_handler',
+          extra: { shipmentId: shipment.id, redsysOrderId, responseCode },
+        });
+      }
+
+      return NextResponse.json({ received: true }, { status: 200 });
     }
 
     // Extract payment details from Redsys response

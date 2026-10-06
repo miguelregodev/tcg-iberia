@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductGridInfinite } from './ProductGridInfinite';
 import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
+import { Breadcrumbs } from './Breadcrumbs';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -26,6 +28,8 @@ interface ProductListPageProps {
   allowedLanguages?: Language[];
   /** Show language filter pills. Defaults to true. */
   showLanguageFilters?: boolean;
+  /** Show the language flag badge on each product card. Defaults to true. */
+  showLanguageFlag?: boolean;
 }
 
 const LANGUAGE_LABELS: Record<Language, string> = {
@@ -52,10 +56,12 @@ export function ProductListPage({
   eyebrow,
   allowedLanguages,
   showLanguageFilters = true,
+  showLanguageFlag = true,
 }: ProductListPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,13 +115,21 @@ export function ProductListPage({
   //     swap in prices on ProductCard.
   const { isB2B } = useB2BSession();
   const b2bOverrides = useB2BPrices(isB2B ? products.map((p) => p.id) : []);
-  const visibleProducts = useMemo(() => {
+  const b2bFilteredProducts = useMemo(() => {
     if (!isB2B) return products;
     return products.filter((p) => {
       const o = b2bOverrides.get(p.id);
       return !!(o?.b2bPrice && o.b2bPrice > 0);
     });
   }, [isB2B, products, b2bOverrides]);
+  const inStockCount = useMemo(
+    () => b2bFilteredProducts.filter((p) => p.available).length,
+    [b2bFilteredProducts],
+  );
+  const visibleProducts = useMemo(() => {
+    if (!inStockOnly) return b2bFilteredProducts;
+    return b2bFilteredProducts.filter((p) => p.available);
+  }, [b2bFilteredProducts, inStockOnly]);
 
   // Wait for the overrides to arrive before showing "empty" — otherwise the
   // page would flicker "no products" for B2B users on first render.
@@ -143,22 +157,19 @@ export function ProductListPage({
     total: visibleProducts.length,
   });
 
-  // Build language-pill href, preserving the current path.
+  // Build language-pill href, preserving the current path. Derived from
+  // usePathname() (not window.location) so the server-rendered HTML and the
+  // client's first render produce the exact same string, avoiding a
+  // hydration mismatch.
+  const pathname = usePathname();
   const buildLangHref = (lang: Language | null) => {
-    if (typeof window === 'undefined') {
-      return lang ? `?language=${lang}` : '?';
-    }
-    const url = new URL(window.location.href);
-    if (lang) {
-      url.searchParams.set('language', lang);
-    } else {
-      url.searchParams.delete('language');
-    }
-    return url.pathname + (url.search || '');
+    return lang ? `${pathname}?language=${lang}` : pathname;
   };
 
   return (
     <>
+      <Breadcrumbs items={[{ label: 'Inicio', href: '/' }, { label: title }]} />
+
       {/* Hero header */}
       <section className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
         <div
@@ -221,6 +232,23 @@ export function ProductListPage({
               })}
             </div>
           )}
+
+          {/* In-stock-only filter — always available, independent of language pills */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setInStockOnly((v) => !v)}
+              aria-pressed={inStockOnly}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border transition-colors ${
+                inStockOnly
+                  ? 'bg-premium-gold text-dark-bg border-premium-gold shadow-sm'
+                  : 'bg-dark-surfaceHover text-text-secondary border-dark-border hover:text-text-primary'
+              }`}
+            >
+              {inStockOnly && <span aria-hidden="true">✓</span>}
+              Disponible ({inStockCount})
+            </button>
+          </div>
         </div>
       </section>
 
@@ -274,6 +302,7 @@ export function ProductListPage({
               visibleCount={visibleCount}
               sentinelRef={sentinelRef}
               hasMore={hasMore}
+              showLanguageFlag={showLanguageFlag}
             />
           )}
         </div>

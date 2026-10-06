@@ -26,7 +26,7 @@ export default function PoliticaEnvioPage() {
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Costos de Envío</h2>
                 <ul className="list-disc list-inside space-y-2 text-text-secondary">
-                  <li>España continental: Desde €4.99</li>
+                  <li>España continental: Desde €3.99</li>
                   <li>Islas Canarias: Desde €10.99</li>
                   <li>Envío gratis en compras superiores a €200</li>
                 </ul>

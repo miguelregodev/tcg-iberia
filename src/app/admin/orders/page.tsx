@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, Fragment } from 'react';
 import { AdminNav } from '@/components/AdminNav';
 import { getTrackingUrl, getProviderLabel } from '@/lib/shipping/tracking-urls';
 
-type OrderStatus = 'PROCESSING' | 'SHIPPED' | 'ENTREGADO' | 'FAILED' | 'CANCELLED';
+type OrderStatus = 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'DEVUELTO';
 type PaymentStatus = 'PENDING_PAYMENT' | 'PAID' | 'PAYMENT_FAILED' | 'CANCELLED';
 type ShippingProvider = 'CORREOS' | 'MRW' | 'SEUR' | 'CTT_EXPRESS';
 
@@ -15,6 +15,14 @@ interface OrderItem {
   quantity: number;
   price: number;
   discountPercentage?: number | null;
+}
+
+interface ShipmentInfo {
+  shipmentNumber: string;
+  shippingCost: number;
+  merchandiseTotal: number;
+  paymentStatus: PaymentStatus;
+  orders: Array<{ id: string; orderNumber: string; status: OrderStatus }>;
 }
 
 interface Order {
@@ -41,6 +49,9 @@ interface Order {
   redsysAuthCode: string | null;
   paymentPaidAt: string | null;
   items: OrderItem[];
+  shippingMode: 'IMMEDIATE' | 'GROUPED';
+  shipmentId: string | null;
+  shipment: ShipmentInfo | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,7 +75,7 @@ const STATUS_STYLES: Record<OrderStatus, { label: string; className: string }> =
     label: 'Enviado',
     className: 'bg-blue-950/40 text-blue-300 border-blue-800/40',
   },
-  ENTREGADO: {
+  COMPLETED: {
     label: 'Entregado',
     className: 'bg-success-bg text-success border-success/30',
   },
@@ -75,6 +86,10 @@ const STATUS_STYLES: Record<OrderStatus, { label: string; className: string }> =
   CANCELLED: {
     label: 'Cancelado',
     className: 'bg-dark-surfaceHover text-text-secondary border-dark-borderStrong',
+  },
+  DEVUELTO: {
+    label: 'Devuelto',
+    className: 'bg-purple-950/40 text-purple-300 border-purple-800/40',
   },
 };
 
@@ -116,10 +131,23 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [shippingEditId, setShippingEditId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<PaymentStatus | ''>('');
   const [shippingForm, setShippingForm] = useState<{
     shippingProvider: ShippingProvider | '';
     trackingNumber: string;
   }>({ shippingProvider: '', trackingNumber: '' });
+
+  // Debounce free-text search so we don't hammer the API on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +159,9 @@ export default function AdminOrdersPage() {
           page: String(page),
           pageSize: String(pageSize),
         });
+        if (search) params.set('search', search);
+        if (filterStatus) params.set('status', filterStatus);
+        if (filterPaymentStatus) params.set('paymentStatus', filterPaymentStatus);
         const res = await fetch(`/api/admin/orders?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to load orders');
         const json = (await res.json()) as OrdersResponse;
@@ -147,7 +178,7 @@ export default function AdminOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, search, filterStatus, filterPaymentStatus]);
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -262,8 +293,58 @@ export default function AdminOrdersPage() {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
+              <label htmlFor="orderSearch" className="sr-only">
+                Buscar por número de pedido
+              </label>
+              <input
+                id="orderSearch"
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar por nº de pedido..."
+                aria-label="Buscar por número de pedido"
+                className="border border-dark-border rounded-lg px-3 py-2 bg-dark-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-premium-gold w-56"
+              />
+              <label htmlFor="filterStatus" className="text-text-secondary font-medium">
+                Estado:
+              </label>
+              <select
+                id="filterStatus"
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value as OrderStatus | '');
+                  setPage(1);
+                }}
+                className="border border-dark-border rounded-lg px-3 py-2 bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
+              >
+                <option value="">Todos los estados</option>
+                {Object.entries(STATUS_STYLES).map(([value, style]) => (
+                  <option key={value} value={value}>
+                    {style.label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="filterPaymentStatus" className="text-text-secondary font-medium">
+                Pago:
+              </label>
+              <select
+                id="filterPaymentStatus"
+                value={filterPaymentStatus}
+                onChange={(e) => {
+                  setFilterPaymentStatus(e.target.value as PaymentStatus | '');
+                  setPage(1);
+                }}
+                className="border border-dark-border rounded-lg px-3 py-2 bg-dark-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
+              >
+                <option value="">Todos los pagos</option>
+                {Object.entries(PAYMENT_STATUS_STYLES).map(([value, style]) => (
+                  <option key={value} value={value}>
+                    {style.label}
+                  </option>
+                ))}
+              </select>
               <label htmlFor="pageSize" className="text-text-secondary font-medium">
-                Pedidos por página:
+                Por página:
               </label>
               <select
                 id="pageSize"
@@ -426,6 +507,15 @@ export default function AdminOrdersPage() {
                             </td>
                             <td className="px-4 py-3 font-mono font-semibold text-text-primary">
                               {order.orderNumber}
+                              {order.shippingMode === 'GROUPED' && (
+                                <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-premium-gold/15 text-premium-gold align-middle">
+                                  {order.shipment
+                                    ? order.shipment.paymentStatus === 'PENDING_PAYMENT'
+                                      ? 'ENVÍO: PAGO PENDIENTE'
+                                      : 'ENVÍO SOLICITADO'
+                                    : 'AGRUPADO'}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                               {dateFmt.format(new Date(order.createdAt))}
@@ -674,6 +764,51 @@ export default function AdminOrdersPage() {
                                     </div>
                                   </div>
                                 </div>
+
+                                {order.shippingMode === 'GROUPED' && (
+                                  <div className="mt-6 pt-4 border-t border-dark-border">
+                                    <h4 className="text-xs font-bold uppercase tracking-wide text-text-muted mb-2">
+                                      Envío agrupado (&quot;Agrupar Envío&quot;)
+                                    </h4>
+                                    <div className="bg-dark-surface rounded-lg border border-dark-border p-3 text-sm space-y-2">
+                                      {!order.shipment ? (
+                                        <p className="text-premium-gold font-semibold">
+                                          En espera de agrupación — el cliente aún no ha solicitado el envío.
+                                        </p>
+                                      ) : (
+                                        <>
+                                          <p className="font-semibold text-text-primary">
+                                            Envío #{order.shipment.shipmentNumber} —{' '}
+                                            <span
+                                              className={`inline-block px-2 py-0.5 rounded-full border text-xs font-semibold ${
+                                                PAYMENT_STATUS_STYLES[order.shipment.paymentStatus]?.className ??
+                                                'bg-dark-surfaceHover text-text-secondary border-dark-borderStrong'
+                                              }`}
+                                            >
+                                              {order.shipment.paymentStatus === 'PENDING_PAYMENT'
+                                                ? 'Pago de envío pendiente'
+                                                : PAYMENT_STATUS_STYLES[order.shipment.paymentStatus]?.label ??
+                                                  order.shipment.paymentStatus}
+                                            </span>
+                                          </p>
+                                          <p className="text-text-secondary">
+                                            Mercancía combinada: {currency.format(order.shipment.merchandiseTotal)} · Gasto de envío:{' '}
+                                            {currency.format(order.shipment.shippingCost)}
+                                          </p>
+                                          <div>
+                                            <span className="text-text-secondary">Pedidos incluidos:</span>{' '}
+                                            {order.shipment.orders.map((o, idx) => (
+                                              <span key={o.id} className="font-mono text-text-primary">
+                                                #{o.orderNumber}
+                                                {idx < order.shipment!.orders.length - 1 ? ', ' : ''}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           )}

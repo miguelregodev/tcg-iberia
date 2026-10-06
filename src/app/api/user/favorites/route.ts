@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
             slug: true,
             price: true,
             discountPercentage: true,
+            liveOpeningPrice: true,
             imageUrl: true,
             stock: true,
             type: true,

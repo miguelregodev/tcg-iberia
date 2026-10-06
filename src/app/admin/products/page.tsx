@@ -26,12 +26,6 @@ const currency = new Intl.NumberFormat('es-ES', {
   currency: 'EUR',
 });
 
-const dateFormatter = new Intl.DateTimeFormat('es-ES', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-});
-
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -328,8 +322,8 @@ export default function AdminProducts() {
                     <th className="px-4 py-3 text-center font-semibold">
                       Stock
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold">
-                      Lanzamiento
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Precio Live
                     </th>
                     <th className="px-4 py-3 text-center font-semibold">
                       Prio.
@@ -438,10 +432,14 @@ export default function AdminProducts() {
                               {product.stock}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-text-secondary text-xs whitespace-nowrap">
-                            {product.releaseDate
-                              ? dateFormatter.format(new Date(product.releaseDate))
-                              : '—'}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {product.liveOpeningPrice != null ? (
+                              <span className="font-bold text-text-primary">
+                                {currency.format(Number(product.liveOpeningPrice))}
+                              </span>
+                            ) : (
+                              <span className="text-text-muted">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">
                             {product.priority}

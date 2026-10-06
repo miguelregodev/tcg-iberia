@@ -8,11 +8,19 @@ import { useB2BSession } from '@/context/B2BSessionContext';
 type Category = 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
+interface NavChild {
+  key: string;
+  label: string;
+  href: string;
+}
+
 interface NavItem {
   key: string;
   label: string;
   href?: string;
   category?: Category;
+  /** Static submenu of plain links (no language filtering), e.g. Singles -> PSA / Raw. */
+  children?: NavChild[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -23,7 +31,14 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
   { key: 'accesorios', label: 'Accesorios', href: '/accesorios' },
   { key: 'mystery-packs', label: 'Mystery Packs', href: '/mystery-packs' },
-  { key: 'psa', label: 'PSA', href: '/psa' },
+  {
+    key: 'singles',
+    label: 'Singles',
+    children: [
+      { key: 'psa', label: 'PSA', href: '/psa' },
+      { key: 'raw', label: 'Raw', href: '/raw' },
+    ],
+  },
   { key: 'releases-calendar', label: 'Calendario de Lanzamientos', href: '/releases-calendar' },
 ];
 
@@ -115,7 +130,9 @@ export function DesktopNavMenu({ onOpenB2B }: DesktopNavMenuProps) {
         }
 
         const isOpen = openKey === item.key;
-        const active = !!item.category && pathname === `/${item.category}`;
+        const active = item.category
+          ? pathname === `/${item.category}`
+          : !!item.children?.some((child) => pathname === child.href);
         const languages = item.category ? LANGUAGES.filter((l) => CATEGORY_LANGUAGES[item.category!].includes(l.value)) : [];
 
         return (
@@ -151,6 +168,20 @@ export function DesktopNavMenu({ onOpenB2B }: DesktopNavMenuProps) {
                   >
                     <img src={lang.flag} alt="" className="w-5 h-3.5 object-cover rounded-sm" />
                     {lang.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {isOpen && item.children && (
+              <div className="absolute left-0 top-full mt-0 w-48 bg-dark-surface border border-dark-border rounded-xl shadow-elevated overflow-hidden z-[9999] animate-fadeIn p-1">
+                {item.children.map((child) => (
+                  <Link
+                    key={child.key}
+                    href={child.href}
+                    className="block px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-premium-gold hover:bg-dark-surfaceHover transition-colors"
+                  >
+                    {child.label}
                   </Link>
                 ))}
               </div>

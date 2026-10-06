@@ -30,12 +30,24 @@ export async function GET() {
         paymentStatus: true,
         createdAt: true,
         items: true,
+        shippingMode: true,
+        shipmentId: true,
+        shipment: {
+          select: {
+            shipmentNumber: true,
+            shippingCost: true,
+            paymentStatus: true,
+          },
+        },
       },
     });
 
     const mapped = orders.map((o) => ({
       ...o,
       totalAmount: parseFloat(o.totalAmount.toString()),
+      shipment: o.shipment
+        ? { ...o.shipment, shippingCost: parseFloat(o.shipment.shippingCost.toString()) }
+        : null,
     }));
 
     return NextResponse.json({ success: true, data: mapped });

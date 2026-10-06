@@ -55,7 +55,7 @@ const SHIPPING_CONFIG = {
     tier1: {
       maxWeightGrams: 2000,
       maxDimensionsCm: [30, 20, 20] as const,
-      price: 4.99,
+      price: 3.99,
     },
     tier2: {
       minWeightGrams: 2001,

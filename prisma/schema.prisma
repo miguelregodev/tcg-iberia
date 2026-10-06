@@ -24,6 +24,7 @@ enum OrderStatus {
   COMPLETED
   FAILED
   CANCELLED
+  DEVUELTO
 }
 
 enum ShippingProvider {
@@ -38,6 +39,15 @@ enum PaymentStatus {
   PAID
   PAYMENT_FAILED
   CANCELLED
+}
+
+/// Customer's shipping-timing choice for an order, selected at checkout.
+/// - IMMEDIATE: default behavior (shipping charged and fulfilled as soon as possible).
+/// - GROUPED: customer explicitly chose "Agrupar Envío" — shipment is deferred so this
+///   order can later be consolidated with future orders into a single physical shipment.
+enum ShippingMode {
+  IMMEDIATE
+  GROUPED
 }
 
 enum NotificationStatus {
@@ -285,6 +295,11 @@ model Order {
   redsysOrderId         String?          @unique @db.VarChar(12)  // Numeric Redsys order ID
   paymentProvider       String           @default("redsys") @db.VarChar(50)  // "stripe" | "redsys"
   paymentStatus         PaymentStatus    @default(PENDING_PAYMENT)  // PENDING_PAYMENT, PAID, PAYMENT_FAILED, CANCELLED
+  /// Client-generated id (persisted in localStorage) identifying the shopping cart that
+  /// produced this order. Lets retried/abandoned checkout attempts for the same cart
+  /// reuse this row instead of creating a duplicate order — see /api/payments/redsys/create.
+  /// Null for legacy orders created before this field existed.
+  cartId                String?     @db.VarChar(100)
   userId                String?     // nullable – guest orders have no userId
   fullName              String      @db.VarChar(255)
   email                 String      @db.VarChar(255)
@@ -299,6 +314,14 @@ model Order {
   shippingProvider      ShippingProvider?  // Shipping provider when status is SHIPPED
   trackingNumber        String?     @db.VarChar(100)  // Tracking number when status is SHIPPED
   shippedAt             DateTime?   // When the order was marked as shipped
+  /// "Agrupar Envío": customer's checkout choice to defer this order's shipment so it can
+  /// later be consolidated with other orders into a single shipment. Defaults to IMMEDIATE
+  /// so all historical/existing orders keep their current behavior unchanged.
+  shippingMode          ShippingMode @default(IMMEDIATE)
+  /// Set once the customer requests shipment (alone or consolidated) and this order is
+  /// atomically claimed into a Shipment. Null while GROUPED and still awaiting a request.
+  shipmentId            String?
+  shipment              Shipment?   @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
   stripeSessionId       String?     @unique @db.VarChar(500)  // @deprecated: Legacy Stripe field
   redsysTransactionId   String?     @db.VarChar(50)  // Ds_Reference from Redsys
   redsysResponseCode    String?     @db.VarChar(10)  // Ds_Response from Redsys
@@ -317,6 +340,56 @@ model Order {
   @@index([status])
   @@index([paymentStatus])
   @@index([redsysOrderId])
+  @@index([shippingMode])
+  @@index([shipmentId])
+  @@index([cartId])
+}
+
+/// Represents a single consolidated physical shipment covering one or more grouped
+/// ("Agrupar Envío") orders belonging to the SAME customer and SAME shipping address.
+///
+/// Lifecycle:
+///   Customer requests shipment (alone or consolidating several eligible orders)
+///     -> shippingCost computed once from combined merchandise value (reuses the
+///        existing weight/threshold shipping calculator — no new pricing logic)
+///     -> if shippingCost > 0: a single Redsys payment is created for that fee
+///        (paymentStatus starts PENDING_PAYMENT); if shippingCost is 0 (free-shipping
+///        threshold reached) paymentStatus is set to PAID immediately, no payment step
+///     -> once paymentStatus is PAID, admin ships the group like any other order
+///        (existing Order.status/shippingProvider/trackingNumber fields are reused —
+///        see admin orders PATCH, which cascades SHIPPED to every order in the group)
+///
+/// This design deliberately reuses the existing `PaymentStatus` enum instead of adding
+/// a parallel status enum, and reuses `Order`'s own carrier/tracking fields instead of
+/// duplicating shipment tracking. Orders are atomically claimed via a guarded
+/// updateMany (shipmentId IS NULL) inside the same transaction that creates this row,
+/// which prevents two concurrent requests from creating duplicate shipments for the
+/// same orders.
+model Shipment {
+  id                  String        @id @default(cuid())
+  shipmentNumber      String        @unique @db.VarChar(50)   // customer-facing: ENV-YYYYMMDD-000000
+  userId              String
+  /// Snapshot of the combined merchandise subtotal of all included orders at request time.
+  merchandiseTotal    Decimal       @db.Decimal(12, 2)
+  /// The single shipping fee for the whole consolidated shipment (0 when combined value
+  /// reaches the existing free-shipping threshold).
+  shippingCost        Decimal       @db.Decimal(12, 2) @default(0)
+  paymentProvider     String?       @db.VarChar(50)  // "redsys", null when shippingCost = 0 (no payment needed)
+  paymentStatus       PaymentStatus @default(PAID)    // PAID immediately when shippingCost = 0
+  redsysOrderId       String?       @unique @db.VarChar(12)
+  redsysTransactionId String?       @db.VarChar(50)
+  redsysResponseCode  String?       @db.VarChar(10)
+  redsysAuthCode      String?       @db.VarChar(50)
+  paymentPaidAt       DateTime?
+  requestedAt         DateTime      @default(now())
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders              Order[]
+
+  @@index([userId])
+  @@index([paymentStatus])
 }
 
 /// Sequence model represents a sequence for auto-incrementing IDs
@@ -363,6 +436,7 @@ model User {
   favorites     Favorite[]
   orders        Order[]   // soft link — orders are also identified by email
   stockAlerts   StockAlert[]
+  shipments     Shipment[]
 
   @@index([email])
 }

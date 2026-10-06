@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
@@ -9,6 +10,7 @@ import { FavoriteButton } from './FavoriteButton';
 import { StockAlertButton } from './StockAlertButton';
 import { trackPreorderViewed, trackProductViewed } from '@/lib/analytics/events';
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
+import { getEstimatedDeliveryRange } from '@/lib/shipping/delivery-estimate';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
 
@@ -37,7 +39,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);
   const b2bSealedPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
+  // Accesorios aren't region/language-specific, so the flag badge doesn't apply.
+  const showLanguageFlag = !product.type?.toLowerCase().includes('accesorio');
   const releaseDate = formatReleaseDate(product.releaseDate);
+  const estimatedDeliveryRange = getEstimatedDeliveryRange();
   
 
   const hasLiveOpening = product.liveOpeningPrice != null;
@@ -65,9 +70,21 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // No discount for B2B users
   const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
 
-  // How many of THIS variant are already in the cart.
-  const inCartQuantity =
-    items.find((it) => it.product.id === variantProduct.id)?.quantity ?? 0;
+  // How much cheaper "Apertura en Directo" is vs. the Sellado price, shown
+  // next to the toggle so the customer sees the incentive for live-opening.
+  const sealedPriceForComparison = b2bSealedPrice ?? Number(product.price);
+  const liveSavingsAmount = hasLiveOpening
+    ? sealedPriceForComparison - Number(product.liveOpeningPrice)
+    : 0;
+  const liveSavingsPercent = hasLiveOpening && sealedPriceForComparison > 0
+    ? Math.round((liveSavingsAmount / sealedPriceForComparison) * 100)
+    : 0;
+
+  // Sellado and Apertura en Directo share one stock pool, so both cart lines
+  // (base id and `_live` suffixed id) count against the same limit.
+  const inCartQuantity = items
+    .filter((it) => it.product.id === product.id || it.product.id === `${product.id}_live`)
+    .reduce((sum, it) => sum + it.quantity, 0);
   const quantityLimit = getProductQuantityLimit(inventoryState);
   const maxAddable = quantityLimit === null
     ? Number.POSITIVE_INFINITY
@@ -166,33 +183,29 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Main Image */}
             {product.imageUrl && (
               <div className="relative group">
-                <div className="relative bg-dark-surface rounded-2xl shadow-elevated overflow-hidden border border-dark-border h-96 lg:h-[500px] flex items-center justify-center">
+                <div className="relative overflow-hidden h-96 lg:h-[500px] flex items-center justify-center">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-300"
                   />
 
-                  {/* Language Flag */}
-                  <div className="absolute top-4 left-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
-                    <img
-                      src={flagInfo.path}
-                      alt={flagInfo.name}
-                      title={flagInfo.name}
-                      className="w-8 h-5 object-cover rounded"
-                    />
-                  </div>
-
                   {/* Badge Overlay */}
                   {product.discountPercentage && (
-                    <div className="absolute top-4 right-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
+                    <div className="absolute top-4 left-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
                       -{Number(product.discountPercentage)}%
                     </div>
                   )}
 
-                  {inventoryState.isLowStock && !isB2B && (
-                    <div className="absolute bottom-4 right-4 bg-warning text-dark-bg px-3 py-1 rounded-full font-semibold text-xs shadow-elevated">
-                      Últimas unidades
+                  {/* Language Flag */}
+                  {showLanguageFlag && (
+                    <div className="absolute top-4 right-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
+                      <img
+                        src={flagInfo.path}
+                        alt={flagInfo.name}
+                        title={flagInfo.name}
+                        className="w-8 h-5 object-cover rounded"
+                      />
                     </div>
                   )}
                 </div>
@@ -265,6 +278,36 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     Apertura en Directo — {Number(product.liveOpeningPrice).toFixed(2)}€
                   </button>
                 </div>
+
+                {/* Live-opening warning — only shown when this variant is selected */}
+                {variant === 'live' && (
+                  <div
+                    role="alert"
+                    className="mt-3 rounded-lg border border-warning/30 bg-warning-bg p-3 text-xs text-warning space-y-2"
+                  >
+                    <p className="font-bold">⚠️ Este producto se abrirá en directo</p>
+                    <p>
+                      Al seleccionar &quot;Apertura en Directo&quot;, aceptas que el producto se abrirá
+                      durante el LIVE de TikTok o Twitch en curso si hay uno activo, o durante el próximo LIVE si
+                      no hay ninguno en curso en este momento.
+                    </p>
+                    <p>
+                      Los productos seleccionados como &quot;Apertura en Directo&quot; nunca se envían
+                      precintados.
+                    </p>
+                    <p>
+                      Si no quieres que tu producto se abra en directo, selecciona &quot;Sellado&quot;.
+                    </p>
+                    <p>
+                      <Link
+                        href="/politica-apertura-en-directo"
+                        className="font-semibold underline hover:text-premium-gold transition-colors"
+                      >
+                        Consulta las condiciones de &quot;Apertura en Directo&quot;
+                      </Link>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -280,6 +323,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </span>
                     <span className="text-[11px] font-semibold text-danger">
                       Ahorras {savingsAmount}€
+                    </span>
+                  </div>
+                )}
+                {variant === 'live' && liveSavingsAmount > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-text-muted line-through">
+                      {sealedPriceForComparison.toFixed(2)}€
+                    </span>
+                    <span className="text-[11px] font-semibold text-success">
+                      -{liveSavingsPercent}% (ahorras {liveSavingsAmount.toFixed(2)}€)
                     </span>
                   </div>
                 )}
@@ -441,7 +494,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
                 <span>
-                  <strong>Envío rápido</strong>
+                  <strong>Entrega el {estimatedDeliveryRange}</strong>, excepto si eliges{' '}
+                  <Link
+                    href="/envio-agrupado"
+                    className="text-premium-gold underline-offset-4 hover:underline"
+                  >
+                    envío agrupado
+                  </Link>
                 </span>
               </div>
               <div className="flex items-center gap-3">
