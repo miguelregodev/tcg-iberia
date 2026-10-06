@@ -22,7 +22,8 @@ import { generateShipmentNumber, nextRedsysOrderId } from '@/lib/shipments/numbe
 import { getRedsysConfig, getRedsysApiUrl } from '@/lib/payments/redsys/config';
 import { generateSignature, toBase64 } from '@/lib/payments/redsys/signature';
 import type { RedsysMerchantParameters } from '@/lib/payments/redsys/types';
-import { sendShipmentRequestAdminNotification } from '@/lib/email';
+import { notifyShipmentRequested } from '@/lib/shipments/notify';
+import { getBaseProductId } from '@/lib/orders/pricing';
 
 interface OrderItemSnapshot {
   id?: string;
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
     }
     const userId = session.user.id;
 
-    const body = (await request.json()) as { orderIds?: unknown };
+    const body = (await request.json()) as { orderIds?: unknown; preview?: unknown };
+    const isPreview = body.preview === true;
     const orderIds = Array.from(
       new Set(
         Array.isArray(body.orderIds)
@@ -93,14 +95,19 @@ export async function POST(request: NextRequest) {
       Array.isArray(o.items) ? (o.items as unknown as OrderItemSnapshot[]) : []
     );
     const productIds = Array.from(
-      new Set(combinedItems.map((i) => i.id).filter((id): id is string => typeof id === 'string'))
+      new Set(
+        combinedItems
+          .map((i) => i.id)
+          .filter((id): id is string => typeof id === 'string')
+          .map(getBaseProductId)
+      )
     );
     const products = await db.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, weightGrams: true, lengthCm: true, widthCm: true, heightCm: true },
     });
     const shippingItems = combinedItems.map((item) => {
-      const product = products.find((p) => p.id === item.id);
+      const product = products.find((p) => p.id === getBaseProductId(item.id ?? ''));
       return {
         quantity: item.quantity ?? 1,
         weightGrams: product?.weightGrams ?? null,
@@ -116,6 +123,16 @@ export async function POST(request: NextRequest) {
       merchandiseTotal,
       SHIPPING_CONFIG.freeShippingThreshold
     );
+
+    // Lets the UI warn the customer about the fee before anything is created or charged.
+    if (isPreview) {
+      return NextResponse.json({
+        preview: true,
+        merchandiseTotal,
+        shippingCost,
+        freeShippingThreshold: SHIPPING_CONFIG.freeShippingThreshold,
+      });
+    }
 
     const shipmentNumber = await generateShipmentNumber();
 
@@ -166,37 +183,11 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Notify sales so they can verify the consolidated order/product list before
-    // preparing the package. Failure here must never block the customer's request.
-    await sendShipmentRequestAdminNotification({
-      shipmentNumber,
-      fullName: referenceOrder.fullName,
-      email: referenceOrder.email,
-      phone: referenceOrder.phone,
-      shipping: {
-        address: referenceOrder.shippingAddress,
-        postalCode: referenceOrder.shippingPostalCode,
-        city: referenceOrder.shippingCity,
-        locality: referenceOrder.shippingLocality,
-        province: referenceOrder.shippingProvince,
-      },
-      merchandiseTotal,
-      shippingCost,
-      requiresPayment: shippingCost > 0,
-      orders: orders.map((o) => ({
-        orderNumber: o.orderNumber,
-        totalAmount: parseFloat(o.totalAmount.toString()),
-        items: (Array.isArray(o.items) ? (o.items as unknown as OrderItemSnapshot[]) : []).map((item) => ({
-          name: item.name || '',
-          quantity: item.quantity || 0,
-          price: item.price || 0,
-          discountPercentage: item.discountPercentage,
-        })),
-      })),
-    });
-
-    // Free shipping (combined value reached the threshold) — nothing to pay, done.
+    // Free shipping (combined value reached the threshold) — nothing to pay, so notify sales
+    // now. When a fee is owed, the email is sent only after Redsys confirms the payment
+    // (see handleShipmentPaymentSuccess).
     if (shippingCost <= 0) {
+      await notifyShipmentRequested(shipmentId);
       return NextResponse.json({
         success: true,
         shipmentNumber,

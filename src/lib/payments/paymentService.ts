@@ -65,6 +65,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
           shippingCity: true,
           shippingLocality: true,
           shippingProvince: true,
+          shippingMode: true,
         },
       });
 
@@ -87,9 +88,11 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
 
         for (const item of items) {
           if (!item.isPreorder && item.id && item.quantity && item.quantity > 0) {
+            // Live-opening cart ids carry a `_live` suffix but share the base product's stock.
+            const productId = item.id.replace(/_live$/, '');
             const updateStock = await tx.product.updateMany({
               where: {
-                id: item.id,
+                id: productId,
                 stock: { gte: item.quantity },
               },
               data: {
@@ -129,6 +132,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
           shippingCity: true,
           shippingLocality: true,
           shippingProvince: true,
+          shippingMode: true,
           paymentStatus: true,
         },
       });
@@ -194,6 +198,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
         })),
         paymentStatus: 'paid',
         shippingCost,
+        shippingMode: order.shippingMode,
         shipping: {
           address: order.shippingAddress,
           postalCode: order.shippingPostalCode,

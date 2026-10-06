@@ -54,18 +54,20 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           {product.name}
         </h3>
         
-        <div className="mb-3">
+        <p className="text-sm text-text-secondary mb-3 line-clamp-2">
+          {product.description}
+        </p>
+
+        <div className="mb-4">
           <ProductPriceDisplay
             productId={product.id}
             publicPrice={Number(product.price)}
             discountPercentage={product.discountPercentage}
             liveOpeningPrice={product.liveOpeningPrice}
+            className="flex items-center justify-end gap-2"
+            priceClassName="text-premium-gold font-bold text-2xl"
           />
         </div>
-        
-        <p className="text-sm text-text-secondary mb-4 line-clamp-2">
-          {product.description}
-        </p>
 
         <div className="mt-auto flex flex-col gap-2">
           {inventoryState.isPreorder && releaseDate ? (

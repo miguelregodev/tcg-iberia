@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { captureServerError } from '@/lib/observability/sentry';
+import { isOrderItemSnapshot } from '@/lib/orders/items';
+import { priceOrderItems, toShippingItems } from '@/lib/orders/pricing';
+import { calculateSubtotal } from '@/lib/shipping/free-shipping';
+import { resolveShippingCost } from '@/lib/shipping/resolve-shipping-cost';
 
 interface CreateOrderRequest {
   fullName: string;
@@ -63,6 +68,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!items.every(isOrderItemSnapshot)) {
+      return NextResponse.json({ error: 'Invalid order items' }, { status: 400 });
+    }
+
+    // Client prices and totals are never trusted: recompute them from the database.
+    const priced = await priceOrderItems(items);
+    if (!priced.ok) {
+      return NextResponse.json({ error: priced.error }, { status: 400 });
+    }
+    const subtotal = calculateSubtotal(priced.items);
+    const verifiedTotal =
+      subtotal +
+      resolveShippingCost(toShippingItems(priced.items, priced.products), shippingPostalCode, subtotal);
+
     // Create order in database
     const order = await db.order.create({
       data: {
@@ -75,10 +94,10 @@ export async function POST(request: NextRequest) {
         shippingCity,
         shippingLocality,
         shippingProvince,
-        totalAmount: String(totalAmount),
+        totalAmount: String(verifiedTotal),
         status: 'PROCESSING',
         stripeSessionId,
-        items: items, // Store as JSON
+        items: priced.items as unknown as Prisma.InputJsonValue,
       },
     });
 

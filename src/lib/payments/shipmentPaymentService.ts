@@ -12,6 +12,7 @@ import 'server-only';
 import { db } from '@/lib/db';
 import { captureServerError } from '@/lib/observability/sentry';
 import { Prisma } from '@prisma/client';
+import { notifyShipmentRequested } from '@/lib/shipments/notify';
 
 interface ShipmentPaymentSuccessContext {
   shipmentId: string;
@@ -31,7 +32,8 @@ export async function handleShipmentPaymentSuccess(context: ShipmentPaymentSucce
   const { shipmentId, paymentAmount, paymentCurrency } = context;
 
   try {
-    return await db.$transaction(async (tx) => {
+    let newlyPaid = false;
+    const result = await db.$transaction(async (tx) => {
       const shipment = await tx.shipment.findUnique({
         where: { id: shipmentId },
         select: { id: true, paymentStatus: true },
@@ -46,6 +48,7 @@ export async function handleShipmentPaymentSuccess(context: ShipmentPaymentSucce
         return shipment;
       }
 
+      newlyPaid = true;
       return tx.shipment.update({
         where: { id: shipmentId },
         data: {
@@ -54,6 +57,13 @@ export async function handleShipmentPaymentSuccess(context: ShipmentPaymentSucce
         },
       });
     });
+
+    // Fee confirmed by Redsys: only now does sales hear about the request (once).
+    if (newlyPaid) {
+      await notifyShipmentRequested(shipmentId);
+    }
+
+    return result;
   } catch (error) {
     captureServerError({
       error,

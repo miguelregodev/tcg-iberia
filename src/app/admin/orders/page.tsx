@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, Fragment } from 'react';
 import { AdminNav } from '@/components/AdminNav';
 import { getTrackingUrl, getProviderLabel } from '@/lib/shipping/tracking-urls';
+import { ORDER_ITEM_VARIANT_LABEL, getOrderItemVariant } from '@/lib/orders/items';
 
 type OrderStatus = 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'DEVUELTO';
 type PaymentStatus = 'PENDING_PAYMENT' | 'PAID' | 'PAYMENT_FAILED' | 'CANCELLED';
@@ -676,6 +677,9 @@ export default function AdminOrdersPage() {
                                           >
                                             <span className="text-text-primary">
                                               {it.quantity}× {it.name}
+                                              <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-dark-surfaceHover text-text-secondary">
+                                                {ORDER_ITEM_VARIANT_LABEL[getOrderItemVariant(it)]}
+                                              </span>
                                             </span>
                                             <span className="text-text-secondary whitespace-nowrap">
                                               {currency.format(lineTotal)}
