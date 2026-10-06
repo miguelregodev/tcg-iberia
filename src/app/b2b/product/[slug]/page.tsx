@@ -14,7 +14,7 @@ export async function generateMetadata({
   const product = await db.product.findUnique({ where: { slug } });
   if (!product) return { title: 'Producto no encontrado' };
   return {
-    title: `${product.name} — Precio B2B | TCG Iberia`,
+    title: `${product.name} — Precio B2B`,
     description: product.description,
   };
 }

@@ -1,31 +1,16 @@
-import { Navigation } from "@/components/Navigation";
-import { ProductListPage } from "@/components/ProductListPage";
-import { Footer } from "@/components/Footer";
+import { CatalogPage } from "@/components/CatalogPage";
+import { getCatalogPage } from "@/lib/seo/catalogPages";
+import { generateCategoryMetadata } from "@/lib/seo/metadata";
 
 interface PageProps {
   searchParams: Promise<{ language?: string }>;
 }
 
-export const metadata = {
-  title: "Raw - TCG Iberia",
-  description: "Raw (ungraded) Pokémon TCG single cards",
-};
+const config = getCatalogPage("/raw");
+
+export const metadata = generateCategoryMetadata(config);
 
 export default async function RawPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
-
-  return (
-    <>
-      <Navigation />
-      <ProductListPage
-        title="Raw"
-        productType="raw"
-        language={language}
-        eyebrow="Cartas sin clasificar"
-        subtitle="Cartas individuales Raw (sin clasificar). Cartas auténticas en perfecto estado."
-      />
-      <Footer />
-    </>
-  );
+  const { language } = await searchParams;
+  return <CatalogPage config={config} languageParam={language} />;
 }

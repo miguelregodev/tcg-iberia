@@ -7,8 +7,9 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: 'Catálogo B2B - TCG Iberia',
+  title: 'Catálogo B2B',
   description: 'Catálogo mayorista con precios B2B exclusivos',
+  robots: { index: false, follow: false },
 };
 
 export default async function B2BCatalogRoute({ searchParams }: PageProps) {

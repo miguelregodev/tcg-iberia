@@ -1,9 +1,17 @@
-import { db } from '@/lib/db';
+import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { HitCardsClient } from '@/components/HitCardsClient';
-import { publicProductWithHitCardsSelect, serializePublicProduct } from '@/lib/products/serialization';
+import { getPublicProductBySlug } from '@/lib/products/catalog';
+import { buildPageMetadata, noIndexMetadata } from '@/lib/seo/metadata';
+import { getProductDisplayName } from '@/lib/seo/product';
+
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -11,21 +19,18 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const product = await getPublicProductBySlug(slug);
 
-  const product = await db.product.findUnique({
-    where: { slug },
+  if (!product || !product.hitCards?.length) return noIndexMetadata('Producto no encontrado');
+
+  const display = getProductDisplayName(product);
+  return buildPageMetadata({
+    title: `Mejores hits de ${display}`,
+    description: `Las cartas más buscadas de ${display}: ${product.hitCards.length} hits con su imagen y precio de mercado orientativo.`,
+    path: `/product/${product.slug}/hit-cards`,
+    image: product.imageUrl,
+    imageAlt: display,
   });
-
-  if (!product) {
-    return {
-      title: 'Product not found',
-    };
-  }
-
-  return {
-    title: `${product.name} - Best Hit Cards | TCG Iberia`,
-    description: `Best hit cards and special editions for ${product.name}`,
-  };
 }
 
 export default async function HitCardsPage({
@@ -35,42 +40,14 @@ export default async function HitCardsPage({
 }) {
   const { slug } = await params;
 
-  const product = await db.product.findUnique({
-    where: { slug },
-    select: publicProductWithHitCardsSelect,
-  });
+  const product = await getPublicProductBySlug(slug);
 
-  if (!product || !product.visible) {
-    return (
-      <>
-        <Navigation />
-        <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-text-primary mb-2">
-              Producto no encontrado
-            </p>
-            <p className="text-text-secondary mb-6">
-              El producto solicitado no se encuentra disponible.
-            </p>
-            <a
-              href="/"
-              className="text-premium-gold font-semibold hover:text-premium-gold_dark"
-            >
-              ← Volver a Inicio
-            </a>
-          </div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
-  const serializedProduct = serializePublicProduct(product);
+  if (!product) notFound();
 
   return (
     <>
       <Navigation />
-      <HitCardsClient product={serializedProduct} />
+      <HitCardsClient product={product} />
       <Footer />
     </>
   );

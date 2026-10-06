@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Política de Envío - TCG Iberia',
-  description: 'Política de Envío de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Política de Envío',
+  description: 'Política de envío de TCG Iberia: plazos de entrega, costes y qué hacer si tu paquete no llega o llega dañado.',
+  path: '/politica-envio',
+});
 
 export default function PoliticaEnvioPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Política de Envío</h1>
@@ -57,7 +59,7 @@ export default function PoliticaEnvioPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

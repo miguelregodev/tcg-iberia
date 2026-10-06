@@ -1,31 +1,13 @@
-import { Navigation } from "@/components/Navigation";
-import { ProductListPage } from "@/components/ProductListPage";
-import { Footer } from "@/components/Footer";
+import { CatalogPage } from "@/components/CatalogPage";
+import { getCatalogPage } from "@/lib/seo/catalogPages";
+import { generateCategoryMetadata } from "@/lib/seo/metadata";
 
-interface PageProps {
-  searchParams: Promise<{ language?: string }>;
-}
+const config = getCatalogPage("/accesorios");
 
-export const metadata = {
-  title: "Accesorios - TCG Iberia",
-  description: "Accesorios para Pokémon TCG y coleccionismo de cartas",
-};
+export const metadata = generateCategoryMetadata(config);
 
-export default async function AccesoriosPage({ searchParams }: PageProps) {
-  const params = await searchParams;
+export const revalidate = 60;
 
-  return (
-    <>
-      <Navigation />
-      <ProductListPage
-        title="Accesorios"
-        productType="Accesorios"
-        eyebrow="Accesorios"
-        subtitle="Accesorios para proteger y organizar tu colección de cartas."
-        showLanguageFilters={false}
-        showLanguageFlag={false}
-      />
-      <Footer />
-    </>
-  );
+export default function AccesoriosPage() {
+  return <CatalogPage config={config} />;
 }

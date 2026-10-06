@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Términos del Servicio - TCG Iberia',
-  description: 'Términos del Servicio de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Términos del Servicio',
+  description: 'Términos del servicio de TCG Iberia: aceptación de términos, uso de la plataforma y limitación de responsabilidad.',
+  path: '/terminos-servicio',
+});
 
 export default function TerminosServicioPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Términos del Servicio</h1>
@@ -58,7 +60,7 @@ export default function TerminosServicioPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

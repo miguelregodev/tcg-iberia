@@ -4,6 +4,9 @@ import { getB2bSessionFromCookies } from '@/lib/b2b/session';
 import { MiCuentaNav } from './MiCuentaNav';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { noIndexMetadata } from '@/lib/seo/metadata';
+
+export const metadata = noIndexMetadata();
 
 export default async function MiCuentaLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();

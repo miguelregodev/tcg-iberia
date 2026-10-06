@@ -7,8 +7,9 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: 'Búsqueda - TCG Iberia',
+  title: 'Búsqueda',
   description: 'Encuentra booster boxes, sobres, ETBs y bundles en el catálogo de TCG Iberia.',
+  robots: { index: false, follow: true },
 };
 
 export default async function SearchPage({ searchParams }: PageProps) {

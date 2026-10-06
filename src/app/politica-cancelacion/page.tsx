@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Política de Cancelación - TCG Iberia',
-  description: 'Política de Cancelación de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Política de Cancelación',
+  description: 'Política de cancelación de pedidos de TCG Iberia: derecho de cancelación, proceso, excepciones y gastos.',
+  path: '/politica-cancelacion',
+});
 
 export default function PoliticaCancelacionPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Política de Cancelación</h1>
@@ -61,7 +63,7 @@ export default function PoliticaCancelacionPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

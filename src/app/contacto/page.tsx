@@ -1,16 +1,19 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Información de Contacto - TCG Iberia',
-  description: 'Información de Contacto de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Contacto y atención al cliente',
+  description:
+    'Contacta con TCG Iberia por email o WhatsApp. Consulta el horario de atención y el tiempo de respuesta de nuestra tienda de Pokémon TCG.',
+  path: '/contacto',
+});
 
 export default function ContactoPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Información de Contacto</h1>
@@ -59,7 +62,7 @@ export default function ContactoPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

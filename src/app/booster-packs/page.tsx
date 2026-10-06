@@ -1,31 +1,16 @@
-import { Navigation } from "@/components/Navigation";
-import { ProductListPage } from "@/components/ProductListPage";
-import { Footer } from "@/components/Footer";
+import { CatalogPage } from "@/components/CatalogPage";
+import { getCatalogPage } from "@/lib/seo/catalogPages";
+import { generateCategoryMetadata } from "@/lib/seo/metadata";
 
 interface PageProps {
   searchParams: Promise<{ language?: string }>;
 }
 
-export const metadata = {
-  title: "Booster Packs - TCG Iberia",
-  description: "Booster packs Pokémon TCG en múltiples idiomas",
-};
+const config = getCatalogPage("/booster-packs");
+
+export const metadata = generateCategoryMetadata(config);
 
 export default async function BoosterPacksPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
-
-  return (
-    <>
-      <Navigation />
-      <ProductListPage
-        title="Booster Packs"
-        productType="pack"
-        language={language}
-        eyebrow="Sobres individuales"
-        subtitle="Sobres sueltos para coleccionistas. Cartas oficiales, listos para abrir."
-      />
-      <Footer />
-    </>
-  );
+  const { language } = await searchParams;
+  return <CatalogPage config={config} languageParam={language} />;
 }

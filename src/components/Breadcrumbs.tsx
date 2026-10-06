@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { breadcrumbJsonLd } from '@/lib/seo/jsonld';
 
 export interface BreadcrumbItem {
   label: string;
@@ -11,8 +12,6 @@ interface BreadcrumbsProps {
   className?: string;
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
 /**
  * Site-wide breadcrumb trail. Renders directly below `<Navigation />` (and
  * any banners it includes) and above page content — see call sites in
@@ -21,16 +20,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   if (items.length === 0) return null;
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.label,
-      ...(item.href ? { item: `${SITE_URL}${item.href}` } : {}),
-    })),
-  };
+  const jsonLd = breadcrumbJsonLd(items);
 
   return (
     <nav aria-label="Breadcrumb" className={`bg-dark-bg border-b border-dark-border ${className ?? ''}`}>
@@ -69,7 +59,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
     </nav>
   );

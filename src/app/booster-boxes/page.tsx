@@ -1,32 +1,16 @@
-import { Navigation } from "@/components/Navigation";
-import { ProductListPage } from "@/components/ProductListPage";
-import { Footer } from "@/components/Footer";
+import { CatalogPage } from "@/components/CatalogPage";
+import { getCatalogPage } from "@/lib/seo/catalogPages";
+import { generateCategoryMetadata } from "@/lib/seo/metadata";
 
 interface PageProps {
   searchParams: Promise<{ language?: string }>;
 }
 
-export const metadata = {
-  title: "Booster Boxes - TCG Iberia",
-  description: "Booster boxes Pokémon TCG en múltiples idiomas",
-};
+const config = getCatalogPage("/booster-boxes");
+
+export const metadata = generateCategoryMetadata(config);
 
 export default async function BoosterBoxesPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
-
-  return (
-    <>
-      <Navigation />
-      <ProductListPage
-        title="Booster Boxes"
-        productType="booster box"
-        language={language}
-        eyebrow="Cajas selladas"
-        subtitle="Cajas selladas con todos los sobres de la expansión. La opción preferida por coleccionistas serios."
-        allowedLanguages={['JAPANESE', 'KOREAN']}
-      />
-      <Footer />
-    </>
-  );
+  const { language } = await searchParams;
+  return <CatalogPage config={config} languageParam={language} />;
 }

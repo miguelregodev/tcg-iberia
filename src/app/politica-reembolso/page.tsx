@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Política de Reembolso - TCG Iberia',
-  description: 'Política de reembolso de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Política de Reembolso',
+  description: 'Política de reembolso de TCG Iberia: cuándo puedes solicitar un reembolso y cómo gestionar productos dañados o defectuosos.',
+  path: '/politica-reembolso',
+});
 
 export default function PoliticaReembolsoPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Política de Reembolso de TCG Iberia</h1>
@@ -68,7 +70,7 @@ export default function PoliticaReembolsoPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

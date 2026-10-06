@@ -13,6 +13,8 @@ import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, g
 import { getEstimatedDeliveryRange } from '@/lib/shipping/delivery-estimate';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
+import { getProductDisplayName } from '@/lib/seo/product';
+import { LANGUAGE_SEO } from '@/lib/seo/languages';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -20,10 +22,10 @@ interface ProductDetailClientProps {
 
 function getLanguageFlag(language: string): { path: string; name: string } {
   const flags: Record<string, { path: string; name: string }> = {
-    ENGLISH: { path: '/images/united-kingdom.png', name: 'English' },
-    JAPANESE: { path: '/images/japan.png', name: 'Japanese' },
-    KOREAN: { path: '/images/south-korea.png', name: 'Korean' },
-    SPANISH: { path: '/images/spain.png', name: 'Spanish' },
+    ENGLISH: { path: '/images/united-kingdom.png', name: LANGUAGE_SEO.ENGLISH.label },
+    JAPANESE: { path: '/images/japan.png', name: LANGUAGE_SEO.JAPANESE.label },
+    KOREAN: { path: '/images/south-korea.png', name: LANGUAGE_SEO.KOREAN.label },
+    SPANISH: { path: '/images/spain.png', name: LANGUAGE_SEO.SPANISH.label },
   };
   return flags[language] || flags.ENGLISH;
 }
@@ -186,7 +188,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <div className="relative overflow-hidden h-96 lg:h-[500px] flex items-center justify-center">
                   <img
                     src={product.imageUrl}
-                    alt={product.name}
+                    alt={showLanguageFlag ? getProductDisplayName(product) : product.name}
+                    fetchPriority="high"
+                    decoding="async"
                     className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-300"
                   />
 
@@ -202,8 +206,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     <div className="absolute top-4 right-4 bg-dark-surface/90 backdrop-blur rounded-lg p-2 shadow-elevated border border-dark-border">
                       <img
                         src={flagInfo.path}
-                        alt={flagInfo.name}
+                        alt={`Idioma: ${flagInfo.name}`}
                         title={flagInfo.name}
+                        width={32}
+                        height={20}
                         className="w-8 h-5 object-cover rounded"
                       />
                     </div>
@@ -354,7 +360,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {(notesList.length > 0 || features.length > 1) && (
               <div className="mb-8">
                 <h3 className="text-sm font-bold text-text-primary uppercase tracking-wide mb-4">
-                  {notesList.length > 0 ? 'Detalles' : 'Key Features'}
+                  {notesList.length > 0 ? 'Detalles' : 'Características'}
                 </h3>
                 <div className="space-y-3">
                   {notesList.length > 0
@@ -437,7 +443,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       >
                         <img
                           src="/images/add-to-cart.png"
-                          alt="Add to Cart"
+                          alt=""
+                          aria-hidden="true"
                           className={`w-5 h-5 ${addToCartDisabled || addedToCart ? 'icon-invert' : ''}`}
                         />
                         {addedToCart

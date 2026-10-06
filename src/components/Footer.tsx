@@ -1,12 +1,35 @@
+import Link from 'next/link';
+
+const SHOP_LINKS = [
+  { href: '/booster-boxes', label: 'Booster Boxes' },
+  { href: '/booster-packs', label: 'Sobres' },
+  { href: '/etbs', label: 'Elite Trainer Boxes' },
+  { href: '/pokemon-tcg-japones', label: 'Pokémon TCG japonés' },
+  { href: '/pokemon-tcg-coreano', label: 'Pokémon TCG coreano' },
+  { href: '/guias', label: 'Guías de Pokémon TCG' },
+  { href: '/distribuidor-tcg-espana', label: 'Mayorista y B2B' },
+];
+
 export function Footer() {
   return (
     <footer className="bg-dark-bgSecondary border-t border-dark-border py-12 md:py-16">
       <div className="container-custom px-4">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-5 gap-8 mb-8">
           <div>
             <h3 className="font-bold mb-4 text-premium-gold">TCG Iberia</h3>
             <p className="text-text-secondary text-sm">Productos de Pokémon TCG de alta calidad para coleccionistas y amantes del hobby</p>
           </div>
+
+          <nav aria-label="Tienda">
+            <h4 className="font-semibold mb-4 text-text-primary">Tienda</h4>
+            <ul className="space-y-2 text-text-secondary text-sm">
+              {SHOP_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-premium-gold transition-colors">{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           
           <div>
             <h4 className="font-semibold mb-4 text-text-primary">Contacto</h4>
@@ -39,7 +62,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-dark-border pt-8 text-center text-text-muted text-sm">
-          <p>&copy; 2026 TCG Iberia. All rights reserved.</p>
+          <p>&copy; 2026 TCG Iberia. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

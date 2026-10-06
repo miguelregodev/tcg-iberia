@@ -1,31 +1,16 @@
-import { Navigation } from "@/components/Navigation";
-import { ProductListPage } from "@/components/ProductListPage";
-import { Footer } from "@/components/Footer";
+import { CatalogPage } from "@/components/CatalogPage";
+import { getCatalogPage } from "@/lib/seo/catalogPages";
+import { generateCategoryMetadata } from "@/lib/seo/metadata";
 
 interface PageProps {
   searchParams: Promise<{ language?: string }>;
 }
 
-export const metadata = {
-  title: "PSA - TCG Iberia",
-  description: "PSA graded Pokémon TCG cards",
-};
+const config = getCatalogPage("/psa");
+
+export const metadata = generateCategoryMetadata(config);
 
 export default async function PSAPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
-
-  return (
-    <>
-      <Navigation />
-      <ProductListPage
-        title="PSA"
-        productType="psa"
-        language={language}
-        eyebrow="Cartas clasificadas"
-        subtitle="Colecciones de cartas clasificadas por PSA. Cartas auténticas y certificadas."
-      />
-      <Footer />
-    </>
-  );
+  const { language } = await searchParams;
+  return <CatalogPage config={config} languageParam={language} />;
 }

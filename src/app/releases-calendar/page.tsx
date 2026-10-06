@@ -4,12 +4,14 @@ import { Footer } from '@/components/Footer';
 import { ReleasesCalendar } from '@/components/releases/ReleasesCalendar';
 import { getReleasesForMonth } from '@/lib/releases';
 import { groupProductsByDay, buildCalendarGrid } from '@/lib/calendar-utils';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata: Metadata = {
-  title: 'Calendario de Lanzamientos Pokémon TCG | TCG Iberia',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Calendario de lanzamientos Pokémon TCG japonés y coreano',
   description:
-    'Consulta todas las próximas fechas de lanzamiento de Pokémon TCG japonés y coreano.',
-};
+    'Consulta las próximas fechas de lanzamiento de Pokémon TCG japonés y coreano y reserva tus productos antes de que salgan.',
+  path: '/releases-calendar',
+});
 
 interface PageProps {
   searchParams: Promise<{ month?: string }>;
@@ -58,7 +60,7 @@ export default async function ReleasesCalendarPage({ searchParams }: PageProps) 
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         {/* Hero header — matches Preorders section style */}
         <section className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
           <div
@@ -90,7 +92,7 @@ export default async function ReleasesCalendarPage({ searchParams }: PageProps) 
             currentMonth={currentMonth}
           />
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

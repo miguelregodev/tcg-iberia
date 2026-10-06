@@ -3,13 +3,15 @@ import { Product } from '@/types';
 import { formatReleaseDate, getProductInventoryState } from '@/lib/products/state';
 import { ProductPriceDisplay } from './ProductPriceDisplay';
 import { InventoryStatusLabel } from './InventoryStatusLabel';
+import { getProductDisplayName } from '@/lib/seo/product';
+import { LANGUAGE_SEO } from '@/lib/seo/languages';
 
 function getLanguageFlag(language: string): { path: string; name: string } {
   const flags: Record<string, { path: string; name: string }> = {
-    ENGLISH: { path: '/images/united-kingdom.png', name: 'English' },
-    JAPANESE: { path: '/images/japan.png', name: 'Japanese' },
-    KOREAN: { path: '/images/south-korea.png', name: 'Korean' },
-    SPANISH: { path: '/images/spain.png', name: 'Spanish' },
+    ENGLISH: { path: '/images/united-kingdom.png', name: LANGUAGE_SEO.ENGLISH.label },
+    JAPANESE: { path: '/images/japan.png', name: LANGUAGE_SEO.JAPANESE.label },
+    KOREAN: { path: '/images/south-korea.png', name: LANGUAGE_SEO.KOREAN.label },
+    SPANISH: { path: '/images/spain.png', name: LANGUAGE_SEO.SPANISH.label },
   };
   return flags[language] || flags.ENGLISH;
 }
@@ -18,9 +20,11 @@ interface ProductCardProps {
   product: Product;
   /** Show the language flag badge on the product image. Defaults to true. */
   showLanguageFlag?: boolean;
+  /** Above-the-fold card: load the image eagerly with high priority. */
+  priority?: boolean;
 }
 
-export function ProductCard({ product, showLanguageFlag = true }: ProductCardProps) {
+export function ProductCard({ product, showLanguageFlag = true, priority = false }: ProductCardProps) {
   const flagInfo = getLanguageFlag(product.language);
   const inventoryState = getProductInventoryState({
     stock: product.stock,
@@ -34,15 +38,21 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           <div className="mb-4 h-64 rounded-lg overflow-hidden relative flex-shrink-0">
             <img
               src={product.imageUrl}
-              alt={product.name}
+              alt={showLanguageFlag ? getProductDisplayName(product) : product.name}
+              loading={priority ? 'eager' : 'lazy'}
+              decoding="async"
+              fetchPriority={priority ? 'high' : 'auto'}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
             {showLanguageFlag && (
               <div className="absolute top-3 right-3 bg-dark-surface/90 backdrop-blur rounded-lg p-1.5 shadow-elevated border border-dark-border">
                 <img
                   src={flagInfo.path}
-                  alt={flagInfo.name}
+                  alt={`Idioma: ${flagInfo.name}`}
                   title={flagInfo.name}
+                  width={24}
+                  height={16}
+                  loading="lazy"
                   className="w-6 h-4 object-cover rounded"
                 />
               </div>

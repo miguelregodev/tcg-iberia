@@ -1,17 +1,19 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Condiciones de Apertura en Directo - TCG Iberia',
+export const metadata = buildPageMetadata({
+  title: 'Condiciones de Apertura en Directo',
   description:
     'Condiciones de la opción "Apertura en Directo": el producto se abre durante un LIVE de TikTok o Twitch, nunca se envía precintado y no admite devoluciones.',
-};
+  path: '/politica-apertura-en-directo',
+});
 
 export default function PoliticaAperturaEnDirectoPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Condiciones de &quot;Apertura en Directo&quot;</h1>
@@ -71,7 +73,7 @@ export default function PoliticaAperturaEnDirectoPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

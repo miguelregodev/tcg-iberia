@@ -1,16 +1,19 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Aviso Legal - TCG Iberia',
-  description: 'Aviso Legal de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Aviso Legal',
+  description:
+    'Aviso legal de TCG Iberia: datos de contacto de la tienda online, responsabilidad sobre los contenidos y propiedad intelectual.',
+  path: '/aviso-legal',
+});
 
 export default function AvisoLegalPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Aviso Legal</h1>
@@ -55,7 +58,7 @@ export default function AvisoLegalPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

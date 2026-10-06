@@ -9,7 +9,8 @@ import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '@/lib/analytics/events';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
-import { Breadcrumbs } from './Breadcrumbs';
+import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
+import { filterListingProducts } from '@/lib/products/listing';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
 
@@ -18,7 +19,7 @@ interface ProductListPageProps {
   /**
    * Substring that must appear in the product's `type` (case-insensitive).
    * Examples: 'booster box', 'pack' (matches 'Booster Pack'),
-   * 'bundle' (matches 'Booster Bundle').
+   * 'bundle' (matches 'Booster Bundle'). Empty string matches every type.
    */
   productType: string;
   language?: Language;
@@ -30,6 +31,15 @@ interface ProductListPageProps {
   showLanguageFilters?: boolean;
   /** Show the language flag badge on each product card. Defaults to true. */
   showLanguageFlag?: boolean;
+  /**
+   * Products already filtered on the server. When provided, the grid is part
+   * of the initial HTML (crawlable) and no client fetch is made.
+   */
+  initialProducts?: Product[];
+  /** Overrides the default `Inicio → {title}` trail. */
+  breadcrumbs?: BreadcrumbItem[];
+  /** Server-rendered content shown below the product grid. */
+  children?: React.ReactNode;
 }
 
 const LANGUAGE_LABELS: Record<Language, string> = {
@@ -57,13 +67,17 @@ export function ProductListPage({
   allowedLanguages,
   showLanguageFilters = true,
   showLanguageFlag = true,
+  initialProducts,
+  breadcrumbs,
+  children,
 }: ProductListPageProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
+  const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState<string | null>(null);
   const [inStockOnly, setInStockOnly] = useState(false);
 
   useEffect(() => {
+    if (initialProducts) return;
     let cancelled = false;
     async function fetchProducts() {
       try {
@@ -72,15 +86,7 @@ export function ProductListPage({
         const response = await fetch('/api/products');
         if (response.ok) {
           const data: Product[] = await response.json();
-
-          const wantedType = productType.toLowerCase();
-          const filtered = data.filter((p) => {
-            const typeMatch = p.type
-              ? p.type.toLowerCase().includes(wantedType)
-              : false;
-            const langMatch = !language || p.language === language;
-            return typeMatch && langMatch;
-          });
+          const filtered = filterListingProducts(data, { productType, language });
 
           if (!cancelled) setProducts(filtered);
         } else if (!cancelled) {
@@ -98,7 +104,7 @@ export function ProductListPage({
     return () => {
       cancelled = true;
     };
-  }, [productType, language]);
+  }, [productType, language, initialProducts]);
 
   useEffect(() => {
     trackCategoryViewed({
@@ -168,7 +174,7 @@ export function ProductListPage({
 
   return (
     <>
-      <Breadcrumbs items={[{ label: 'Inicio', href: '/' }, { label: title }]} />
+      <Breadcrumbs items={breadcrumbs ?? [{ label: 'Inicio', href: '/' }, { label: title }]} />
 
       {/* Hero header */}
       <section className="relative overflow-hidden bg-dark-bgSecondary text-text-primary border-b border-dark-border">
@@ -283,7 +289,7 @@ export function ProductListPage({
                 Estamos reponiendo stock, vuelve a visitarnos pronto.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {language && (
+                {language && showLanguageFilters && (
                   <Link
                     href={buildLangHref(null)}
                     className="btn btn-secondary"
@@ -307,6 +313,7 @@ export function ProductListPage({
           )}
         </div>
       </section>
+      {children}
     </>
   );
 }

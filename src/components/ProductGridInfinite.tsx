@@ -27,14 +27,16 @@ const AnimatedCard = memo(function AnimatedCard({
   product,
   animationDelay,
   showLanguageFlag,
+  priority,
 }: {
   product: Product;
   animationDelay: number;
   showLanguageFlag: boolean;
+  priority: boolean;
 }) {
   return (
     <div className="product-reveal" style={{ animationDelay: `${animationDelay}ms` }}>
-      <ProductCard product={product} showLanguageFlag={showLanguageFlag} />
+      <ProductCard product={product} showLanguageFlag={showLanguageFlag} priority={priority} />
     </div>
   );
 });
@@ -61,7 +63,7 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
           // Stagger delay within each batch: 0 → 60 → 120 … → max 600 ms.
           const delay = Math.min((index % PRODUCTS_PER_BATCH) * 60, 600);
           return (
-            <AnimatedCard key={product.id} product={product} animationDelay={delay} showLanguageFlag={showLanguageFlag} />
+            <AnimatedCard key={product.id} product={product} animationDelay={delay} showLanguageFlag={showLanguageFlag} priority={index < 4} />
           );
         })}
       </div>

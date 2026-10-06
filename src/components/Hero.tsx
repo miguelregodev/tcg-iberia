@@ -1,10 +1,15 @@
+import Image from 'next/image';
+
 export function Hero() {
   return (
     <section className="relative w-full h-[60vh] md:h-[70vh] min-h-[440px] max-h-[820px] overflow-hidden bg-dark-bgSecondary border-b border-dark-border">
-      <img
+      <Image
         src="/images/pikachu-4-scaled.jpg"
-        alt="Colección Pokémon TCG de TCG Iberia"
-        className="absolute inset-0 w-full h-full object-cover object-center"
+        alt="Colección de cartas Pokémon TCG de TCG Iberia"
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover object-center"
       />
       {/* Gradient scrim so the headline stays legible over the photo */}
       <div className="absolute inset-0 bg-gradient-to-t from-dark-bg via-dark-bg/30 to-transparent" />
@@ -14,10 +19,10 @@ export function Hero() {
           TCG Iberia
         </span>
         <h1 className="font-bold text-3xl sm:text-4xl md:text-6xl tracking-tight leading-tight text-text-primary max-w-3xl">
-          Pokémon TCG, de todo el mundo
+          Tienda Pokémon TCG online en España
         </h1>
         <p className="mt-3 text-white text-sm md:text-lg max-w-xl">
-          Productos japoneses, coreanos e internacionales, seleccionados para coleccionistas.
+          Booster boxes, sobres y cartas japonesas, coreanas, inglesas y españolas, con envío a toda España.
         </p>
         <a href="#shop-by-category" className="btn btn-primary mt-6">
           Explorar colección

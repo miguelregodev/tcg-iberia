@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Envío Agrupado - TCG Iberia',
-  description: 'Cómo funciona el envío agrupado en TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Envío agrupado',
+  description: 'Cómo funciona el envío agrupado en TCG Iberia para recibir varios pedidos en un único paquete.',
+  path: '/envio-agrupado',
+});
 
 export default function EnvioAgrupadoPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Envío Agrupado</h1>
@@ -76,7 +78,7 @@ export default function EnvioAgrupadoPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );

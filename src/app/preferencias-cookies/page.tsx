@@ -1,16 +1,18 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-  title: 'Preferencias de Cookies - TCG Iberia',
-  description: 'Preferencias de Cookies de TCG Iberia',
-};
+export const metadata = buildPageMetadata({
+  title: 'Preferencias de Cookies',
+  description: 'Información sobre las cookies que usa TCG Iberia y cómo gestionar tus preferencias.',
+  path: '/preferencias-cookies',
+});
 
 export default function PreferenciasCookiesPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-dark-bg">
+      <div className="min-h-screen bg-dark-bg">
         <div className="container-custom px-4 py-12 md:py-16">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-h2 mb-8 text-text-primary">Preferencias de Cookies</h1>
@@ -66,7 +68,7 @@ export default function PreferenciasCookiesPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
       <Footer />
     </>
   );
