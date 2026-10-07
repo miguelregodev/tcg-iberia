@@ -118,6 +118,21 @@ const currency = new Intl.NumberFormat('es-ES', {
   currency: 'EUR',
 });
 
+/** Shipping type for an order: grouped, free (threshold reached) or paid at checkout. */
+function getShippingTypeLabel(order: Order): { text: string; className: string } {
+  if (order.shippingMode === 'GROUPED') {
+    return { text: 'Envío Agrupado', className: 'bg-premium-gold/15 text-premium-gold' };
+  }
+  const itemsSubtotal = (order.items ?? []).reduce((sum, it) => {
+    const unit = Number(it.price) * (1 - Number(it.discountPercentage ?? 0) / 100);
+    return sum + unit * it.quantity;
+  }, 0);
+  const shippingPaid = order.totalAmount - itemsSubtotal;
+  return shippingPaid > 0.005
+    ? { text: 'Envío pagado', className: 'bg-blue-950/40 text-blue-300' }
+    : { text: 'Envío Gratis', className: 'bg-success-bg text-success' };
+}
+
 const dateFmt = new Intl.DateTimeFormat('es-ES', {
   dateStyle: 'short',
   timeStyle: 'short',
@@ -508,15 +523,25 @@ export default function AdminOrdersPage() {
                             </td>
                             <td className="px-4 py-3 font-mono font-semibold text-text-primary">
                               {order.orderNumber}
-                              {order.shippingMode === 'GROUPED' && (
-                                <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-premium-gold/15 text-premium-gold align-middle">
-                                  {order.shipment
-                                    ? order.shipment.paymentStatus === 'PENDING_PAYMENT'
+                              <div className="mt-1 flex flex-wrap gap-1 font-sans">
+                                {(() => {
+                                  const label = getShippingTypeLabel(order);
+                                  return (
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${label.className}`}
+                                    >
+                                      {label.text}
+                                    </span>
+                                  );
+                                })()}
+                                {order.shippingMode === 'GROUPED' && order.shipment && (
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-premium-gold/15 text-premium-gold">
+                                    {order.shipment.paymentStatus === 'PENDING_PAYMENT'
                                       ? 'ENVÍO: PAGO PENDIENTE'
-                                      : 'ENVÍO SOLICITADO'
-                                    : 'AGRUPADO'}
-                                </span>
-                              )}
+                                      : 'ENVÍO SOLICITADO'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                               {dateFmt.format(new Date(order.createdAt))}

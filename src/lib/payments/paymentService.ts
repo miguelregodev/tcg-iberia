@@ -47,6 +47,8 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
   } = context;
 
   try {
+    let alreadyPaid = false;
+
     const order = await db.$transaction(async (tx) => {
       // Fetch order to check current state
       const currentOrder = await tx.order.findUnique({
@@ -75,6 +77,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
 
       // Check idempotency: if already PAID, return without re-processing
       if (currentOrder.paymentStatus === 'PAID') {
+        alreadyPaid = true;
         return currentOrder;
       }
 
@@ -139,6 +142,11 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
 
       return updatedOrder;
     });
+
+    // Duplicate notification: emails/analytics were already sent the first time
+    if (alreadyPaid) {
+      return order;
+    }
 
     // Post-payment side effects (outside transaction)
     try {
@@ -269,8 +277,11 @@ export async function handlePaymentFailure(context: PaymentFailureContext) {
         throw new Error(`Order not found: ${orderId}`);
       }
 
-      // Check idempotency: if already PAYMENT_FAILED, return without re-processing
-      if (currentOrder.paymentStatus === 'PAYMENT_FAILED') {
+      // Idempotency, and never downgrade an order that was already paid
+      if (
+        currentOrder.paymentStatus === 'PAYMENT_FAILED' ||
+        currentOrder.paymentStatus === 'PAID'
+      ) {
         return currentOrder;
       }
 
