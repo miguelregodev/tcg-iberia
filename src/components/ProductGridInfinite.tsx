@@ -56,7 +56,7 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
         {visible.map((product, index) => {
           // Stagger delay within each batch: 0 → 60 → 120 … → max 600 ms.
           const delay = Math.min((index % PRODUCTS_PER_BATCH) * 60, 600);
