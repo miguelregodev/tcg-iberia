@@ -44,15 +44,16 @@ export function ProductPriceDisplay({
     overrides,
   });
 
-  const discounted = !usingB2B && discountPercentage && discountPercentage > 0;
-  const finalPublic = discounted
-    ? publicPrice * (1 - (discountPercentage ?? 0) / 100)
-    : publicPrice;
+  const discounted = !usingB2B && !!discountPercentage && discountPercentage > 0;
+  const applyDiscount = (value: number) =>
+    discounted ? value * (1 - (discountPercentage ?? 0) / 100) : value;
   const hasLiveOpening = !usingB2B && liveOpeningPrice != null;
-  const lowestPrice = hasLiveOpening
-    ? Math.min(finalPublic, liveOpeningPrice as number)
-    : finalPublic;
-  const displayPrice = usingB2B ? price : lowestPrice;
+  // The discount applies to both formats; show the cheapest one.
+  const sealedFinal = applyDiscount(publicPrice);
+  const liveFinal = hasLiveOpening ? applyDiscount(liveOpeningPrice as number) : null;
+  const useLive = liveFinal != null && liveFinal <= sealedFinal;
+  const originalPrice = useLive ? (liveOpeningPrice as number) : publicPrice;
+  const displayPrice = usingB2B ? price : useLive ? (liveFinal as number) : sealedFinal;
 
   return (
     <div className={className ?? 'flex items-center gap-2'}>
@@ -62,9 +63,9 @@ export function ProductPriceDisplay({
       <p className={priceClassName ?? 'text-premium-gold font-bold text-sm'}>
         {displayPrice.toFixed(2)}€
       </p>
-      {discounted && !hasLiveOpening && (
+      {discounted && (
         <p className="text-[11px] text-text-muted line-through">
-          {publicPrice.toFixed(2)}€
+          {originalPrice.toFixed(2)}€
         </p>
       )}
       {usingB2B && (
