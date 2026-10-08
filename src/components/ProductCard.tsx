@@ -66,13 +66,14 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           {product.description}
         </p>
 
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col-reverse items-end gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+          <InventoryStatusLabel inventoryState={inventoryState} />
           <ProductPriceDisplay
             productId={product.id}
             publicPrice={Number(product.price)}
             discountPercentage={product.discountPercentage}
             liveOpeningPrice={product.liveOpeningPrice}
-            className="flex items-center justify-end gap-2"
+            className="ml-auto flex items-center justify-end gap-2"
             priceClassName="text-premium-gold font-bold text-2xl"
           />
         </div>
@@ -83,10 +84,6 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
               Lanzamiento: {releaseDate}
             </p>
           ) : null}
-          
-          <div className="flex justify-between items-center">
-            <InventoryStatusLabel inventoryState={inventoryState} />
-          </div>
         </div>
       </div>
     </Link>
