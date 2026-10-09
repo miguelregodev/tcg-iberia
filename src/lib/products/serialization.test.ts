@@ -20,6 +20,10 @@ describe('serializePublicProduct', () => {
       language: 'SPANISH',
       priority: 1,
       visible: true,
+      weightGrams: null,
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-10T00:00:00.000Z'),
     });
@@ -47,6 +51,10 @@ describe('serializePublicProduct', () => {
       language: 'ENGLISH',
       priority: 2,
       visible: true,
+      weightGrams: null,
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-10T00:00:00.000Z'),
     });

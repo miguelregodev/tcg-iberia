@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Product } from '@/types';
 import { formatReleaseDate, getProductInventoryState } from '@/lib/products/state';
+import { getCategoryForProductType } from '@/lib/products/categories';
 import { ProductPriceDisplay } from './ProductPriceDisplay';
 import { InventoryStatusLabel } from './InventoryStatusLabel';
 
@@ -27,11 +28,18 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
     releaseDate: product.releaseDate,
   });
   const releaseDate = formatReleaseDate(product.releaseDate);
+  // Graded/raw single cards are portrait photos, so they get a 9:16 frame instead of the default.
+  const categoryHref = getCategoryForProductType(product.type)?.href;
+  const isPortraitImage = categoryHref === '/psa' || categoryHref === '/raw';
   return (
     <Link href={`/product/${product.slug}`} className="h-full">
       <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
         {product.imageUrl && (
-          <div className="mb-4 h-64 rounded-lg overflow-hidden relative flex-shrink-0">
+          <div
+            className={`mb-4 rounded-lg overflow-hidden relative flex-shrink-0 ${
+              isPortraitImage ? 'aspect-[5/7]' : 'h-64'
+            }`}
+          >
             <img
               src={product.imageUrl}
               alt={product.name}
@@ -54,18 +62,21 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           {product.name}
         </h3>
         
-        <div className="mb-3">
+        <p className="text-sm text-text-secondary mb-3 line-clamp-2">
+          {product.description}
+        </p>
+
+        <div className="mb-4 flex flex-col-reverse items-end gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+          <InventoryStatusLabel inventoryState={inventoryState} />
           <ProductPriceDisplay
             productId={product.id}
             publicPrice={Number(product.price)}
             discountPercentage={product.discountPercentage}
             liveOpeningPrice={product.liveOpeningPrice}
+            className="ml-auto flex items-center justify-end gap-2"
+            priceClassName="text-premium-gold font-bold text-2xl"
           />
         </div>
-        
-        <p className="text-sm text-text-secondary mb-4 line-clamp-2">
-          {product.description}
-        </p>
 
         <div className="mt-auto flex flex-col gap-2">
           {inventoryState.isPreorder && releaseDate ? (
@@ -73,10 +84,6 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
               Lanzamiento: {releaseDate}
             </p>
           ) : null}
-          
-          <div className="flex justify-between items-center">
-            <InventoryStatusLabel inventoryState={inventoryState} />
-          </div>
         </div>
       </div>
     </Link>

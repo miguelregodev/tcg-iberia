@@ -11,6 +11,18 @@ export interface OrderItemSnapshot {
   isPreorder?: boolean;
 }
 
+export type OrderItemVariant = 'sealed' | 'live';
+
+export const ORDER_ITEM_VARIANT_LABEL: Record<OrderItemVariant, string> = {
+  sealed: 'Sellado',
+  live: 'Apertura en Directo',
+};
+
+// Live-opening lines are stored with a `_live` suffix on the product id.
+export function getOrderItemVariant(item: { id?: string | null }): OrderItemVariant {
+  return item.id?.endsWith('_live') ? 'live' : 'sealed';
+}
+
 export function createOrderItemSnapshot(
   product: Product,
   quantity: number,

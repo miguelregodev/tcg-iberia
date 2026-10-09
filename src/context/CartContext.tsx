@@ -25,7 +25,15 @@ interface CartContextType {
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  /** Overwrites price/discount of cart lines (keyed by cart product id) with current catalog values. */
+  updateItemPricing: (updates: CartPricingUpdate[]) => void;
   clearCart: () => void;
+}
+
+export interface CartPricingUpdate {
+  productId: string;
+  price: number;
+  discountPercentage: number | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -198,6 +206,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, [removeFromCart]);
 
+  const updateItemPricing = useCallback((updates: CartPricingUpdate[]) => {
+    if (updates.length === 0) return;
+    const byId = new Map(updates.map((u) => [u.productId, u]));
+    setItems(prevItems =>
+      prevItems.map(item => {
+        const update = byId.get(item.product.id);
+        if (!update) return item;
+        return {
+          ...item,
+          product: {
+            ...item.product,
+            price: update.price,
+            discountPercentage: update.discountPercentage,
+          },
+        };
+      })
+    );
+  }, []);
+
   const clearCart = useCallback(() => {
     setItems([]);
     // A fresh cart id marks this shopping session as fully closed (e.g. after a
@@ -222,6 +249,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     addToCart,
     removeFromCart,
     updateQuantity,
+    updateItemPricing,
     clearCart,
   };
 

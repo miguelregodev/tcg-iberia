@@ -58,7 +58,7 @@ export function ProductCatalog() {
         ) : products.length === 0 ? (
           <p className="text-center text-text-secondary">No products available</p>
         ) : (
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {products.map(product => {
               return <ProductCard key={product.id} product={product} />
             })}
@@ -83,7 +83,7 @@ export function ProductCatalog() {
         ) : products.length === 0 ? (
           <p className="text-center text-text-secondary">No products available</p>
         ) : (
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
             {products.map(product => {
               return <ProductCard key={product.id} product={product} />
             })}

@@ -210,7 +210,7 @@ export function B2BCatalogPage({ language }: Props) {
           )}
 
           {loading || b2bLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
               {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
@@ -254,7 +254,7 @@ export function B2BCatalogPage({ language }: Props) {
                 {visibleProducts.length !== 1 ? 's' : ''} con tarifa mayorista en{' '}
                 {LANGUAGE_LABELS[activeLanguage]}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                 {visibleProducts.slice(0, visibleCount).map((product, index) => {
                   const o = b2bOverrides.get(product.id);
                   const delay = Math.min((index % 12) * 60, 600);

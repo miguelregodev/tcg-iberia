@@ -15,7 +15,7 @@ interface ProductFormProps {
   onSuccess: (savedProduct?: Product) => void;
 }
 
-const PRODUCT_TYPES = [
+export const PRODUCT_TYPES = [
   { value: '', label: 'Selecciona un tipo' },
   { value: 'Booster Box', label: 'Booster Box' },
   { value: 'Booster Bundle', label: 'Booster Bundle' },

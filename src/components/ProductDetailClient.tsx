@@ -52,7 +52,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // separate cart line item — independent quantity, independent price.
   // Both variants share the same stock pool.
   const variantProduct = hasLiveOpening && variant === 'live'
-    ? { ...product, id: `${product.id}_live`, price: Number(product.liveOpeningPrice!), discountPercentage: null }
+    ? { ...product, id: `${product.id}_live`, price: Number(product.liveOpeningPrice!) }
     : product;
 
   // Derive inventory state from the active variant's stock so all stock
@@ -70,11 +70,20 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // No discount for B2B users
   const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
 
+  // Format prices shown on the toggle: the discount applies to both formats.
+  const formatDiscount = isB2B ? null : product.discountPercentage;
+  const applyDiscount = (value: number) =>
+    formatDiscount ? value * (1 - Number(formatDiscount) / 100) : value;
+  const sealedBasePrice = b2bSealedPrice ?? Number(product.price);
+  const sealedFinalPrice = applyDiscount(sealedBasePrice);
+  const liveBasePrice = hasLiveOpening ? Number(product.liveOpeningPrice) : 0;
+  const liveFinalPrice = applyDiscount(liveBasePrice);
+
   // How much cheaper "Apertura en Directo" is vs. the Sellado price, shown
   // next to the toggle so the customer sees the incentive for live-opening.
-  const sealedPriceForComparison = b2bSealedPrice ?? Number(product.price);
+  const sealedPriceForComparison = sealedFinalPrice;
   const liveSavingsAmount = hasLiveOpening
-    ? sealedPriceForComparison - Number(product.liveOpeningPrice)
+    ? sealedFinalPrice - liveFinalPrice
     : 0;
   const liveSavingsPercent = hasLiveOpening && sealedPriceForComparison > 0
     ? Math.round((liveSavingsAmount / sealedPriceForComparison) * 100)
@@ -263,7 +272,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'bg-dark-surface text-text-secondary hover:bg-dark-surfaceHover'
                     }`}
                   >
-                    Sellado — {(b2bSealedPrice ?? Number(product.price)).toFixed(2)}€
+                    Sellado — {sealedFinalPrice.toFixed(2)}€
+                    {formatDiscount && (
+                      <span className="ml-1 text-xs line-through opacity-70">{sealedBasePrice.toFixed(2)}€</span>
+                    )}
                     {b2bSealedPrice && <span className="ml-1 text-[10px] font-bold bg-dark-bg/20 text-dark-bg px-1 rounded">B2B</span>}
                   </button>
                   <button
@@ -275,7 +287,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'bg-dark-surface text-text-secondary hover:bg-dark-surfaceHover'
                     }`}
                   >
-                    Apertura en Directo — {Number(product.liveOpeningPrice).toFixed(2)}€
+                    Apertura en Directo — {liveFinalPrice.toFixed(2)}€
+                    {formatDiscount && (
+                      <span className="ml-1 text-xs line-through opacity-70">{liveBasePrice.toFixed(2)}€</span>
+                    )}
                   </button>
                 </div>
 
@@ -326,7 +341,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     </span>
                   </div>
                 )}
-                {variant === 'live' && liveSavingsAmount > 0 && (
+                {variant === 'live' && !activeDiscount && liveSavingsAmount > 0 && (
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-text-muted line-through">
                       {sealedPriceForComparison.toFixed(2)}€
@@ -501,18 +516,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   >
                     envío agrupado
                   </Link>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-lg">✓</span>
-                <span>
-                  <strong>Producto original</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-lg">💬</span>
-                <span>
-                  <strong>Contáctanos para cualquier consulta o ayuda con tu pedido</strong> 
                 </span>
               </div>
             </div>
