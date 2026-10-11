@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "@/styles/globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
@@ -38,6 +39,7 @@ export default function RootLayout({
             </B2BSessionProvider>
           </SessionProvider>
         </PostHogProvider>
+        <Analytics />
       </body>
     </html>
   );

@@ -28,9 +28,10 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
     releaseDate: product.releaseDate,
   });
   const releaseDate = formatReleaseDate(product.releaseDate);
-  // Graded/raw single cards are portrait photos, so they get a 9:16 frame instead of the default.
+  // Graded/raw single cards and mystery packs use a 5:7 portrait frame instead of the default.
   const categoryHref = getCategoryForProductType(product.type)?.href;
-  const isPortraitImage = categoryHref === '/psa' || categoryHref === '/raw';
+  const isPortraitImage =
+    categoryHref === '/psa' || categoryHref === '/raw' || categoryHref === '/mystery-packs';
   return (
     <Link href={`/product/${product.slug}`} className="h-full">
       <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
