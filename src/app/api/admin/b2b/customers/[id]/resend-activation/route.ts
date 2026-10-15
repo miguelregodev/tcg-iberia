@@ -16,6 +16,7 @@ import { db } from '@/lib/db';
 import { isAdminAuthenticated } from '@/lib/b2b/admin-auth';
 import { issueActivationToken } from '@/lib/b2b/tokens';
 import { sendB2bActivationEmail } from '@/lib/b2b/emails';
+import { getB2bAppUrl } from '@/lib/b2b/app-url';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const token = issueActivationToken();
 
   try {
+    const activationUrl = `${getB2bAppUrl(request.nextUrl.origin)}/b2b/activar/${token.raw}`;
     await db.$transaction([
       // Invalidate all unused tokens for this customer.
       db.b2bActivationToken.updateMany({
@@ -56,24 +58,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }),
     ]);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const activationUrl = `${appUrl}/b2b/activar/${token.raw}`;
-
-    void sendB2bActivationEmail({
+    await sendB2bActivationEmail({
       email: customer.email,
       contactName: customer.contactName,
       companyName: customer.companyName,
       activationUrl,
       expiresAt: token.expiresAt,
-    }).catch((err) => {
-      Sentry.captureException(err, {
-        tags: { module: 'b2b', action: 'resend_activation_email' },
-        extra: { customerId: id },
-      });
     });
 
     return NextResponse.json({ success: true, activationLink: activationUrl });
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { module: 'b2b', action: 'resend_activation_email' },
+      extra: { customerId: id },
+    });
     return NextResponse.json(
       { error: 'No se pudo reenviar el enlace.' },
       { status: 500 }

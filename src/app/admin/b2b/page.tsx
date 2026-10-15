@@ -426,7 +426,11 @@ function RequestReviewModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? 'No se pudo aprobar la solicitud.');
-      notify('success', 'Solicitud aprobada. Se ha enviado el email de activación.');
+      if (data.emailSent) {
+        notify('success', 'Solicitud aprobada. Se ha enviado el email de activación.');
+      } else {
+        notify('error', 'Solicitud aprobada, pero no se pudo enviar el email. Reenvía el enlace desde Clientes.');
+      }
       onChanged();
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Error.');
