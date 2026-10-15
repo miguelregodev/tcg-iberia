@@ -508,15 +508,23 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="mt-8 pt-8 border-t border-dark-border space-y-3 text-sm text-text-secondary">
               <div className="flex items-center gap-3">
                 <span className="text-lg">🚚</span>
-                <span>
-                  <strong>Entrega el {estimatedDeliveryRange}</strong>, excepto si eliges{' '}
-                  <Link
-                    href="/envio-agrupado"
-                    className="text-premium-gold underline-offset-4 hover:underline"
-                  >
-                    envío agrupado
-                  </Link>
-                </span>
+                {inventoryState.isPreorder ? (
+                  <span>
+                    <strong>Fecha de entrega no disponible para reservas.</strong> La fecha de
+                    entrega depende de la recepción de los productos por parte del proveedor y
+                    puede variar. Recibirás un correo electrónico cuando tu pedido sea enviado.
+                  </span>
+                ) : (
+                  <span>
+                    <strong>Entrega el {estimatedDeliveryRange}</strong>, excepto si eliges{' '}
+                    <Link
+                      href="/envio-agrupado"
+                      className="text-premium-gold underline-offset-4 hover:underline"
+                    >
+                      envío agrupado
+                    </Link>
+                  </span>
+                )}
               </div>
             </div>
           </div>

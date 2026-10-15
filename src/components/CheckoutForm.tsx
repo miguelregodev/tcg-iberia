@@ -418,6 +418,34 @@ export function CheckoutForm() {
     }
   };
 
+  const renderGroupedShippingOption = (helpId: string) => (
+    <div className="mt-4 border border-dark-border rounded-lg p-4 bg-dark-bgSecondary">
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={groupedShipping}
+          onChange={(e) => setGroupedShipping(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold accent-[#F5E77A]"
+          aria-describedby={helpId}
+        />
+        <span className="text-sm font-semibold text-text-primary">Agrupar Envío</span>
+      </label>
+      <p id={helpId} className="mt-2 text-xs text-text-secondary leading-relaxed">
+        Retrasa el envío de este pedido para poder agruparlo con futuras compras y ahorrar en
+        gastos de envío. Podrás solicitar el envío cuando quieras desde &ldquo;Mis pedidos&rdquo;.{' '}
+        <Link href="/envio-agrupado" className="text-premium-gold underline-offset-4 hover:underline">
+          Más información
+        </Link>
+      </p>
+      {groupedShipping && (
+        <p className="mt-2 text-xs font-semibold text-premium-gold">
+          Este pedido no se enviará todavía. Se pagará igualmente en su totalidad ahora; el envío
+          quedará pendiente hasta que lo solicites.
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="grid md:grid-cols-3 gap-8">
@@ -605,6 +633,13 @@ export function CheckoutForm() {
                 </div>
               </div>
 
+              {/* "Agrupar Envío" — only offered to authenticated customers (guest checkout unaffected) */}
+              {isAuthenticated && (
+                <div className="md:hidden">
+                  {renderGroupedShippingOption('grouped-shipping-help-mobile')}
+                </div>
+              )}
+
               {/* Pay Button */}
               <button
                 type="submit"
@@ -732,30 +767,8 @@ export function CheckoutForm() {
 
             {/* "Agrupar Envío" — only offered to authenticated customers (guest checkout unaffected) */}
             {isAuthenticated && (
-              <div className="mt-4 border border-dark-border rounded-lg p-4 bg-dark-bgSecondary">
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={groupedShipping}
-                    onChange={(e) => setGroupedShipping(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold accent-[#F5E77A]"
-                    aria-describedby="grouped-shipping-help"
-                  />
-                  <span className="text-sm font-semibold text-text-primary">Agrupar Envío</span>
-                </label>
-                <p id="grouped-shipping-help" className="mt-2 text-xs text-text-secondary leading-relaxed">
-                  Retrasa el envío de este pedido para poder agruparlo con futuras compras y ahorrar en
-                  gastos de envío. Podrás solicitar el envío cuando quieras desde &ldquo;Mis pedidos&rdquo;.{' '}
-                  <Link href="/envio-agrupado" className="text-premium-gold underline-offset-4 hover:underline">
-                    Más información
-                  </Link>
-                </p>
-                {groupedShipping && (
-                  <p className="mt-2 text-xs font-semibold text-premium-gold">
-                    Este pedido no se enviará todavía. Se pagará igualmente en su totalidad ahora; el envío
-                    quedará pendiente hasta que lo solicites.
-                  </p>
-                )}
+              <div className="hidden md:block">
+                {renderGroupedShippingOption('grouped-shipping-help-desktop')}
               </div>
             )}
           </div>
