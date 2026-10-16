@@ -76,6 +76,9 @@ export function ProductPriceDisplay({
           B2B
         </span>
       )}
+      {usingB2B && (
+        <span className="text-[10px] text-text-muted">Impuestos no incluidos</span>
+      )}
     </div>
   );
 }

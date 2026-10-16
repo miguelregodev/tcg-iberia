@@ -74,7 +74,7 @@ export function B2BProductDetailClient({ product }: Props) {
   const reachedMax = quantity >= maxAddable;
 
   const handleAddToCart = () => {
-    if (!inventoryState.canPurchase) return;
+    if (maxAddable === 0) return;
     const safeQty = Math.min(quantity, maxAddable);
     addToCart(product, safeQty);
     setAddedToCart(true);
@@ -159,6 +159,7 @@ export function B2BProductDetailClient({ product }: Props) {
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-premium-gold/15 text-premium-gold">
                 Precio B2B
               </span>
+              <span className="text-xs text-text-muted">Impuestos no incluidos</span>
             </div>
 
             {/* Description */}
@@ -222,11 +223,11 @@ export function B2BProductDetailClient({ product }: Props) {
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={!inventoryState.canPurchase || maxAddable === 0}
+              disabled={maxAddable === 0}
               className={`w-full py-4 px-8 rounded-xl text-base font-bold transition-all shadow-elevated mb-4 ${
                 addedToCart
                   ? 'bg-success text-dark-bg scale-95'
-                  : inventoryState.canPurchase && maxAddable > 0
+                  : maxAddable > 0
                   ? 'bg-premium-gold hover:bg-premium-gold_dark text-dark-bg hover:scale-[1.02] active:scale-[0.98]'
                   : 'bg-dark-surfaceHover text-text-muted cursor-not-allowed'
               }`}
@@ -236,7 +237,7 @@ export function B2BProductDetailClient({ product }: Props) {
                 : inventoryState.isPreorder
                 ? 'Reservar'
                 : maxAddable === 0
-                ? 'Sin stock'
+                ? 'Máximo en el carrito'
                 : 'Añadir al carrito'}
             </button>
 

@@ -5,6 +5,7 @@ import { Product } from '@/types';
 import { trackPreorderAddedToCart, trackProductAddedToCart, trackProductRemovedFromCart } from '@/lib/analytics/events';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { getProductInventoryState, getProductQuantityLimit } from '@/lib/products/state';
+import { useB2BSession } from '@/context/B2BSessionContext';
 
 export interface CartItem {
   product: Product;
@@ -39,6 +40,8 @@ export interface CartPricingUpdate {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'tcg-iberia-cart';
 const CART_ID_STORAGE_KEY = 'tcg-iberia-cart-id';
+// Matches the per-line cap enforced by POST /api/b2b/orders.
+const B2B_MAX_QTY_PER_LINE = 999;
 
 function generateCartId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -61,6 +64,7 @@ function getOtherVariantQuantity(items: CartItem[], productId: string): number {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { isB2B } = useB2BSession();
   const [items, setItems] = useState<CartItem[]>([]);
   const [cartId, setCartId] = useState<string>('');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -128,14 +132,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         releaseDate: product.releaseDate,
       });
       const stock = Math.max(0, Number(product.stock) || 0);
-      const quantityLimit = getProductQuantityLimit(state);
+      const quantityLimit = isB2B ? null : getProductQuantityLimit(state);
       const sharedStockUsed = getOtherVariantQuantity(prevItems, product.id);
       const availableStock = Math.max(0, stock - sharedStockUsed);
       const existingItem = prevItems.find(item => item.product.id === product.id);
       if (existingItem) {
         const desired = existingItem.quantity + quantity;
         const capped = quantityLimit === null
-          ? Math.max(1, desired)
+          ? Math.min(B2B_MAX_QTY_PER_LINE, Math.max(1, desired))
           : Math.min(availableStock, Math.max(1, desired));
         if (capped === existingItem.quantity) return prevItems;
         return prevItems.map(item =>
@@ -145,7 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
       }
       const initialQty = quantityLimit === null
-        ? Math.max(1, quantity)
+        ? Math.min(B2B_MAX_QTY_PER_LINE, Math.max(1, quantity))
         : Math.min(availableStock, Math.max(1, quantity));
       if (initialQty <= 0) return prevItems;
 
@@ -167,7 +171,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       return [...prevItems, { product, quantity: initialQty }];
     });
-  }, []);
+  }, [isB2B]);
 
   const removeFromCart = useCallback((productId: string) => {
     setItems(prevItems => {
@@ -197,14 +201,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
           releaseDate: item.product.releaseDate,
         });
         const stock = Math.max(0, Number(item.product.stock) || 0);
-        const quantityLimit = getProductQuantityLimit(state);
+        const quantityLimit = isB2B ? null : getProductQuantityLimit(state);
         const sharedStockUsed = getOtherVariantQuantity(prevItems, item.product.id);
         const availableStock = Math.max(0, stock - sharedStockUsed);
-        const capped = quantityLimit === null ? quantity : Math.min(availableStock, quantity);
+        const capped = quantityLimit === null
+          ? Math.min(B2B_MAX_QTY_PER_LINE, quantity)
+          : Math.min(availableStock, quantity);
         return { ...item, quantity: capped };
       })
     );
-  }, [removeFromCart]);
+  }, [removeFromCart, isB2B]);
 
   const updateItemPricing = useCallback((updates: CartPricingUpdate[]) => {
     if (updates.length === 0) return;

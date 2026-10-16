@@ -1,7 +1,7 @@
 /**
  * GET /api/b2b/prices?ids=id1,id2,id3
  *
- * Returns the wholesale price map for the requested product IDs. Only ACTIVE
+ * Returns the wholesale price map (VAT excluded) for the requested product IDs. Only ACTIVE
  * B2B sessions receive data — anonymous or non-active callers get 401/403.
  *
  * Response:
@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getActiveB2bCustomer } from '@/lib/b2b/session';
+import { b2bNetPrice } from '@/lib/b2b/company';
 
 const MAX_IDS = 200;
 
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     const prices: Record<string, { b2bPrice: number | null }> = {};
     for (const r of rows) {
       prices[r.id] = {
-        b2bPrice: r.b2bPrice ? Number(r.b2bPrice) : null,
+        b2bPrice: r.b2bPrice ? b2bNetPrice(Number(r.b2bPrice)) : null,
       };
     }
     return NextResponse.json({ prices });

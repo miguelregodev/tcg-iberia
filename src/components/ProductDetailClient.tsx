@@ -356,6 +356,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     Precio B2B
                   </span>
                 )}
+                {isB2B && b2bSealedPrice && (
+                  <span className="text-xs text-text-muted">Impuestos no incluidos</span>
+                )}
               </div>
 
             {/* Description */}

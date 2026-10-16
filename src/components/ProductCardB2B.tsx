@@ -67,6 +67,7 @@ export function ProductCardB2B({ product, b2bPrice }: Props) {
             <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide">
               Sellado
             </span>
+            <span className="text-[10px] text-text-muted">Impuestos no incluidos</span>
           </div>
         </div>
 
