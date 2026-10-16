@@ -71,7 +71,7 @@ export function ProductCardB2B({ product, b2bPrice }: Props) {
           </div>
         </div>
 
-        <p className="text-sm text-text-secondary mb-4 line-clamp-2">{product.description}</p>
+        <p className="text-sm text-text-secondary mb-4 line-clamp-2 min-h-[2.5rem]">{product.description}</p>
 
         <div className="mt-auto flex flex-col gap-2">
           {inventoryState.isPreorder && releaseDate ? (

@@ -63,7 +63,7 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           {product.name}
         </h3>
         
-        <p className="text-sm text-text-secondary mb-3 line-clamp-2">
+        <p className="text-sm text-text-secondary mb-3 line-clamp-2 min-h-[2.5rem]">
           {product.description}
         </p>
 
