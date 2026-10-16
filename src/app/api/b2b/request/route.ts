@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { db } from '@/lib/db';
 import { isValidEmail } from '@/lib/b2b/validation';
+import { getB2bAppUrl } from '@/lib/b2b/app-url';
 import {
   sendB2bDocumentationRequestEmail,
   sendB2bRequestAdminNotification,
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
+    const appUrl = getB2bAppUrl(request.nextUrl.origin);
     await db.b2bRequest.create({
       data: {
         email: rawEmail,
@@ -55,11 +57,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Emails are fire-and-forget: request creation must not fail if the SMTP
-    // hop is temporarily down, but the failures are captured in Sentry.
-    void Promise.allSettled([
+    // Finish both SMTP attempts before returning from the serverless request.
+    // Preserve the application if either email fails, and report each failure.
+    await Promise.allSettled([
       sendB2bDocumentationRequestEmail(rawEmail),
-      sendB2bRequestAdminNotification(rawEmail),
+      sendB2bRequestAdminNotification(rawEmail, appUrl),
     ]).then((results) => {
       results.forEach((r, i) => {
         if (r.status === 'rejected') {

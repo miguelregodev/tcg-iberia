@@ -5,6 +5,8 @@ import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { calculateSubtotal, getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { isOrderItemSnapshot } from '@/lib/orders/items';
+import { priceOrderItems, toShippingItems } from '@/lib/orders/pricing';
+import { resolveShippingCost } from '@/lib/shipping/resolve-shipping-cost';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -52,22 +54,29 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { items, customerData } = body as CheckoutBody;
+    const { items: requestItems, customerData } = body as CheckoutBody;
     customerEmail = customerData?.email;
 
-    if (!items || items.length === 0) {
+    if (!requestItems || requestItems.length === 0) {
       return NextResponse.json(
         { error: 'No items in cart' },
         { status: 400 }
       );
     }
 
-    if (!items.every(isOrderItemSnapshot)) {
+    if (!requestItems.every(isOrderItemSnapshot)) {
       return NextResponse.json(
         { error: 'Invalid checkout items' },
         { status: 400 },
       );
     }
+
+    // Client prices are never trusted: price and discount come from the database.
+    const priced = await priceOrderItems(requestItems);
+    if (!priced.ok) {
+      return NextResponse.json({ error: priced.error }, { status: 400 });
+    }
+    const items = priced.items;
 
     // Build line items for Stripe
     const lineItems: LineItem[] = items.map((item) => {
@@ -103,11 +112,17 @@ export async function POST(request: NextRequest) {
         discountPercentage: item.discountPercentage,
       }))
     );
-    const shippingState = getFreeShippingState(subtotal);
+    const shippingCost = customerData?.shippingPostalCode
+      ? resolveShippingCost(
+          toShippingItems(items, priced.products),
+          customerData.shippingPostalCode,
+          subtotal,
+        )
+      : getFreeShippingState(subtotal).shippingCost;
 
     // Build a Stripe shipping rate so the cost is added to the session total
     // and shown to the customer on Stripe Checkout.
-    const shippingAmountCents = Math.max(0, Math.round(shippingState.shippingCost * 100));
+    const shippingAmountCents = Math.max(0, Math.round(shippingCost * 100));
     const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] =
       [
         {

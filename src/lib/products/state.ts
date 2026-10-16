@@ -56,6 +56,19 @@ export function getProductInventoryState(
   const normalizedReleaseDate = parsedReleaseDate?.toISOString() ?? null;
   const preorder = isPreorderProduct(parsedReleaseDate, now);
 
+  if (preorder && stock === 0) {
+    return {
+      status: 'out_of_stock',
+      isPreorder: true,
+      isAvailable: false,
+      isLowStock: false,
+      isOutOfStock: true,
+      canPurchase: false,
+      stock,
+      releaseDate: normalizedReleaseDate,
+    };
+  }
+
   if (preorder) {
     return {
       status: 'preorder',
@@ -126,7 +139,7 @@ export function getProductPurchaseLabel(state: ProductInventoryState) {
 }
 
 export function getProductQuantityLimit(state: ProductInventoryState) {
-  return state.isPreorder ? null : state.stock;
+  return state.stock;
 }
 
 export function formatReleaseDate(

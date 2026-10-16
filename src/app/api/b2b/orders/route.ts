@@ -17,7 +17,7 @@ import { db } from '@/lib/db';
 import { getActiveB2bCustomer } from '@/lib/b2b/session';
 import { generateB2bOrderNumber } from '@/lib/b2b/order-numbers';
 import { sendB2bOrderRequestEmail, type OrderEmailLine } from '@/lib/b2b/emails';
-import { B2B_IVA_RATE } from '@/lib/b2b/company';
+import { B2B_IVA_RATE, b2bNetPrice } from '@/lib/b2b/company';
 import { truncate } from '@/lib/b2b/validation';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -159,20 +159,15 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // Fall back to the public price when no wholesale price is set — the
-    // invoice still uses this effective price so the customer knows exactly
-    // what they will pay.
+    // Products without a wholesale price cannot be ordered.
     if (customer === null || p.b2bPrice === null) {
       rejections.push({ productId: line.productId, reason: 'no_price' });
       continue;
     }
-    const unit = p.b2bPrice !== null ? Number(p.b2bPrice) : Number(p.price);
 
-    // Stock check (server-side, silent enforcement)
-    if (line.quantity > p.stock) {
-      rejections.push({ productId: line.productId, reason: 'insufficient_stock' });
-      continue;
-    }
+    // Unit price is VAT-excluded. Stock is not enforced: B2B orders are
+    // requests that are reviewed before invoicing.
+    const unit = b2bNetPrice(Number(p.b2bPrice));
 
     // Round to 2 decimals (EUR cents) to avoid floating-point drift.
     const lineTotal = Math.round(unit * line.quantity * 100) / 100;
@@ -180,7 +175,7 @@ export async function POST(request: NextRequest) {
       productId: line.productId,
       quantity: line.quantity,
       name: p.name,
-      unitPriceEur: Math.round(unit * 100) / 100,
+      unitPriceEur: unit,
       lineTotal,
     });
   }
@@ -196,16 +191,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // B2B unit prices are treated as VAT-inclusive (this is what the customer
-  // sees in the cart and agrees to pay). We store the pre-tax base and the
-  // 21 % IVA amount separately so the invoice can split them out:
-  //   base_imponible = gross / 1.21
-  //   IVA (21 %)     = gross - base_imponible
-  //   total          = gross
-  const gross = Math.round(persisted.reduce((s, i) => s + i.lineTotal, 0) * 100) / 100;
-  const subtotal = Math.round((gross / (1 + B2B_IVA_RATE)) * 100) / 100;
-  const ivaAmount = Math.round((gross - subtotal) * 100) / 100;
-  const total = gross;
+  // Unit prices are VAT-excluded; IVA (21 %) is added on top of the base.
+  const subtotal = Math.round(persisted.reduce((s, i) => s + i.lineTotal, 0) * 100) / 100;
+  const ivaAmount = Math.round(subtotal * B2B_IVA_RATE * 100) / 100;
+  const total = Math.round((subtotal + ivaAmount) * 100) / 100;
 
   const notes = truncate(typeof body.notes === 'string' ? body.notes : null, 2000);
 

@@ -14,12 +14,16 @@ describe('serializePublicProduct', () => {
       liveOpeningPrice: null,
       notes: null,
       type: 'Booster Pack',
-      releaseDate: new Date('2026-08-15T00:00:00.000Z'),
-      stock: 0,
+      releaseDate: new Date('2099-08-15T00:00:00.000Z'),
+      stock: 10,
       imageUrl: null,
       language: 'SPANISH',
       priority: 1,
       visible: true,
+      weightGrams: null,
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-10T00:00:00.000Z'),
     });
@@ -27,7 +31,7 @@ describe('serializePublicProduct', () => {
     expect(serialized.isPreorder).toBe(true);
     expect(serialized.canPurchase).toBe(true);
     expect(serialized.inventoryStatus).toBe('preorder');
-    expect(serialized.releaseDate).toBe('2026-08-15T00:00:00.000Z');
+    expect(serialized.releaseDate).toBe('2099-08-15T00:00:00.000Z');
   });
 
   it('keeps normal in-stock products available', () => {
@@ -47,6 +51,10 @@ describe('serializePublicProduct', () => {
       language: 'ENGLISH',
       priority: 2,
       visible: true,
+      weightGrams: null,
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-10T00:00:00.000Z'),
     });

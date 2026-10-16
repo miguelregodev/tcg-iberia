@@ -41,7 +41,7 @@ type Cached = { transporter: nodemailer.Transporter | null };
 const globalForMailer = global as unknown as { _tcgMailer?: Cached };
 if (!globalForMailer._tcgMailer) globalForMailer._tcgMailer = { transporter: null };
 
-function getTransporter(): nodemailer.Transporter | null {
+function getTransporter(): nodemailer.Transporter {
   if (globalForMailer._tcgMailer!.transporter) {
     return globalForMailer._tcgMailer!.transporter;
   }
@@ -50,11 +50,10 @@ function getTransporter(): nodemailer.Transporter | null {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASSWORD;
   if (!host || !port || !user || !pass) {
-    console.warn(
-      '[b2b/emails] SMTP env vars missing — emails will not be sent. ' +
+    throw new Error(
+      '[b2b/emails] SMTP env vars missing. ' +
         'Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD.'
     );
-    return null;
   }
   const portNumber = Number(port);
   const transporter = nodemailer.createTransport({
@@ -466,13 +465,12 @@ export async function sendB2bAccountReactivatedEmail(params: {
  * Sent to the admin inbox whenever a new B2B request is submitted so the team
  * can begin the review process without polling the admin panel.
  */
-export async function sendB2bRequestAdminNotification(email: string): Promise<void> {
+export async function sendB2bRequestAdminNotification(email: string, appUrl: string): Promise<void> {
   const transporter = getTransporter();
   if (!transporter) return;
 
   const from = getFromAddress('TCG Iberia <sales@tcgiberia.com>');
   const adminEmail = process.env.ADMIN_EMAIL || 'sales@tcgiberia.com';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   const content = `
     <tr>

@@ -1,4 +1,5 @@
 import * as nodemailer from 'nodemailer';
+import { ORDER_ITEM_VARIANT_LABEL, type OrderItemVariant } from '@/lib/orders/items';
 
 /**
  * Email service for order notifications.
@@ -18,6 +19,7 @@ export interface OrderEmailItem {
   quantity: number;
   price: number;
   discountPercentage?: number | null;
+  variant?: OrderItemVariant;
 }
 
 export interface OrderEmailPayload {
@@ -29,6 +31,8 @@ export interface OrderEmailPayload {
   items: OrderEmailItem[];
   paymentStatus: string; // 'paid' | 'unpaid' | 'no_payment_required' (Stripe values)
   shippingCost?: number; // Calculated shipping cost; if not provided, will be computed
+  /** "Agrupar Envío" orders defer shipment (and its fee) until the customer requests it. Defaults to IMMEDIATE. */
+  shippingMode?: 'IMMEDIATE' | 'GROUPED';
   shipping?: {
     address?: string;
     postalCode?: string;
@@ -176,6 +180,10 @@ function lineSubtotal(item: OrderEmailItem): number {
   return unit * item.quantity;
 }
 
+function textItemName(item: OrderEmailItem): string {
+  return item.variant ? `${item.name} [${ORDER_ITEM_VARIANT_LABEL[item.variant]}]` : item.name;
+}
+
 function calculateSubtotal(items: OrderEmailItem[]): number {
   return items.reduce((sum, item) => sum + lineSubtotal(item), 0);
 }
@@ -247,12 +255,15 @@ function itemsTableHtml(items: OrderEmailItem[]): string {
         item.discountPercentage && item.discountPercentage > 0
           ? `<div style="display:inline-block;margin-top:4px;padding:2px 8px;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:999px;font-size:11px;font-weight:600;">-${escapeHtml(item.discountPercentage)}%</div>`
           : '';
+      const variantBadge = item.variant
+        ? `<div style="display:inline-block;margin-top:4px;margin-right:6px;padding:2px 8px;background:${item.variant === 'live' ? BRAND.primaryLight : BRAND.bg};color:${item.variant === 'live' ? BRAND.primary : BRAND.textMuted};border:1px solid ${BRAND.border};border-radius:999px;font-size:11px;font-weight:600;">${escapeHtml(ORDER_ITEM_VARIANT_LABEL[item.variant])}</div>`
+        : '';
       return `
         <tr>
           <td style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};">
             <div style="font-size:14px;font-weight:600;color:${BRAND.text};line-height:1.3;">${escapeHtml(item.name)}</div>
             <div style="font-size:12px;color:${BRAND.textMuted};margin-top:4px;">${escapeHtml(item.quantity)} &times; ${formatCurrency(item.price)}</div>
-            ${discountBadge}
+            ${variantBadge}${discountBadge}
           </td>
           <td align="right" style="padding:16px 0;${borderStyle}font-family:${FONT_STACK};font-size:14px;font-weight:600;color:${BRAND.text};white-space:nowrap;">${formatCurrency(subtotal)}</td>
         </tr>`;
@@ -277,8 +288,13 @@ function totalRowHtml(total: number): string {
   `;
 }
 
-function totalBreakdownHtml(subtotal: number, shippingCost: number, total: number): string {
-  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+function totalBreakdownHtml(
+  subtotal: number,
+  shippingCost: number,
+  total: number,
+  shippingLabel?: string,
+): string {
+  const shippingDisplay = shippingLabel ?? (shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost));
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
       <tr>
@@ -298,6 +314,40 @@ function totalBreakdownHtml(subtotal: number, shippingCost: number, total: numbe
 }
 
 // --- Customer email ---
+
+function isGrouped(payload: OrderEmailPayload): boolean {
+  return payload.shippingMode === 'GROUPED';
+}
+
+function shippingModeLabel(payload: OrderEmailPayload): string {
+  return isGrouped(payload) ? 'Envío agrupado' : 'Envío normal';
+}
+
+function shippingModeCardHtml(payload: OrderEmailPayload, audience: 'customer' | 'admin'): string {
+  const grouped = isGrouped(payload);
+  const description =
+    audience === 'admin'
+      ? grouped
+        ? 'No enviar todav&iacute;a: el cliente solicitar&aacute; el env&iacute;o m&aacute;s adelante y abonar&aacute; una &uacute;nica tarifa de env&iacute;o.'
+        : 'Preparar y enviar este pedido de inmediato.'
+      : grouped
+        ? 'Guardaremos tu pedido hasta que solicites el env&iacute;o desde Mi cuenta &rarr; Pedidos. Podr&aacute;s combinar varios pedidos y pagar el env&iacute;o una sola vez.'
+        : 'Prepararemos y enviaremos tu pedido en cuanto sea posible.';
+  return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:16px 20px;background:${grouped ? BRAND.primaryLight : BRAND.bg};border-left:4px solid ${grouped ? BRAND.primary : BRAND.border};border-radius:8px;font-family:${FONT_STACK};">
+              <div style="font-size:11px;letter-spacing:0.12em;color:${grouped ? BRAND.primary : BRAND.textMuted};text-transform:uppercase;font-weight:700;">Tipo de env&iacute;o</div>
+              <div style="font-size:16px;font-weight:700;color:${BRAND.text};margin-top:4px;">${escapeHtml(shippingModeLabel(payload))}</div>
+              <div style="font-size:13px;color:${BRAND.textMuted};margin-top:6px;line-height:1.5;">${description}</div>
+            </td>
+          </tr>
+        </table>`;
+}
+
+function shippingLabelFor(payload: OrderEmailPayload): string | undefined {
+  return isGrouped(payload) ? 'Pendiente de solicitar' : undefined;
+}
 
 function buildCustomerHtml(payload: OrderEmailPayload): string {
   const firstName = payload.fullName.split(' ')[0] || payload.fullName;
@@ -326,13 +376,15 @@ function buildCustomerHtml(payload: OrderEmailPayload): string {
           </tr>
         </table>
 
+        ${shippingModeCardHtml(payload, 'customer')}
+
         <!-- Items header -->
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Resumen del pedido</div>
         ${itemsTableHtml(payload.items)}
-        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount)}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload))}
 
         <p style="margin:32px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.textMuted};">
-          Te enviaremos otro correo en cuanto tu pedido salga de nuestro almac&eacute;n. Si tienes cualquier duda, escr&iacute;benos a
+          ${isGrouped(payload) ? 'Te avisaremos cuando solicites y salga tu env&iacute;o.' : 'Te enviaremos otro correo en cuanto tu pedido salga de nuestro almac&eacute;n.'} Si tienes cualquier duda, escr&iacute;benos a
           <a href="mailto:sales@tcgiberia.com" style="color:${BRAND.primary};text-decoration:none;font-weight:600;">sales@tcgiberia.com</a>.
         </p>
         <p style="margin:24px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.text};">
@@ -383,6 +435,8 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
           </tr>
         </table>
 
+        ${shippingModeCardHtml(payload, 'admin')}
+
         <!-- Customer info card -->
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 8px 0;">Cliente</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
@@ -409,7 +463,7 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Art&iacute;culos</div>
         ${itemsTableHtml(payload.items)}
-        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount)}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload))}
       </td>
     </tr>
   `;
@@ -421,12 +475,12 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
 function buildCustomerText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${textItemName(i)}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
   const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
-  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+  const shippingDisplay = isGrouped(payload) ? 'Pendiente de solicitar' : shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
   
   return [
     `Hola ${payload.fullName},`,
@@ -434,6 +488,7 @@ function buildCustomerText(payload: OrderEmailPayload): string {
     'Gracias por tu pedido en TCG Iberia. Hemos recibido tu compra correctamente.',
     '',
     `Numero de pedido: ${payload.orderNumber}`,
+    `Tipo de envio:    ${shippingModeLabel(payload)}`,
     '',
     'Resumen:',
     ...lines,
@@ -448,16 +503,17 @@ function buildCustomerText(payload: OrderEmailPayload): string {
 
 function buildAdminText(payload: OrderEmailPayload): string {
   const lines = payload.items.map(
-    (i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
+    (i) => `  - ${textItemName(i)}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`
   );
   
   const subtotal = calculateSubtotal(payload.items);
   const shippingCost = payload.shippingCost ?? Math.round((payload.totalAmount - subtotal) * 100) / 100;
-  const shippingDisplay = shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
+  const shippingDisplay = isGrouped(payload) ? 'Pendiente de solicitar' : shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost);
   
   return [
     `Nuevo pedido: ${payload.orderNumber}`,
     `Estado pago: ${payload.paymentStatus}`,
+    `Tipo de envio: ${shippingModeLabel(payload)}`,
     '',
     `Cliente: ${payload.fullName}`,
     `Email:   ${payload.email}`,
@@ -581,8 +637,8 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
     return;
   }
 
-  const customerSubject = `Tu pedido ${payload.orderNumber} - TCG Iberia`;
-  const adminSubject = `Nuevo pedido ${payload.orderNumber} - ${escapeHtml(payload.fullName)}`;
+  const customerSubject = `Pedido Confirmado ${payload.orderNumber} - TCG Iberia`;
+  const adminSubject = `Nuevo pedido ${payload.orderNumber}`;
 
   console.log(
     `[email] Sending order confirmation emails for order ${payload.orderNumber}\n` +
@@ -700,7 +756,7 @@ function buildShipmentRequestAdminHtml(payload: ShipmentRequestEmailPayload): st
 function buildShipmentRequestAdminText(payload: ShipmentRequestEmailPayload): string {
   const orderLines = payload.orders.flatMap((order) => [
     `Pedido ${order.orderNumber} (${formatCurrency(order.totalAmount)}):`,
-    ...order.items.map((i) => `  - ${i.name}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`),
+    ...order.items.map((i) => `  - ${textItemName(i)}  x${i.quantity}  ${formatCurrency(lineSubtotal(i))}`),
   ]);
 
   return [

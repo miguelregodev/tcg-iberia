@@ -52,28 +52,20 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
   /**
    * B2B totals.
    *
-   * The wholesale prices shown per line are treated as VAT-inclusive
-   * (the customer pays the sum of line prices as-is). The invoice split
-   * therefore back-computes the pre-tax base:
-   *   base_imponible = gross / 1.21
-   *   IVA (21%)      = gross - base_imponible
-   *   Total          = gross
+   * Per-line wholesale prices are VAT-excluded, so the base is the sum of the
+   * lines and IVA (21%) is added on top.
    */
-  const b2bGross = useMemo(() => {
+  const b2bSubtotal = useMemo(() => {
     if (!isB2B) return 0;
     const total = items.reduce((sum, i) => sum + effectiveUnitPrice(i) * i.quantity, 0);
     return Math.round(total * 100) / 100;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, isB2B, b2bOverrides]);
-  const b2bSubtotal = useMemo(
-    () => (isB2B ? Math.round((b2bGross / (1 + B2B_IVA_RATE)) * 100) / 100 : 0),
-    [b2bGross, isB2B]
-  );
   const b2bIva = useMemo(
-    () => (isB2B ? Math.round((b2bGross - b2bSubtotal) * 100) / 100 : 0),
-    [b2bGross, b2bSubtotal, isB2B]
+    () => (isB2B ? Math.round(b2bSubtotal * B2B_IVA_RATE * 100) / 100 : 0),
+    [b2bSubtotal, isB2B]
   );
-  const b2bTotal = b2bGross;
+  const b2bTotal = Math.round((b2bSubtotal + b2bIva) * 100) / 100;
 
   if (!isOpen) return null;
 
@@ -210,7 +202,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                       releaseDate: item.product.releaseDate,
                     });
                     const releaseDate = formatReleaseDate(item.product.releaseDate);
-                    const quantityLimit = getProductQuantityLimit(inventoryState);
+                    const quantityLimit = isB2B ? null : getProductQuantityLimit(inventoryState);
                     // Sellado and Apertura en Directo lines share one stock pool.
                     const baseId = item.product.id.replace(/_live$/, '');
                     const otherVariantQuantity = items
@@ -266,9 +258,14 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                           <p className="text-xs sm:text-sm text-text-secondary mb-1 sm:mb-2">
                             {finalUnitPrice.toFixed(2)}€ / ud
                             {isB2B && (
-                              <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
-                                B2B
-                              </span>
+                              <>
+                                <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-premium-gold/15 text-premium-gold">
+                                  B2B
+                                </span>
+                                <span className="ml-1 text-[10px] text-text-muted">
+                                  Impuestos no incluidos
+                                </span>
+                              </>
                             )}
                           </p>
                           {!isB2B && item.product.discountPercentage && (

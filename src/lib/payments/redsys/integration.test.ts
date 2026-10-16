@@ -4,7 +4,7 @@ import { parseRedsysNotificationPayload, decodeRedsysMerchantParameters } from '
 import { isRedsysResponseSuccess, isRedsysResponseCancelled } from '@/lib/payments/redsys/types';
 
 // Mock server-only module for test environment
-vi.mock('server-only', () => ({}), { virtual: true });
+vi.mock('server-only', () => ({}));
 
 // Set up test environment variables for Redsys tests
 // Secret must decode to exactly 24 bytes (32 Base64 chars, no padding) for 3DES
@@ -130,7 +130,7 @@ describe('Redsys Payment Processing Integration', () => {
       const encodedParams = toBase64(JSON.stringify(params));
       const decoded = decodeRedsysMerchantParameters(encodedParams);
 
-      expect(decoded.Ds_Card_MaskedPAN).toBe('4545****4545');
+      expect((decoded as Record<string, unknown>).Ds_Card_MaskedPAN).toBe('4545****4545');
       expect(decoded.Ds_AuthorisationCode).toBe('AUTH-999-XYZ');
     });
 
@@ -347,13 +347,13 @@ describe('Redsys Payment Processing Integration', () => {
     it('handles very large encoded parameters', () => {
       const largeParams = createMerchantParams();
       // Add additional data
-      largeParams.Ds_Merchant_Description =
+      (largeParams as Record<string, unknown>).Ds_Merchant_Description =
         'A'.repeat(1000) + JSON.stringify({ extra: 'data' });
 
       const encodedParams = toBase64(JSON.stringify(largeParams));
       const decoded = decodeRedsysMerchantParameters(encodedParams);
 
-      expect(decoded.Ds_Merchant_Description).toBe(
+      expect((decoded as Record<string, unknown>).Ds_Merchant_Description).toBe(
         'A'.repeat(1000) + JSON.stringify({ extra: 'data' })
       );
     });

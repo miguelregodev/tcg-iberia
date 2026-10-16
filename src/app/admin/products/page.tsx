@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { Product } from '@/types';
 import { AdminNav } from '@/components/AdminNav';
-import { ProductForm } from '@/components/ProductForm';
+import { ProductForm, PRODUCT_TYPES } from '@/components/ProductForm';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 
@@ -69,12 +69,15 @@ export default function AdminProducts() {
     }
   };
 
+  // Every type selectable in the product form, plus any legacy/custom types already stored.
   const productTypes = useMemo(() => {
-    const set = new Set<string>();
+    const types = new Map<string, string>(
+      PRODUCT_TYPES.filter((t) => t.value).map((t) => [t.value, t.label])
+    );
     products.forEach((p) => {
-      if (p.type) set.add(p.type);
+      if (p.type && !types.has(p.type)) types.set(p.type, p.type);
     });
-    return Array.from(set).sort();
+    return Array.from(types, ([value, label]) => ({ value, label }));
   }, [products]);
 
   const filtered = useMemo(() => {
@@ -238,8 +241,8 @@ export default function AdminProducts() {
                 >
                   <option value="">Todos</option>
                   {productTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                    <option key={t.value} value={t.value}>
+                      {t.label}
                     </option>
                   ))}
                 </select>

@@ -11,10 +11,26 @@ import {
 describe('product inventory state', () => {
   const now = new Date('2026-06-15T10:00:00.000Z');
 
-  it('classifies future releases as preorder even when stock is zero', () => {
+  it('classifies future releases with zero stock as out of stock preorders', () => {
     const state = getProductInventoryState(
       {
         stock: 0,
+        releaseDate: '2026-07-01T00:00:00.000Z',
+      },
+      now,
+    );
+
+    expect(state.status).toBe('out_of_stock');
+    expect(state.isPreorder).toBe(true);
+    expect(state.canPurchase).toBe(false);
+    expect(state.isOutOfStock).toBe(true);
+    expect(getProductStatusLabel(state)).toBe('Agotado');
+  });
+
+  it('classifies future releases with stock as purchasable preorders', () => {
+    const state = getProductInventoryState(
+      {
+        stock: 10,
         releaseDate: '2026-07-01T00:00:00.000Z',
       },
       now,

@@ -157,8 +157,7 @@ export function Navigation() {
 
           {/* Centered Logo & Brand */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src="/images/logo.png" alt="TCG Iberia" className="h-10 w-auto" />
-            <span className="hidden sm:inline text-lg md:text-2xl font-bold text-premium-gold">TCG Iberia</span>
+            <img src="/images/new-logo.png" alt="TCG Iberia" className="h-10 sm:h-14 md:h-16 w-auto" />
           </Link>
 
           {/* Right side: Search + Login / Account + Shopping Bag */}

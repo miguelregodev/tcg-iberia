@@ -128,13 +128,11 @@ export async function POST(request: NextRequest) {
               throw new Error(`Invalid item payload in checkout cart for session ${session.id}`);
             }
 
-            if (item.isPreorder) {
-              continue;
-            }
-
+            // Live-opening cart ids carry a `_live` suffix but share the base product's stock.
+            const productId = item.id.replace(/_live$/, '');
             const updateStock = await tx.product.updateMany({
               where: {
-                id: item.id,
+                id: productId,
                 stock: { gte: item.quantity },
               },
               data: {

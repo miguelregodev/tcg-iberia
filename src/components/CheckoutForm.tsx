@@ -27,11 +27,13 @@ export function CheckoutForm() {
     cartId,
     isHydrated,
     updateQuantity,
+    updateItemPricing,
   } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stockWarning, setStockWarning] = useState<string[] | null>(null);
+  const [priceWarning, setPriceWarning] = useState<string[] | null>(null);
   const [postalCodeFilled, setPostalCodeFilled] = useState(false);
   const [postalCodeError, setPostalCodeError] = useState<string | null>(null);
   const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
@@ -121,12 +123,18 @@ export function CheckoutForm() {
     };
   }, [session?.user?.email, status]);
 
-  // Re-validates current cart items against live stock. Any item that's no longer
-  // purchasable (out of stock / unpublished / deleted) gets its quantity zeroed out
+  // Re-validates current cart items against live stock and pricing. Any item that's no
+  // longer purchasable (out of stock / unpublished / deleted) gets its quantity zeroed out
   // (removing it from the cart), triggering the shipping-cost recalculation effect
-  // above. Returns whether every item was valid, plus the names that were removed.
-  const validateCartStock = useCallback(async (): Promise<{ ok: boolean; removedNames: string[] }> => {
-    if (items.length === 0) return { ok: true, removedNames: [] };
+  // above. Items whose price or discount changed since they were added get refreshed in
+  // the cart. Returns whether every item was valid, the names that were removed, and the
+  // names whose pricing was updated.
+  const validateCartStock = useCallback(async (): Promise<{
+    ok: boolean;
+    removedNames: string[];
+    priceChangedNames: string[];
+  }> => {
+    if (items.length === 0) return { ok: true, removedNames: [], priceChangedNames: [] };
 
     const realIds = Array.from(new Set(items.map((item) => item.product.id.replace(/_live$/, ''))));
 
@@ -139,39 +147,73 @@ export function CheckoutForm() {
 
       if (!response.ok) {
         // Fail open: don't block checkout on a transient stock-check error.
-        return { ok: true, removedNames: [] };
+        return { ok: true, removedNames: [], priceChangedNames: [] };
       }
 
-      const { data } = (await response.json()) as { data: { id: string; canPurchase: boolean }[] };
-      const canPurchaseById = new Map(data.map((d) => [d.id, d.canPurchase]));
+      const { data } = (await response.json()) as {
+        data: {
+          id: string;
+          canPurchase: boolean;
+          price: number;
+          liveOpeningPrice: number | null;
+          discountPercentage: number | null;
+        }[];
+      };
+      const byId = new Map(data.map((d) => [d.id, d]));
 
       const removedNames: string[] = [];
+      const priceChangedNames: string[] = [];
+      const pricingUpdates: { productId: string; price: number; discountPercentage: number | null }[] = [];
       for (const item of items) {
         const realId = item.product.id.replace(/_live$/, '');
-        if (!canPurchaseById.get(realId)) {
+        const current = byId.get(realId);
+        if (!current?.canPurchase) {
           removedNames.push(item.product.name);
           updateQuantity(item.product.id, 0);
+          continue;
+        }
+
+        const isLive = item.product.id.endsWith('_live');
+        const currentPrice = isLive ? current.liveOpeningPrice : current.price;
+        if (currentPrice == null) continue;
+        const currentDiscount = current.discountPercentage;
+
+        const priceChanged = Math.abs(Number(item.product.price) - currentPrice) > 0.005;
+        const discountChanged =
+          Math.abs(Number(item.product.discountPercentage ?? 0) - Number(currentDiscount ?? 0)) > 0.005;
+        if (priceChanged || discountChanged) {
+          priceChangedNames.push(item.product.name);
+          pricingUpdates.push({
+            productId: item.product.id,
+            price: currentPrice,
+            discountPercentage: currentDiscount,
+          });
         }
       }
 
-      return { ok: removedNames.length === 0, removedNames };
+      updateItemPricing(pricingUpdates);
+
+      return { ok: removedNames.length === 0, removedNames, priceChangedNames };
     } catch (err) {
       Sentry.captureException(err, {
         tags: { module: 'checkout', action: 'validate_stock' },
       });
       // Fail open: don't block checkout on a transient network error.
-      return { ok: true, removedNames: [] };
+      return { ok: true, removedNames: [], priceChangedNames: [] };
     }
-  }, [items, updateQuantity]);
+  }, [items, updateQuantity, updateItemPricing]);
 
   // Run the stock check once, right after the cart finishes loading from localStorage.
   useEffect(() => {
     if (!isHydrated || didRunInitialStockCheck.current) return;
     didRunInitialStockCheck.current = true;
 
-    validateCartStock().then(({ removedNames }) => {
+    validateCartStock().then(({ removedNames, priceChangedNames }) => {
       if (removedNames.length > 0) {
         setStockWarning(removedNames);
+      }
+      if (priceChangedNames.length > 0) {
+        setPriceWarning(priceChangedNames);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,16 +291,26 @@ export function CheckoutForm() {
     e.preventDefault();
     setError(null);
     setStockWarning(null);
+    setPriceWarning(null);
 
-    // Re-validate stock right before paying: if anything went out of stock since the
-    // cart was loaded (or since the last check), zero it out, warn the customer, and
-    // stop here — do NOT redirect to Redsys. The customer must review and submit again.
+    // Re-validate stock and pricing right before paying: if anything went out of stock or
+    // its price/discount changed since the cart was loaded, update the cart, warn the
+    // customer, and stop here — do NOT redirect to Redsys. The customer must review the
+    // new totals and submit again.
     setIsValidatingStock(true);
-    const { ok, removedNames } = await validateCartStock();
+    const { ok, removedNames, priceChangedNames } = await validateCartStock();
     setIsValidatingStock(false);
+
+    if (priceChangedNames.length > 0) {
+      setPriceWarning(priceChangedNames);
+    }
 
     if (!ok) {
       setStockWarning(removedNames);
+      return;
+    }
+
+    if (priceChangedNames.length > 0) {
       return;
     }
 
@@ -366,6 +418,34 @@ export function CheckoutForm() {
     }
   };
 
+  const renderGroupedShippingOption = (helpId: string) => (
+    <div className="mt-4 border border-dark-border rounded-lg p-4 bg-dark-bgSecondary">
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={groupedShipping}
+          onChange={(e) => setGroupedShipping(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold accent-[#F5E77A]"
+          aria-describedby={helpId}
+        />
+        <span className="text-sm font-semibold text-text-primary">Agrupar Envío</span>
+      </label>
+      <p id={helpId} className="mt-2 text-xs text-text-secondary leading-relaxed">
+        Retrasa el envío de este pedido para poder agruparlo con futuras compras y ahorrar en
+        gastos de envío. Podrás solicitar el envío cuando quieras desde &ldquo;Mis pedidos&rdquo;.{' '}
+        <Link href="/envio-agrupado" className="text-premium-gold underline-offset-4 hover:underline">
+          Más información
+        </Link>
+      </p>
+      {groupedShipping && (
+        <p className="mt-2 text-xs font-semibold text-premium-gold">
+          Este pedido no se enviará todavía. Se pagará igualmente en su totalidad ahora; el envío
+          quedará pendiente hasta que lo solicites.
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="grid md:grid-cols-3 gap-8">
@@ -378,6 +458,15 @@ export function CheckoutForm() {
                   <p className="text-warning font-semibold mb-1">Algunos productos ya no están disponibles</p>
                   <p className="text-warning text-sm">
                     Hemos eliminado de tu pedido: {stockWarning.join(', ')}. Revisa tu pedido antes de continuar.
+                  </p>
+                </div>
+              )}
+
+              {priceWarning && priceWarning.length > 0 && (
+                <div className="p-4 bg-warning-bg border border-warning/30 rounded-lg" role="status" aria-live="polite">
+                  <p className="text-warning font-semibold mb-1">Los precios de tu pedido se han actualizado</p>
+                  <p className="text-warning text-sm">
+                    Hemos actualizado el precio de: {priceWarning.join(', ')}. Revisa el total antes de continuar.
                   </p>
                 </div>
               )}
@@ -544,6 +633,13 @@ export function CheckoutForm() {
                 </div>
               </div>
 
+              {/* "Agrupar Envío" — only offered to authenticated customers (guest checkout unaffected) */}
+              {isAuthenticated && (
+                <div className="md:hidden">
+                  {renderGroupedShippingOption('grouped-shipping-help-mobile')}
+                </div>
+              )}
+
               {/* Pay Button */}
               <button
                 type="submit"
@@ -671,30 +767,8 @@ export function CheckoutForm() {
 
             {/* "Agrupar Envío" — only offered to authenticated customers (guest checkout unaffected) */}
             {isAuthenticated && (
-              <div className="mt-4 border border-dark-border rounded-lg p-4 bg-dark-bgSecondary">
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={groupedShipping}
-                    onChange={(e) => setGroupedShipping(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold accent-[#F5E77A]"
-                    aria-describedby="grouped-shipping-help"
-                  />
-                  <span className="text-sm font-semibold text-text-primary">Agrupar Envío</span>
-                </label>
-                <p id="grouped-shipping-help" className="mt-2 text-xs text-text-secondary leading-relaxed">
-                  Retrasa el envío de este pedido para poder agruparlo con futuras compras y ahorrar en
-                  gastos de envío. Podrás solicitar el envío cuando quieras desde &ldquo;Mis pedidos&rdquo;.{' '}
-                  <Link href="/envio-agrupado" className="text-premium-gold underline-offset-4 hover:underline">
-                    Más información
-                  </Link>
-                </p>
-                {groupedShipping && (
-                  <p className="mt-2 text-xs font-semibold text-premium-gold">
-                    Este pedido no se enviará todavía. Se pagará igualmente en su totalidad ahora; el envío
-                    quedará pendiente hasta que lo solicites.
-                  </p>
-                )}
+              <div className="hidden md:block">
+                {renderGroupedShippingOption('grouped-shipping-help-desktop')}
               </div>
             )}
           </div>

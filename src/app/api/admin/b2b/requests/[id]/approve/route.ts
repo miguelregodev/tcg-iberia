@@ -22,6 +22,7 @@ import { isAdminAuthenticated } from '@/lib/b2b/admin-auth';
 import { issueActivationToken, B2B_ACTIVATION_TOKEN_TTL_HOURS } from '@/lib/b2b/tokens';
 import { sendB2bActivationEmail } from '@/lib/b2b/emails';
 import { isValidEmail } from '@/lib/b2b/validation';
+import { getB2bAppUrl } from '@/lib/b2b/app-url';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     request.cookies.get('tcg_admin_auth')?.value ?? 'admin@tcgiberia.com';
 
   try {
+    const activationUrl = `${getB2bAppUrl(request.nextUrl.origin)}/b2b/activar/${activationToken.raw}`;
     const { customer } = await db.$transaction(async (tx) => {
       const customer = await tx.b2bCustomer.create({
         data: {
@@ -123,24 +125,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return { customer };
     });
 
-    // Send activation email fire-and-forget.
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const activationUrl = `${appUrl}/b2b/activar/${activationToken.raw}`;
-    void sendB2bActivationEmail({
-      email: customer.email,
-      contactName: customer.contactName,
-      companyName: customer.companyName,
-      activationUrl,
-      expiresAt: activationToken.expiresAt,
-    }).catch((err) => {
+    let emailSent = false;
+    try {
+      await sendB2bActivationEmail({
+        email: customer.email,
+        contactName: customer.contactName,
+        companyName: customer.companyName,
+        activationUrl,
+        expiresAt: activationToken.expiresAt,
+      });
+      emailSent = true;
+    } catch (err) {
       Sentry.captureException(err, {
         tags: { module: 'b2b', action: 'activation_email' },
         extra: { customerId: customer.id },
       });
-    });
+    }
 
     return NextResponse.json({
       success: true,
+      emailSent,
       customer: {
         id: customer.id,
         email: customer.email,

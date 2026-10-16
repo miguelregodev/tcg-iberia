@@ -32,5 +32,10 @@ export const B2B_COMPANY_ADDRESS_LINES: readonly string[] = [
 /** Spanish B2B VAT rate applied to every wholesale invoice. */
 export const B2B_IVA_RATE = 0.21;
 
+/** Converts the stored `b2bPrice` into the VAT-excluded price shown to B2B customers. */
+export function b2bNetPrice(storedPrice: number): number {
+  return Math.round((storedPrice / (1 + B2B_IVA_RATE)) * 100) / 100;
+}
+
 /** How long the customer has to pay the invoice before prices may be revised. */
 export const B2B_INVOICE_VALIDITY_HOURS = 24;

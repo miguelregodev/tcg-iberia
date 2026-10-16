@@ -241,6 +241,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
+    // A late failure/cancel notification must not override an already-paid order
+    if (order.paymentStatus === 'PAID' && !isRedsysResponseSuccess(responseCode)) {
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     // Extract payment details from Redsys response
     const paymentAmount = extractRedsysAmount(params);
     const paymentCurrency = extractRedsysCurrency(params);
@@ -312,10 +317,10 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Still return 200 OK to Redsys; error is logged
+        // Non-2xx so Redsys retries; the handler is idempotent
         return NextResponse.json(
-          { received: true },
-          { status: 200 }
+          { error: 'Payment processing failed' },
+          { status: 500 }
         );
       }
     } else if (isRedsysResponseCancelled(responseCode)) {
@@ -397,10 +402,10 @@ export async function POST(request: NextRequest) {
       module: 'redsys_notification_handler',
     });
 
-    // Return 200 OK to Redsys even on error (idempotency + acknowledgement)
+    // Non-2xx so Redsys retries; the handlers are idempotent
     return NextResponse.json(
-      { received: true },
-      { status: 200 }
+      { error: 'Notification processing failed' },
+      { status: 500 }
     );
   }
 }

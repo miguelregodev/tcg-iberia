@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ORDER_ITEM_VARIANT_LABEL, getOrderItemVariant } from '@/lib/orders/items';
 import * as Sentry from '@sentry/nextjs';
 
 type OrderStatus = 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -8,8 +10,11 @@ type PaymentStatus = 'PENDING_PAYMENT' | 'PAID' | 'PAYMENT_FAILED' | 'CANCELLED'
 type ShippingMode = 'IMMEDIATE' | 'GROUPED';
 
 interface OrderItem {
+  id?: string;
   productId: string;
   name: string;
+  /** Current product slug, or null when the product no longer exists / is hidden. */
+  slug?: string | null;
   quantity: number;
   price: number;
   discountPercentage?: number;
@@ -111,6 +116,9 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<ExpandedOrder>({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
 
   // "Solicitar envío" consolidation panel state
   const [panelOrderId, setPanelOrderId] = useState<string | null>(null);
@@ -119,6 +127,11 @@ export default function PedidosPage() {
   const [panelLoading, setPanelLoading] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [shippingWarning, setShippingWarning] = useState<{
+    shippingCost: number;
+    merchandiseTotal: number;
+    freeShippingThreshold: number;
+  } | null>(null);
 
   const toggleExpanded = (orderId: string) => {
     setExpandedOrders((prev) => ({
@@ -129,10 +142,14 @@ export default function PedidosPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/user/orders');
+      const res = await fetch(`/api/user/orders?page=${page}`);
       if (!res.ok) throw new Error('Failed to load orders');
       const json = await res.json();
       setOrders(json.data ?? []);
+      setTotalPages(json.pagination?.totalPages ?? 1);
+      setTotalOrders(json.pagination?.total ?? 0);
+      // The server clamps out-of-range pages (e.g. after orders were removed).
+      if (json.pagination?.page && json.pagination.page !== page) setPage(json.pagination.page);
     } catch (err) {
       Sentry.captureException(err, { tags: { module: 'mi-cuenta', section: 'pedidos' } });
       setError('No se pudieron cargar tus pedidos.');
@@ -143,7 +160,16 @@ export default function PedidosPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const goToPage = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    setLoading(true);
+    setExpandedOrders({});
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const openRequestPanel = async (orderId: string) => {
     setPanelOrderId(orderId);
@@ -179,6 +205,7 @@ export default function PedidosPage() {
     setEligibleOrders([]);
     setSelectedIds(new Set());
     setPanelError(null);
+    setShippingWarning(null);
   };
 
   const toggleSelected = (orderId: string) => {
@@ -191,6 +218,40 @@ export default function PedidosPage() {
   };
 
   const confirmShipmentRequest = async () => {
+    if (selectedIds.size === 0) return;
+    setSubmitting(true);
+    setPanelError(null);
+    try {
+      // Preview first: if a shipping fee applies, ask the customer to acknowledge it.
+      const previewRes = await fetch('/api/user/shipments/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: Array.from(selectedIds), preview: true }),
+      });
+      const preview = await previewRes.json();
+      if (!previewRes.ok) throw new Error(preview.error || 'No se pudo calcular el coste de envío.');
+
+      if (preview.shippingCost > 0) {
+        setShippingWarning({
+          shippingCost: preview.shippingCost,
+          merchandiseTotal: preview.merchandiseTotal,
+          freeShippingThreshold: preview.freeShippingThreshold,
+        });
+        return;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo calcular el coste de envío.';
+      Sentry.captureException(err, { tags: { module: 'mi-cuenta', section: 'pedidos_preview_envio' } });
+      setPanelError(message);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+
+    await requestShipment();
+  };
+
+  const requestShipment = async () => {
     if (selectedIds.size === 0) return;
     setSubmitting(true);
     setPanelError(null);
@@ -209,11 +270,13 @@ export default function PedidosPage() {
         return;
       }
 
+      setShippingWarning(null);
       closePanel();
       await fetchOrders();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo solicitar el envío.';
       Sentry.captureException(err, { tags: { module: 'mi-cuenta', section: 'pedidos_confirmar_envio' } });
+      setShippingWarning(null);
       setPanelError(message);
     } finally {
       setSubmitting(false);
@@ -453,7 +516,19 @@ export default function PedidosPage() {
                       order.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-start text-sm bg-dark-surface p-3 rounded-lg">
                           <div className="flex-1">
-                            <p className="font-medium text-text-primary">{item.name}</p>
+                            {item.slug ? (
+                              <Link
+                                href={`/product/${item.slug}`}
+                                className="font-medium text-text-primary hover:text-premium-gold underline-offset-2 hover:underline transition-colors"
+                              >
+                                {item.name}
+                              </Link>
+                            ) : (
+                              <p className="font-medium text-text-primary">{item.name}</p>
+                            )}
+                            <p className="text-xs font-semibold text-premium-gold mt-1">
+                              {ORDER_ITEM_VARIANT_LABEL[getOrderItemVariant(item)]}
+                            </p>
                             {item.isPreorder ? (
                               <p className="text-xs font-semibold text-premium-gold mt-1">
                                 Reserva
@@ -532,6 +607,30 @@ export default function PedidosPage() {
         </div>
       )}
 
+      {totalPages > 1 && (
+        <nav aria-label="Paginación de pedidos" className="mt-6 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="px-4 py-2 border border-dark-border rounded-lg text-text-secondary bg-dark-surface hover:bg-dark-surfaceHover font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <p className="text-sm text-text-secondary" aria-live="polite">
+            Página {page} de {totalPages} ({totalOrders} pedidos)
+          </p>
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="px-4 py-2 border border-dark-border rounded-lg text-text-secondary bg-dark-surface hover:bg-dark-surfaceHover font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Siguiente
+          </button>
+        </nav>
+      )}
+
       {/* "Solicitar envío" / consolidation panel */}
       {panelOrderId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -594,6 +693,54 @@ export default function PedidosPage() {
                 className="flex-1 btn btn-primary disabled:opacity-50"
               >
                 {submitting ? 'Procesando...' : 'Confirmar envío agrupado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shipping fee warning */}
+      {shippingWarning && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="shipping-warning-title"
+          aria-describedby="shipping-warning-desc"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && !submitting) setShippingWarning(null);
+          }}
+        >
+          <div className="bg-dark-surface border border-dark-border rounded-xl shadow-elevated max-w-md w-full p-6">
+            <h2 id="shipping-warning-title" className="text-lg font-bold text-text-primary mb-2">
+              Se aplicarán gastos de envío
+            </h2>
+            <p id="shipping-warning-desc" className="text-sm text-text-secondary mb-4">
+              {shippingWarning.merchandiseTotal < shippingWarning.freeShippingThreshold
+                ? `El importe de tus pedidos (${shippingWarning.merchandiseTotal.toFixed(2)} €) no alcanza el mínimo de envío gratuito (${shippingWarning.freeShippingThreshold.toFixed(2)} €), por lo que deberás pagar los gastos de envío para continuar.`
+                : 'Para tu dirección de envío se aplican gastos de envío que deberás pagar para continuar.'}
+            </p>
+            <div className="flex justify-between text-sm font-semibold text-text-primary border-t border-dark-border pt-3 mb-5">
+              <span>Gastos de envío</span>
+              <span>{shippingWarning.shippingCost.toFixed(2)} €</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setShippingWarning(null)}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 border border-dark-border rounded-lg text-text-secondary bg-dark-surface hover:bg-dark-surfaceHover font-medium disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={requestShipment}
+                disabled={submitting}
+                className="flex-1 btn btn-primary disabled:opacity-50"
+              >
+                {submitting ? 'Redirigiendo...' : 'Confirmar y pagar'}
               </button>
             </div>
           </div>

@@ -100,7 +100,19 @@ export default function FavoritosPage() {
         const res = await fetch('/api/user/favorites');
         if (!res.ok) throw new Error('Failed to load favorites');
         const json = await res.json();
-        setFavorites(json.data ?? []);
+        // Prisma Decimals are serialized as strings; normalize to numbers.
+        const toNum = (v: unknown) => (v == null ? null : Number(v));
+        setFavorites(
+          ((json.data ?? []) as Favorite[]).map((fav) => ({
+            ...fav,
+            product: {
+              ...fav.product,
+              price: Number(fav.product.price),
+              discountPercentage: toNum(fav.product.discountPercentage),
+              liveOpeningPrice: toNum(fav.product.liveOpeningPrice),
+            },
+          })),
+        );
       } catch (err) {
         Sentry.captureException(err, { tags: { module: 'mi-cuenta', section: 'favoritos' } });
         setError('No se pudieron cargar tus favoritos.');

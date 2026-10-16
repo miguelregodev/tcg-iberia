@@ -29,6 +29,7 @@ import { calculateSubtotal } from '@/lib/shipping/free-shipping';
 import { resolveShippingCost } from '@/lib/shipping/resolve-shipping-cost';
 import { SHIPPING_CONFIG } from '@/lib/shipping/config';
 import { isOrderItemSnapshot } from '@/lib/orders/items';
+import { priceOrderItems, toShippingItems } from '@/lib/orders/pricing';
 import { RETRIABLE_PAYMENT_STATUSES } from '@/lib/orders/retry';
 import { getRedsysConfig, getRedsysApiUrl } from '@/lib/payments/redsys/config';
 import { nextRedsysOrderId } from '@/lib/payments/redsys/orderId';
@@ -108,39 +109,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Client prices are never trusted: price and discount come from the database.
+    const priced = await priceOrderItems(items);
+    if (!priced.ok) {
+      return NextResponse.json({ error: priced.error }, { status: 400 });
+    }
+    const { items: pricedItems, products } = priced;
+
     // Calculate totals with zone-aware shipping (Canary Islands, Baleares, etc.)
     const subtotal = calculateSubtotal(
-      items.map((item) => ({
+      pricedItems.map((item) => ({
         price: item.price,
         quantity: item.quantity,
         discountPercentage: item.discountPercentage,
       }))
     );
 
-    // Fetch product data for shipping calculation (weight, dimensions)
-    const productIds = items.map((item) => item.id);
-    const products = await db.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true,
-        weightGrams: true,
-        lengthCm: true,
-        widthCm: true,
-        heightCm: true,
-      },
-    });
-
-    // Build shipping items array with product details
-    const shippingItems = items.map((item) => {
-      const product = products.find((p) => p.id === item.id);
-      return {
-        quantity: item.quantity,
-        weightGrams: product?.weightGrams || null,
-        lengthCm: product?.lengthCm || null,
-        widthCm: product?.widthCm || null,
-        heightCm: product?.heightCm || null,
-      };
-    });
+    const shippingItems = toShippingItems(pricedItems, products);
 
     // Grouped shipping ('Agrupar Envío'): the customer explicitly defers this order's
     // shipment, so no shipping fee is collected now. The fee is computed once — from the
@@ -227,7 +212,7 @@ export async function POST(request: NextRequest) {
         totalAmount: String(totalAmount),
         status: 'PROCESSING' as const,
         shippingMode: groupedShipping ? ('GROUPED' as const) : ('IMMEDIATE' as const),
-        items: items as unknown as Prisma.InputJsonValue,
+        items: pricedItems as unknown as Prisma.InputJsonValue,
         // Clear any stale attempt data left over from a previous failed/abandoned try.
         redsysTransactionId: null,
         redsysResponseCode: null,

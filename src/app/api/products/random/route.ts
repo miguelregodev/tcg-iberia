@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {
       visible: true,
-      OR: [{ stock: { gt: 0 } }, { releaseDate: { gt: new Date() } }],
+      stock: { gt: 0 },
     };
     if (excludeId) {
       where.id = { not: excludeId };
