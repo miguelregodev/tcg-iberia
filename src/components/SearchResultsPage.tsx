@@ -78,8 +78,9 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
     });
   }, [loading, trimmedQuery, total, tokens.length]);
 
-  const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
+  const { visibleCount, sentinelRef, hasMore, saveSnapshot } = useInfiniteReveal({
     total: products.length,
+    snapshotKey: `search:${trimmedQuery}`,
   });
 
   return (
@@ -138,6 +139,7 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
               visibleCount={visibleCount}
               sentinelRef={sentinelRef}
               hasMore={hasMore}
+              onNavigateAway={saveSnapshot}
             />
           )}
         </div>

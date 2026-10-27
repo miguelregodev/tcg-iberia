@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function MysteryPacksPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
+  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE' | undefined;
 
   return (
     <>

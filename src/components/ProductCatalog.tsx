@@ -5,7 +5,7 @@ import { Product } from '@/types';
 import { ProductCard } from './ProductCard';
 import { trackProductSearch } from '@/lib/analytics/events';
 
-type LanguageFilter = 'ALL' | 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
+type LanguageFilter = 'ALL' | 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
 const LANGUAGES: { value: LanguageFilter; label: string; flag: string }[] = [
   { value: 'ALL', label: 'All Languages', flag: '' },
@@ -13,6 +13,7 @@ const LANGUAGES: { value: LanguageFilter; label: string; flag: string }[] = [
   { value: 'JAPANESE', label: 'Japanese', flag: '/images/japan.png' },
   { value: 'KOREAN', label: 'Korean', flag: '/images/south-korea.png' },
   { value: 'SPANISH', label: 'Spanish', flag: '/images/spain.png' },
+  { value: 'CHINESE', label: 'Chinese', flag: '/images/china.png' },
 ];
 
 export function ProductCatalog() {

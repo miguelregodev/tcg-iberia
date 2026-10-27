@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, Fragment } from 'react';
+import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
 import { getTrackingUrl, getProviderLabel } from '@/lib/shipping/tracking-urls';
 import { ORDER_ITEM_VARIANT_LABEL, getOrderItemVariant } from '@/lib/orders/items';
@@ -53,6 +54,14 @@ interface Order {
   shippingMode: 'IMMEDIATE' | 'GROUPED';
   shipmentId: string | null;
   shipment: ShipmentInfo | null;
+  partyParticipation: {
+    status: string;
+    shippingRequestedAt: string | null;
+    partyId: string;
+    partyStatus: string;
+    partyMode: 'SHARED' | 'BATTLE';
+    isWinner: boolean;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -540,6 +549,17 @@ export default function AdminOrdersPage() {
                                       ? 'ENVÍO: PAGO PENDIENTE'
                                       : 'ENVÍO SOLICITADO'}
                                   </span>
+                                )}
+                                {order.partyParticipation && (
+                                  <Link
+                                    href="/admin/parties"
+                                    className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800"
+                                  >
+                                    PARTY {order.partyParticipation.partyMode === 'SHARED' ? 'COMPARTIDA' : 'BATALLA'} · {order.partyParticipation.partyMode === 'BATTLE' && order.partyParticipation.isWinner ? 'GANADOR' : 'PARTICIPANTE'}
+                                    {(order.partyParticipation.partyMode === 'SHARED' || order.partyParticipation.isWinner) && order.partyParticipation.shippingRequestedAt
+                                      ? ' · ENVÍO SOLICITADO'
+                                      : ''}
+                                  </Link>
                                 )}
                               </div>
                             </td>

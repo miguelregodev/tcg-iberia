@@ -12,6 +12,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   JAPANESE: 'Japonés',
   KOREAN: 'Coreano',
   SPANISH: 'Español',
+  CHINESE: 'Chino',
 };
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -19,6 +20,7 @@ const LANGUAGE_FLAGS: Record<string, string> = {
   JAPANESE: '/images/japan.png',
   KOREAN: '/images/south-korea.png',
   SPANISH: '/images/spain.png',
+  CHINESE: '/images/china.png',
 };
 
 const currency = new Intl.NumberFormat('es-ES', {
@@ -225,6 +227,7 @@ export default function AdminProducts() {
                   <option value="JAPANESE">Japonés</option>
                   <option value="KOREAN">Coreano</option>
                   <option value="SPANISH">Español</option>
+                  <option value="CHINESE">Chino</option>
                 </select>
               </div>
               <div>

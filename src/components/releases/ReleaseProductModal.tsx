@@ -9,6 +9,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   KOREAN: 'Coreano',
   ENGLISH: 'Inglés',
   SPANISH: 'Español',
+  CHINESE: 'Chino',
 };
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -16,6 +17,7 @@ const LANGUAGE_FLAGS: Record<string, string> = {
   KOREAN: '/images/south-korea.png',
   ENGLISH: '/images/united-kingdom.png',
   SPANISH: '/images/spain.png',
+  CHINESE: '/images/china.png',
 };
 
 interface Props {

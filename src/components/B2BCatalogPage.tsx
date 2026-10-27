@@ -23,13 +23,14 @@ import { useB2BPrices } from '@/hooks/useB2BPrices';
 import { trackCategoryViewed } from '@/lib/analytics/events';
 import { ProductCardB2B } from './ProductCardB2B';
 
-type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
+type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   ENGLISH: 'Inglés',
   JAPANESE: 'Japonés',
   KOREAN: 'Coreano',
   SPANISH: 'Español',
+  CHINESE: 'Chino',
 };
 
 const LANGUAGE_FLAGS: Record<Language, string> = {
@@ -37,9 +38,10 @@ const LANGUAGE_FLAGS: Record<Language, string> = {
   JAPANESE: '/images/japan.png',
   KOREAN: '/images/south-korea.png',
   SPANISH: '/images/spain.png',
+  CHINESE: '/images/china.png',
 };
 
-const LANGUAGES: Language[] = ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH'];
+const LANGUAGES: Language[] = ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH', 'CHINESE'];
 
 interface Props {
   language?: Language;

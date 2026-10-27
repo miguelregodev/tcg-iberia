@@ -11,7 +11,7 @@ import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
 import { Breadcrumbs } from './Breadcrumbs';
 
-type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
+type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
 interface ProductListPageProps {
   title: string;
@@ -37,6 +37,7 @@ const LANGUAGE_LABELS: Record<Language, string> = {
   JAPANESE: 'Japonés',
   KOREAN: 'Coreano',
   SPANISH: 'Español',
+  CHINESE: 'Chino',
 };
 
 const LANGUAGE_FLAGS: Record<Language, string> = {
@@ -44,9 +45,10 @@ const LANGUAGE_FLAGS: Record<Language, string> = {
   JAPANESE: '/images/japan.png',
   KOREAN: '/images/south-korea.png',
   SPANISH: '/images/spain.png',
+  CHINESE: '/images/china.png',
 };
 
-const LANGUAGES: Language[] = ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH'];
+const LANGUAGES: Language[] = ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH', 'CHINESE'];
 
 export function ProductListPage({
   title,
@@ -153,15 +155,16 @@ export function ProductListPage({
     });
   }, [loading, productType, title, language, visibleProducts.length]);
 
-  const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
+  const pathname = usePathname();
+  const { visibleCount, sentinelRef, hasMore, saveSnapshot } = useInfiniteReveal({
     total: visibleProducts.length,
+    snapshotKey: `${pathname}?${language ?? ''}`,
   });
 
   // Build language-pill href, preserving the current path. Derived from
   // usePathname() (not window.location) so the server-rendered HTML and the
   // client's first render produce the exact same string, avoiding a
   // hydration mismatch.
-  const pathname = usePathname();
   const buildLangHref = (lang: Language | null) => {
     return lang ? `${pathname}?language=${lang}` : pathname;
   };
@@ -303,6 +306,7 @@ export function ProductListPage({
               sentinelRef={sentinelRef}
               hasMore={hasMore}
               showLanguageFlag={showLanguageFlag}
+              onNavigateAway={saveSnapshot}
             />
           )}
         </div>

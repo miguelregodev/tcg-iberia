@@ -16,6 +16,7 @@ enum Language {
   KOREAN
   ENGLISH
   SPANISH
+  CHINESE
 }
 
 enum OrderStatus {
@@ -48,6 +49,38 @@ enum PaymentStatus {
 enum ShippingMode {
   IMMEDIATE
   GROUPED
+}
+
+enum PartyStatus {
+  OPEN
+  FULL
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// - SHARED (Compartida): every participant keeps the packs they paid for.
+/// - BATTLE (Batalla): the participant with the best hit wins every pack from the opening.
+enum PartyMode {
+  SHARED
+  BATTLE
+}
+
+enum PartyParticipationStatus {
+  PENDING_PAYMENT
+  PAID
+  EXPIRED
+  CANCELLED
+  REFUND_REQUESTED
+  REFUNDED
+  REFUND_REQUIRED
+}
+
+enum PartyRefundStatus {
+  NONE
+  REQUESTED
+  REJECTED
+  APPROVED
 }
 
 enum NotificationStatus {
@@ -148,6 +181,7 @@ model Product {
   stockAlerts          StockAlert[]
   priceMappings        PriceMapping[]
   priceHistory         PriceHistory[]
+  parties              Party[]
 
   @@index([visible])
   @@index([slug])
@@ -322,6 +356,7 @@ model Order {
   /// atomically claimed into a Shipment. Null while GROUPED and still awaiting a request.
   shipmentId            String?
   shipment              Shipment?   @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  partyParticipation    PartyParticipation?
   stripeSessionId       String?     @unique @db.VarChar(500)  // @deprecated: Legacy Stripe field
   redsysTransactionId   String?     @db.VarChar(50)  // Ds_Reference from Redsys
   redsysResponseCode    String?     @db.VarChar(10)  // Ds_Response from Redsys
@@ -392,6 +427,82 @@ model Shipment {
   @@index([paymentStatus])
 }
 
+model Party {
+  id                    String      @id @default(cuid())
+  productId             String
+  boxPrice              Decimal     @db.Decimal(10, 2)
+  packsPerBox           Int
+  participantCount      Int
+  packsPerParticipant   Int
+  participationPrice    Decimal     @db.Decimal(10, 2)
+  status                PartyStatus @default(OPEN)
+  mode                  PartyMode   @default(BATTLE)
+  internalNotes         String?     @db.Text
+  tiktokLiveUrl         String?     @db.VarChar(500)
+  startedAt             DateTime?
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  inventoryReleased     Boolean     @default(false)
+  createdByAdminId      String?     @db.VarChar(255)
+  winnerParticipationId String?     @unique
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  product               Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
+  participations        PartyParticipation[]  @relation("PartyParticipations")
+  winnerParticipation   PartyParticipation?   @relation("PartyWinner", fields: [winnerParticipationId], references: [id], onDelete: SetNull)
+  auditLogs             PartyAuditLog[]
+
+  @@index([status, createdAt])
+  @@index([productId])
+}
+
+model PartyParticipation {
+  id                      String                   @id @default(cuid())
+  partyId                 String
+  userId                  String
+  slotNumber              Int?
+  status                  PartyParticipationStatus @default(PENDING_PAYMENT)
+  refundStatus            PartyRefundStatus         @default(NONE)
+  amountPaid              Decimal                  @db.Decimal(10, 2)
+  /// Legacy Stripe references retained for reconciliation of previously created sessions.
+  stripeCheckoutSessionId String?                  @unique @db.VarChar(255)
+  stripePaymentIntentId   String?                  @unique @db.VarChar(255)
+  redsysOrderId           String?                  @unique @db.VarChar(12)
+  redsysTransactionId     String?                  @db.VarChar(50)
+  orderId                 String?                  @unique
+  reservedAt              DateTime                 @default(now())
+  reservationExpiresAt    DateTime?
+  paidAt                  DateTime?
+  refundedAt              DateTime?
+  shippingRequestedAt     DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  party      Party  @relation("PartyParticipations", fields: [partyId], references: [id], onDelete: Cascade)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order      Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  wonParty   Party? @relation("PartyWinner")
+
+  @@unique([partyId, slotNumber])
+  @@index([partyId, status])
+  @@index([userId, partyId])
+  @@index([reservationExpiresAt])
+}
+
+model PartyAuditLog {
+  id        String   @id @default(cuid())
+  partyId   String
+  action    String   @db.VarChar(100)
+  adminId   String?  @db.VarChar(255)
+  details   Json?
+  createdAt DateTime @default(now())
+
+  party     Party    @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@index([partyId, createdAt])
+}
+
 /// Sequence model represents a sequence for auto-incrementing IDs
 /// Fields:
 /// - name: ORDER
@@ -437,6 +548,7 @@ model User {
   orders        Order[]   // soft link — orders are also identified by email
   stockAlerts   StockAlert[]
   shipments     Shipment[]
+  partyParticipations PartyParticipation[]
 
   @@index([email])
 }
@@ -528,6 +640,7 @@ model CheckoutSessionCart {
   items      Json
   createdAt  DateTime  @default(now())
   processedAt DateTime?
+  inventoryConflictAt DateTime?
 
   @@index([createdAt])
 }

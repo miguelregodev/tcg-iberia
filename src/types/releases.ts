@@ -6,7 +6,7 @@ export type CalendarProduct = {
   discountPercentage: number | null;
   imageUrl: string | null;
   releaseDate: string; // ISO string
-  language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
+  language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH' | 'CHINESE';
 };
 
 export type CalendarDayData = {

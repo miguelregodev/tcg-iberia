@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function BoosterBoxesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | undefined;
+  const language = params.language as 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE' | undefined;
 
   return (
     <>
@@ -24,7 +24,7 @@ export default async function BoosterBoxesPage({ searchParams }: PageProps) {
         language={language}
         eyebrow="Cajas selladas"
         subtitle="Cajas selladas con todos los sobres de la expansión. La opción preferida por coleccionistas serios."
-        allowedLanguages={['JAPANESE', 'KOREAN']}
+        allowedLanguages={['JAPANESE', 'KOREAN', 'CHINESE']}
       />
       <Footer />
     </>

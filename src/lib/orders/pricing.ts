@@ -13,6 +13,7 @@ export type PricedOrderItemsResult =
       items: OrderItemSnapshot[];
       products: Array<{
         id: string;
+        stock: number;
         weightGrams: number | null;
         lengthCm: Prisma.Decimal | null;
         widthCm: Prisma.Decimal | null;
@@ -52,6 +53,7 @@ export async function priceOrderItems(items: OrderItemSnapshot[]): Promise<Price
     where: { id: { in: productIds } },
     select: {
       id: true,
+      stock: true,
       visible: true,
       price: true,
       liveOpeningPrice: true,

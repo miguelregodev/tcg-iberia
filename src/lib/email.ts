@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import { ORDER_ITEM_VARIANT_LABEL, type OrderItemVariant } from '@/lib/orders/items';
+import { PARTY_MODE_INFO, type PartyMode } from '@/lib/parties/core';
 
 /**
  * Email service for order notifications.
@@ -40,6 +41,20 @@ export interface OrderEmailPayload {
     locality?: string;
     province?: string;
   };
+}
+
+export interface PartyParticipationEmailPayload {
+  orderNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  amountPaid: number;
+  partyId: string;
+  productName: string;
+  slotNumber: number | null;
+  participantCount: number;
+  packsPerParticipant: number;
+  mode: PartyMode;
 }
 
 export interface StockAlertEmailPayload {
@@ -678,6 +693,219 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
       const emailType = i === 0 ? 'customer' : 'admin';
       const recipient = i === 0 ? customerEmail : adminEmail;
       console.log(`[email] ✓ ${emailType} email sent to ${recipient}`);
+    }
+  });
+}
+
+// --- Party participation emails ---
+
+function partyUrls(partyId: string): { party: string; admin: string } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return { party: `${appUrl}/parties/${partyId}`, admin: `${appUrl}/admin/parties` };
+}
+
+function partyDetailRowsHtml(rows: Array<[string, string]>): string {
+  return rows
+    .map(
+      ([label, value], i) => `
+          <tr>
+            <td style="padding:12px 20px;${i < rows.length - 1 ? `border-bottom:1px solid ${BRAND.border};` : ''}font-family:${FONT_STACK};font-size:13px;">
+              <span style="color:${BRAND.textMuted};display:inline-block;width:130px;">${escapeHtml(label)}</span>
+              <strong style="color:${BRAND.text};">${escapeHtml(value)}</strong>
+            </td>
+          </tr>`,
+    )
+    .join('');
+}
+
+function partyModeBullets(payload: PartyParticipationEmailPayload): string[] {
+  if (payload.mode === 'SHARED') {
+    return [
+      `Party Compartida: los ${payload.packsPerParticipant} sobre(s) que has comprado con tu plaza son para ti.`,
+      'La caja se abrirá en directo cuando se completen todas las plazas de la Party.',
+      'Cuando la Party finalice, podrás solicitar el envío de tus sobres desde Mi cuenta → Pedidos, solo o agrupado con otros pedidos.',
+    ];
+  }
+  return [
+    'Party Batalla: quien consiga el mejor hit en la apertura se lleva todos los sobres de la caja.',
+    'La caja se abrirá en directo cuando se completen todas las plazas de la Party.',
+    'Si ganas, podrás solicitar el envío de todos los sobres desde Mi cuenta → Pedidos.',
+  ];
+}
+
+function buildPartyCustomerHtml(payload: PartyParticipationEmailPayload): string {
+  const firstName = payload.fullName.split(' ')[0] || payload.fullName;
+  const urls = partyUrls(payload.partyId);
+  const slot = payload.slotNumber ? `${payload.slotNumber} de ${payload.participantCount}` : '—';
+
+  const content = `
+    <tr>
+      <td style="padding:32px;">
+        <p style="margin:0 0 12px 0;font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${BRAND.text};">
+          Hola <strong>${escapeHtml(firstName)}</strong>,
+        </p>
+        <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${BRAND.text};">
+          &iexcl;Tu participaci&oacute;n en la Party est&aacute; confirmada! Hemos recibido tu pago y tu plaza ya es tuya.
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+          <tr>
+            <td style="padding:16px 20px;background:${BRAND.primaryLight};border-left:4px solid ${BRAND.primary};border-radius:8px;">
+              <div style="font-family:${FONT_STACK};font-size:11px;letter-spacing:0.12em;color:${BRAND.primary};text-transform:uppercase;font-weight:700;">Tu plaza</div>
+              <div style="font-family:${FONT_STACK};font-size:18px;font-weight:700;color:${BRAND.text};margin-top:4px;">${escapeHtml(payload.productName)}</div>
+              <div style="font-family:${FONT_STACK};font-size:14px;color:${BRAND.textMuted};margin-top:4px;">Plaza ${escapeHtml(slot)} &middot; Party ${escapeHtml(PARTY_MODE_INFO[payload.mode].label)}</div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 8px 0;">Detalles</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
+          ${partyDetailRowsHtml([
+            ['Tipo de Party', PARTY_MODE_INFO[payload.mode].label],
+            ['Referencia', payload.orderNumber],
+            [payload.mode === 'SHARED' ? 'Tus sobres' : 'Sobres que abres', String(payload.packsPerParticipant)],
+            ['Importe pagado', formatCurrency(payload.amountPaid)],
+          ])}
+        </table>
+
+        <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 8px 0;">Qu&eacute; ocurre ahora</div>
+        <ul style="margin:0 0 24px 0;padding-left:20px;font-family:${FONT_STACK};font-size:14px;line-height:1.7;color:${BRAND.text};">
+          <li>Puedes seguir el progreso y los detalles del directo en la p&aacute;gina de la Party.</li>
+          ${partyModeBullets(payload).map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+        </ul>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 24px auto;">
+          <tr>
+            <td align="center" style="background:${BRAND.primary};border-radius:10px;">
+              <a href="${escapeHtml(urls.party)}" style="display:inline-block;padding:12px 22px;font-family:${FONT_STACK};font-size:14px;font-weight:700;color:${BRAND.white};text-decoration:none;">Ver mi Party</a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.textMuted};">
+          Si tienes cualquier duda, escr&iacute;benos a
+          <a href="mailto:sales@tcgiberia.com" style="color:${BRAND.primary};text-decoration:none;font-weight:600;">sales@tcgiberia.com</a>.
+        </p>
+        <p style="margin:24px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.text};">
+          &iexcl;Mucha suerte en el directo!<br/>
+          <strong>El equipo de TCG Iberia</strong>
+        </p>
+      </td>
+    </tr>
+  `;
+
+  return htmlShell('Participación en Party confirmada', content);
+}
+
+function buildPartyCustomerText(payload: PartyParticipationEmailPayload): string {
+  const urls = partyUrls(payload.partyId);
+  return [
+    `Hola ${payload.fullName},`,
+    '',
+    'Tu participación en la Party está confirmada. Hemos recibido tu pago y tu plaza ya es tuya.',
+    '',
+    `Party:           ${payload.productName}`,
+    `Plaza:           ${payload.slotNumber ? `${payload.slotNumber} de ${payload.participantCount}` : '-'}`,
+    `Tipo de Party:   ${PARTY_MODE_INFO[payload.mode].label}`,
+    `Referencia:      ${payload.orderNumber}`,
+    `${payload.mode === 'SHARED' ? 'Tus sobres:' : 'Sobres que abres:'} ${payload.packsPerParticipant}`,
+    `Importe pagado:  ${formatCurrency(payload.amountPaid)}`,
+    '',
+    'Qué ocurre ahora:',
+    '  - Sigue el progreso en la página de la Party.',
+    ...partyModeBullets(payload).map((line) => `  - ${line}`),
+    '',
+    `Ver mi Party: ${urls.party}`,
+    '',
+    'El equipo de TCG Iberia',
+  ].join('\n');
+}
+
+function buildPartyAdminHtml(payload: PartyParticipationEmailPayload): string {
+  const urls = partyUrls(payload.partyId);
+  const slot = payload.slotNumber ? `${payload.slotNumber} de ${payload.participantCount}` : '—';
+  const content = `
+    <tr>
+      <td style="padding:32px;">
+        <p style="margin:0 0 20px 0;font-family:${FONT_STACK};font-size:14px;color:${BRAND.text};">
+          <strong>Nueva participación pagada</strong>
+          <span style="display:block;margin-top:4px;font-size:13px;color:${BRAND.textMuted};">${escapeHtml(payload.orderNumber)}</span>
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
+          ${partyDetailRowsHtml([
+            ['Party', payload.productName],
+            ['Tipo', PARTY_MODE_INFO[payload.mode].label],
+            ['Plaza', slot],
+            ['Importe', formatCurrency(payload.amountPaid)],
+            ['Cliente', payload.fullName],
+            ['Email', payload.email],
+            ['Teléfono', payload.phone],
+          ])}
+        </table>
+        <a href="${escapeHtml(urls.admin)}" style="display:inline-block;padding:12px 22px;background:${BRAND.primary};color:${BRAND.white};font-family:${FONT_STACK};font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">Gestionar Parties</a>
+      </td>
+    </tr>
+  `;
+  return htmlShell('Nueva participación en Party', content);
+}
+
+function buildPartyAdminText(payload: PartyParticipationEmailPayload): string {
+  return [
+    `Nueva participación en Party: ${payload.orderNumber}`,
+    `Party:    ${payload.productName}`,
+    `Tipo:     ${PARTY_MODE_INFO[payload.mode].label}`,
+    `Plaza:    ${payload.slotNumber ? `${payload.slotNumber} de ${payload.participantCount}` : '-'}`,
+    `Importe:  ${formatCurrency(payload.amountPaid)}`,
+    '',
+    `Cliente:  ${payload.fullName}`,
+    `Email:    ${payload.email}`,
+    `Teléfono: ${payload.phone}`,
+    '',
+    `Gestionar: ${partyUrls(payload.partyId).admin}`,
+  ].join('\n');
+}
+
+export async function sendPartyParticipationEmails(payload: PartyParticipationEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error(
+      `[email] Cannot send party emails for ${payload.orderNumber}: SMTP not configured.`,
+    );
+    return;
+  }
+
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const adminEmail = (process.env.ADMIN_EMAIL || 'sales@tcgiberia.com').trim().toLowerCase();
+  const customerEmail = (payload.email || '').trim().toLowerCase();
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(customerEmail) || !emailRegex.test(adminEmail)) {
+    console.error(`[email] Invalid email format for party order ${payload.orderNumber}`);
+    return;
+  }
+
+  const results = await Promise.allSettled([
+    transporter.sendMail({
+      from,
+      to: customerEmail,
+      subject: `Participación en Party confirmada ${payload.orderNumber} - TCG Iberia`,
+      html: buildPartyCustomerHtml(payload),
+      text: buildPartyCustomerText(payload),
+    }),
+    transporter.sendMail({
+      from,
+      to: adminEmail,
+      replyTo: customerEmail,
+      subject: `Nueva participación en Party ${payload.orderNumber}`,
+      html: buildPartyAdminHtml(payload),
+      text: buildPartyAdminText(payload),
+    }),
+  ]);
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(
+        `[email] Failed to send party ${i === 0 ? 'customer' : 'admin'} email for ${payload.orderNumber}: ${String(r.reason)}`,
+      );
     }
   });
 }

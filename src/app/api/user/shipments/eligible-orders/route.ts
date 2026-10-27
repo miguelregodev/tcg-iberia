@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { ownsPartyPrize } from '@/lib/parties/core';
 
 /**
  * GET /api/user/shipments/eligible-orders
@@ -39,12 +40,50 @@ export async function GET() {
         shippingPostalCode: true,
         shippingCity: true,
         createdAt: true,
+        partyParticipation: {
+          select: {
+            id: true,
+            status: true,
+            party: { select: { status: true, mode: true, winnerParticipationId: true } },
+          },
+        },
       },
     });
 
-    const mapped = orders.map((o) => ({
+    // Party orders ship to the profile address at request time, so compare using that one.
+    const profile = orders.some((order) => order.partyParticipation)
+      ? await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { addressLine: true, postalCode: true, city: true },
+        })
+      : null;
+
+    const mapped = orders
+      .filter((order) => {
+        if (!order.partyParticipation) return true;
+        return (
+          order.partyParticipation.status === 'PAID' &&
+          order.partyParticipation.party.status === 'COMPLETED' &&
+          ownsPartyPrize(
+            order.partyParticipation.party.mode,
+            order.partyParticipation.party.winnerParticipationId,
+            order.partyParticipation.id,
+          )
+        );
+      })
+      .map((o) => ({
       ...o,
       totalAmount: parseFloat(o.totalAmount.toString()),
+      ...(o.partyParticipation && profile?.addressLine
+        ? {
+            shippingAddress: profile.addressLine,
+            shippingPostalCode: profile.postalCode ?? o.shippingPostalCode,
+            shippingCity: profile.city ?? o.shippingCity,
+          }
+        : {}),
+      partyParticipation: o.partyParticipation
+        ? { partyMode: o.partyParticipation.party.mode }
+        : null,
     }));
 
     return NextResponse.json({ success: true, data: mapped });

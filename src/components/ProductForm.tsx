@@ -33,6 +33,7 @@ const LANGUAGES = [
   { value: 'JAPANESE', label: 'Japonés' },
   { value: 'KOREAN', label: 'Coreano' },
   { value: 'SPANISH', label: 'Español' },
+  { value: 'CHINESE', label: 'Chino' },
 ];
 
 function FormSection({

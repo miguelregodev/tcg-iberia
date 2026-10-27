@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useB2BSession } from '@/context/B2BSessionContext';
 
 type Category = 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
-type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
+type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
 interface NavChild {
   key: string;
@@ -26,6 +26,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Inicio', href: '/' },
   { key: 'booster-boxes', label: 'Cajas Selladas', category: 'booster-boxes' },
+  { key: 'parties', label: 'Parties', href: '/parties' },
   { key: 'booster-packs', label: 'Sobres', category: 'booster-packs' },
   { key: 'booster-bundles', label: 'Booster Bundles', category: 'booster-bundles' },
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },
@@ -47,11 +48,12 @@ const LANGUAGES: { value: Language; label: string; flag: string }[] = [
   { value: 'JAPANESE', label: 'Japanese', flag: '/images/japan.png' },
   { value: 'KOREAN', label: 'Korean', flag: '/images/south-korea.png' },
   { value: 'SPANISH', label: 'Spanish', flag: '/images/spain.png' },
+  { value: 'CHINESE', label: 'Chinese', flag: '/images/china.png' },
 ];
 
 const CATEGORY_LANGUAGES: Record<Category, Language[]> = {
-  'booster-boxes': ['JAPANESE', 'KOREAN'],
-  'booster-packs': ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH'],
+  'booster-boxes': ['JAPANESE', 'KOREAN', 'CHINESE'],
+  'booster-packs': ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH', 'CHINESE'],
   'booster-bundles': ['ENGLISH', 'SPANISH'],
   etbs: ['ENGLISH', 'SPANISH'],
 };
