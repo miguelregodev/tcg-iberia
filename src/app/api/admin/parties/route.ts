@@ -84,12 +84,13 @@ export async function POST(request: NextRequest) {
           id: string;
           name: string;
           price: Prisma.Decimal;
+          liveOpeningPrice: Prisma.Decimal | null;
           stock: number;
           visible: boolean;
           type: string | null;
         }>
       >(Prisma.sql`
-        SELECT "id", "name", "price", "stock", "visible", "type"
+        SELECT "id", "name", "price", "liveOpeningPrice", "stock", "visible", "type"
         FROM "Product"
         WHERE "id" = ${productId}
         FOR UPDATE
@@ -98,7 +99,8 @@ export async function POST(request: NextRequest) {
       if (!product || !product.visible || product.type?.trim().toLowerCase() !== 'booster box') {
         throw new Error('PARTY_PRODUCT_NOT_FOUND');
       }
-      const boxPriceCents = parseMoneyToCents(product.price.toString());
+      // Parties are sold as live openings, so that variant's price wins when defined.
+      const boxPriceCents = parseMoneyToCents((product.liveOpeningPrice ?? product.price).toString());
       const pricing =
         boxPriceCents === null
           ? null

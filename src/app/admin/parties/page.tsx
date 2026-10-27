@@ -10,9 +10,15 @@ interface Product {
   name: string;
   language: string;
   price: string | number;
+  liveOpeningPrice?: string | number | null;
   stock: number;
   imageUrl: string | null;
   type: string | null;
+}
+
+// Parties are sold as live openings, so that variant's price wins when defined.
+function getPartyBoxPrice(product: Pick<Product, 'price' | 'liveOpeningPrice'>) {
+  return product.liveOpeningPrice ?? product.price;
 }
 
 interface Participant {
@@ -103,7 +109,7 @@ export default function AdminPartiesPage() {
   }, [loadParties]);
 
   const selectedProduct = products.find((product) => product.id === productId);
-  const priceCents = selectedProduct ? parseMoneyToCents(String(selectedProduct.price)) : null;
+  const priceCents = selectedProduct ? parseMoneyToCents(String(getPartyBoxPrice(selectedProduct))) : null;
   const pricing = priceCents && Number.isInteger(Number(packsPerBox)) && Number.isInteger(Number(participantCount))
     ? getPartyPricing({
         boxPriceCents: priceCents,
@@ -210,7 +216,7 @@ export default function AdminPartiesPage() {
                 <option value="">Selecciona un producto visible</option>
                 {products.filter((product) => product.stock > 0 && product.type?.trim().toLowerCase() === 'booster box').map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} — {product.language} — {Number(product.price).toFixed(2)} € — stock {product.stock}
+                    {product.name} — {product.language} — {Number(getPartyBoxPrice(product)).toFixed(2)} € — stock {product.stock}
                   </option>
                 ))}
               </select>
@@ -248,7 +254,7 @@ export default function AdminPartiesPage() {
           <div className="mt-5 rounded-lg border border-dark-border bg-dark-bgSecondary p-4 text-sm">
             <h3 className="font-semibold text-text-primary">Resumen de precio</h3>
             {selectedProduct && (
-              <p className="mt-2 text-text-secondary">Precio de caja: {Number(selectedProduct.price).toFixed(2)} €</p>
+              <p className="mt-2 text-text-secondary">Precio de caja{selectedProduct.liveOpeningPrice != null ? ' (apertura en directo)' : ''}: {Number(getPartyBoxPrice(selectedProduct)).toFixed(2)} €</p>
             )}
             {pricing ? (
               <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3 text-text-secondary">

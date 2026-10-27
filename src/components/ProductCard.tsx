@@ -4,6 +4,7 @@ import { formatReleaseDate, getProductInventoryState } from '@/lib/products/stat
 import { getCategoryForProductType } from '@/lib/products/categories';
 import { ProductPriceDisplay } from './ProductPriceDisplay';
 import { InventoryStatusLabel } from './InventoryStatusLabel';
+import { AddToCartButton } from './AddToCartButton';
 
 function getLanguageFlag(language: string): { path: string; name: string } {
   const flags: Record<string, { path: string; name: string }> = {
@@ -34,8 +35,8 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
   const isPortraitImage =
     categoryHref === '/psa' || categoryHref === '/raw' || categoryHref === '/mystery-packs';
   return (
-    <Link href={`/product/${product.slug}`} className="h-full">
-      <div className="cursor-pointer group h-full flex flex-col transition-all duration-300">
+    <div className="h-full">
+      <div className="relative cursor-pointer group h-full flex flex-col transition-all duration-300">
         {product.imageUrl && (
           <div
             className={`mb-4 rounded-lg overflow-hidden relative flex-shrink-0 ${
@@ -61,7 +62,10 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
         )}
         
         <h3 className="text-lg font-semibold mb-2 text-text-primary group-hover:text-premium-gold transition-colors line-clamp-2 min-h-[3.5rem]">
-          {product.name}
+          {/* Stretched link: the whole card is clickable without nesting the cart button in an anchor. */}
+          <Link href={`/product/${product.slug}`} className="after:absolute after:inset-0">
+            {product.name}
+          </Link>
         </h3>
         
         <p className="text-sm text-text-secondary mb-3 line-clamp-2 min-h-[2.5rem]">
@@ -80,14 +84,17 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           />
         </div>
 
-        <div className="mt-auto flex flex-col gap-2">
+        <div className="mt-auto flex items-end justify-between gap-2">
           {inventoryState.isPreorder && releaseDate ? (
             <p className="text-xs font-semibold text-text-secondary">
               Lanzamiento: {releaseDate}
             </p>
-          ) : null}
+          ) : (
+            <span />
+          )}
+          <AddToCartButton product={product} />
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
