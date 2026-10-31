@@ -7,7 +7,11 @@ A production-ready, premium ecommerce landing page for Pokémon TCG collectors. 
 ✨ **Public Website**
 - Premium dark luxury design
 - Dynamic product catalog
+- Category, search, and B2B catalogs support a two-handle price slider and ascending/descending price sorting, with separate and combined reset actions. The slider starts at the lowest and highest catalog prices; filtering applies when a handle is released (or after keyboard adjustment), without an Apply button. Prices match the cards (discounted lowest public variant, or sealed wholesale price excluding taxes for B2B); resetting sorting restores the original catalog/relevance order.
 - Product detail pages
+- The shopping-cart header includes "Vaciar carrito" to remove all items and persist the empty cart.
+- Only the `/raw` catalog shows product-card cart buttons: beside the compact price and stock on mobile, and over the product image's bottom-right corner on desktop. Other catalogs use product-detail pages for purchasing.
+- Filtered category catalogs with no results offer "Restablecer filtros" to clear price, language, and availability filters while keeping the catalog type and selected sort order.
 - Trust/credibility section
 - Contact CTA (WhatsApp/Email)
 - Mobile-first responsive design
@@ -71,6 +75,8 @@ Navigate to http://localhost:3000/admin and log in with your `ADMIN_PASSWORD`.
 - Add/Edit/Delete products
 - Image upload to S3
 - Manage stock and pricing
+- Discount previews show final Sellado and Apertura en directo prices; the optional live-opening variant is marked "No configurada" when no price is set.
+- The admin product list shows discounted prices and crossed-out original prices in both Sellado and Apertura en directo columns.
 - Toggle product visibility
 - Auto-generated product slugs
 

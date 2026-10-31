@@ -56,6 +56,16 @@ JWT_SECRET=random-secret-string-here
 
 **Environment**: Select "Production", "Preview", "Development" as needed.
 
+### B2B access emails
+
+- Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM` for your SMTP provider.
+- Set `ADMIN_EMAIL` to the inbox that should receive new B2B access requests; it defaults to `sales@tcgiberia.com`.
+- Set `NEXT_PUBLIC_APP_URL` to the public website origin. Approval, activation resend, and request notification links use this URL, or the incoming request's origin when unset. Production rejects loopback URLs.
+- New requests wait for both the applicant's documentation email and the admin notification before responding. Delivery failures are captured in Sentry under `b2b` / `docs_email` or `admin_email`. Existing pending requests do not resend notifications on repeat submissions.
+- Approval and activation resend wait for SMTP completion. If approval succeeds but email fails, the admin panel reports the failure; use the resend action under **Clientes** after resolving SMTP configuration.
+- Activation links expire after 72 hours. Resending invalidates older unused links, so customers must use the newest email. Opening a link does not consume it; setting a password does.
+- Redeploy after changing Vercel environment variables. Verify a fresh request reaches `ADMIN_EMAIL`, then approve it and open the newest activation email on the public site.
+
 ## Step 4: Deploy
 
 ### First Deploy:
@@ -63,6 +73,29 @@ JWT_SECRET=random-secret-string-here
 1. After setting env vars, click "Deploy"
 2. Vercel builds and deploys (takes ~3-5 minutes)
 3. Get deployment URL
+
+### Important: Redsys Payment Processing
+
+**This project uses Redsys for payment processing, which requires DES encryption support.**
+
+The codebase automatically handles this via a wrapper script (`node-with-legacy-provider.js`) that enables OpenSSL legacy algorithms.
+
+**Vercel Configuration Required:**
+
+Vercel should auto-detect and use the build/start commands from `package.json`, which include the wrapper. However, **verify the following in Vercel Dashboard**:
+
+1. Go to Settings → Build & Development Settings
+2. Ensure **Build Command** is: `npm run build`
+3. Ensure **Start Command** is: `npm run start`
+4. These commands use the wrapper script that enables `--openssl-legacy-provider`
+
+**If payment processing fails with `error:0308010C`:**
+- Check Vercel build/start commands above
+- Ensure `node-with-legacy-provider.js` file exists in repository root
+- Verify `package.json` scripts reference the wrapper
+
+**Local Development:**
+Always use `npm run dev` (not `next dev` directly) to enable legacy OpenSSL algorithms.
 
 ### Subsequent Deploys:
 
@@ -220,6 +253,26 @@ git push origin main  # Retry deploy
 2. Check the storage bucket `product-images` exists in your Supabase project
 3. Ensure file size/type limits are respected (5MB max by default)
 4. Check Supabase project logs for storage errors
+
+### Redsys Payment Processing Error: `error:0308010C:digital envelope routines::unsupported`
+
+This error occurs when trying to process payments through Redsys.
+
+**Root Cause**: Redsys uses DES encryption which is disabled by default in Node.js 17+ with OpenSSL 3.x.
+
+**Solution**:
+1. Verify Vercel build/start commands are using the wrapper:
+   - Build: `npm run build` (uses `node-with-legacy-provider.js`)
+   - Start: `npm run start` (uses `node-with-legacy-provider.js`)
+2. Ensure `node-with-legacy-provider.js` is in the repository root
+3. Verify `package.json` contains the wrapper script configuration
+4. In Vercel Settings → Build & Development Settings, ensure build/start commands are set to defaults (or explicitly: `npm run build` and `npm run start`)
+
+**For Local Testing:**
+```bash
+npm run dev    # Uses wrapper (correct)
+next dev       # Does NOT use wrapper (will fail with DES error)
+```
 
 ### Admin Login Not Working
 

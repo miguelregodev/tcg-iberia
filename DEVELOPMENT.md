@@ -401,6 +401,29 @@ npm run prisma:generate
 - Verify Tailwind config includes `src/` paths
 - Check `globals.css` imported in `layout.tsx`
 
+### Redsys Payment Error: `error:0308010C:digital envelope routines::unsupported`
+
+This error occurs when trying to process payments through Redsys. **This is already fixed in the codebase.**
+
+**Root Cause**: Redsys signature generation requires DES encryption, which is disabled by default in Node.js 17+ with OpenSSL 3.x.
+
+**Solution** (automatically applied):
+- Development: `npm run dev` uses `node-with-legacy-provider.js` wrapper
+- Build: `npm run build` uses the wrapper to enable `--openssl-legacy-provider`
+- Production: Vercel build/start commands are configured to use the wrapper
+
+**If you still see this error:**
+1. Ensure you're using `npm run dev` (not running `next dev` directly)
+2. Verify `node-with-legacy-provider.js` exists in project root
+3. Check `package.json` scripts use the wrapper for dev/build/start
+
+**For Vercel Deployments:**
+Ensure vercel.json or project settings use:
+```bash
+npm run build  # Uses wrapper
+npm run start  # Uses wrapper
+```
+
 ## 📚 Resources
 
 - **Next.js**: https://nextjs.org/docs

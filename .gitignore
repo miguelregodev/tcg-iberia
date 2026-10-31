@@ -52,3 +52,9 @@ coverage/
 
 # Generated files
 prisma/migrations/*/migration.lock.key
+
+#Agent skills
+.agents/
+.claude/
+*.md
+*.pdf

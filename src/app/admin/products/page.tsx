@@ -367,6 +367,9 @@ export default function AdminProducts() {
                         ? Number(product.price) *
                           (1 - Number(product.discountPercentage) / 100)
                         : Number(product.price);
+                      const finalLiveOpeningPrice = product.liveOpeningPrice != null
+                        ? Number(product.liveOpeningPrice) * (1 - Number(product.discountPercentage ?? 0) / 100)
+                        : null;
                       const lowStock =
                         product.stock > 0 && product.stock <= 5;
                       const outOfStock = product.stock === 0;
@@ -439,10 +442,21 @@ export default function AdminProducts() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap">
-                            {product.liveOpeningPrice != null ? (
-                              <span className="font-bold text-text-primary">
-                                {currency.format(Number(product.liveOpeningPrice))}
-                              </span>
+                            {finalLiveOpeningPrice != null ? (
+                              product.discountPercentage ? (
+                                <div>
+                                  <div className="font-bold text-text-primary">
+                                    {currency.format(finalLiveOpeningPrice)}
+                                  </div>
+                                  <div className="text-xs text-text-muted line-through">
+                                    {currency.format(Number(product.liveOpeningPrice))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="font-bold text-text-primary">
+                                  {currency.format(Number(product.liveOpeningPrice))}
+                                </span>
+                              )
                             ) : (
                               <span className="text-text-muted">—</span>
                             )}
