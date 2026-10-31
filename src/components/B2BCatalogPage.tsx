@@ -22,6 +22,8 @@ import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
 import { trackCategoryViewed } from '@/lib/analytics/events';
 import { ProductCardB2B } from './ProductCardB2B';
+import { CatalogPriceControls } from '@/components/CatalogPriceControls';
+import { useCatalogPriceFilter } from '@/hooks/useCatalogPriceFilter';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
@@ -107,7 +109,7 @@ export function B2BCatalogPage({ language }: Props) {
   // ── B2B price filter + language filter ───────────────────────────────
   const b2bOverrides = useB2BPrices(isB2B ? products.map((p) => p.id) : []);
 
-  const visibleProducts = useMemo(() => {
+  const tariffProducts = useMemo(() => {
     return products.filter((p) => {
       // Must have at least one B2B tariff
       const o = b2bOverrides.get(p.id);
@@ -118,12 +120,15 @@ export function B2BCatalogPage({ language }: Props) {
       return p.language === activeLanguage;
     });
   }, [products, b2bOverrides, activeLanguage]);
+  const { visibleProducts, priceOptions, setPriceOptions, hasPriceFilter, priceKey, priceBounds } =
+    useCatalogPriceFilter(tariffProducts, b2bOverrides);
 
   // Don't show "empty" while B2B overrides are still loading
   const b2bLoading = isB2B && b2bOverrides.size === 0 && products.length > 0;
 
   const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
     total: visibleProducts.length,
+    snapshotKey: `b2b:${activeLanguage}:${priceKey}`,
   });
 
   // Build language-pill href, preserving the path
@@ -205,6 +210,7 @@ export function B2BCatalogPage({ language }: Props) {
       {/* Product grid */}
       <section className="bg-dark-bg">
         <div className="container-custom px-4 py-10 md:py-14">
+          <CatalogPriceControls options={priceOptions} onChange={setPriceOptions} priceBounds={priceBounds} resultCount={visibleProducts.length} loading={loading || b2bLoading} />
           {error && (
             <div className="bg-danger-bg border border-danger/30 rounded-lg p-4 mb-8 text-danger text-sm">
               {error}
@@ -224,6 +230,8 @@ export function B2BCatalogPage({ language }: Props) {
                 </div>
               ))}
             </div>
+          ) : visibleProducts.length === 0 && hasPriceFilter ? (
+            <p className="py-12 text-center text-text-secondary">No hay productos en este rango de precios. Ajusta los límites o quita el filtro de precio.</p>
           ) : visibleProducts.length === 0 ? (
             <div className="bg-dark-surface rounded-2xl border border-dark-border p-12 text-center shadow-sm">
               <div className="text-5xl mb-4">📦</div>

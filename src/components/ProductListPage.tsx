@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductGridInfinite } from './ProductGridInfinite';
 import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
@@ -10,6 +10,8 @@ import { trackCategoryViewed, trackCollectionViewed, trackProductSearch } from '
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
 import { Breadcrumbs } from './Breadcrumbs';
+import { CatalogPriceControls } from '@/components/CatalogPriceControls';
+import { useCatalogPriceFilter } from '@/hooks/useCatalogPriceFilter';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
@@ -128,10 +130,12 @@ export function ProductListPage({
     () => b2bFilteredProducts.filter((p) => p.available).length,
     [b2bFilteredProducts],
   );
-  const visibleProducts = useMemo(() => {
+  const stockFilteredProducts = useMemo(() => {
     if (!inStockOnly) return b2bFilteredProducts;
     return b2bFilteredProducts.filter((p) => p.available);
   }, [b2bFilteredProducts, inStockOnly]);
+  const { visibleProducts, priceOptions, setPriceOptions, hasPriceFilter, priceKey, priceBounds } =
+    useCatalogPriceFilter(stockFilteredProducts, isB2B ? b2bOverrides : undefined);
 
   // Wait for the overrides to arrive before showing "empty" — otherwise the
   // page would flicker "no products" for B2B users on first render.
@@ -156,9 +160,16 @@ export function ProductListPage({
   }, [loading, productType, title, language, visibleProducts.length]);
 
   const pathname = usePathname();
+  const router = useRouter();
+  const hasActiveFilters = hasPriceFilter || !!language || inStockOnly;
+  const resetFilters = () => {
+    setPriceOptions((options) => ({ ...options, minPrice: null, maxPrice: null }));
+    setInStockOnly(false);
+    if (language) router.replace(pathname, { scroll: false });
+  };
   const { visibleCount, sentinelRef, hasMore, saveSnapshot } = useInfiniteReveal({
     total: visibleProducts.length,
-    snapshotKey: `${pathname}?${language ?? ''}`,
+    snapshotKey: `${pathname}?${language ?? ''}:${inStockOnly}:${priceKey}`,
   });
 
   // Build language-pill href, preserving the current path. Derived from
@@ -258,6 +269,7 @@ export function ProductListPage({
       {/* Body */}
       <section className="bg-dark-bg">
         <div className="container-custom px-4 py-10 md:py-14">
+          <CatalogPriceControls options={priceOptions} onChange={setPriceOptions} priceBounds={priceBounds} resultCount={visibleProducts.length} loading={loading || b2bLoading} />
           {error && (
             <div className="bg-danger-bg border border-danger/30 rounded-lg p-4 mb-8 text-danger text-sm">
               {error}
@@ -280,12 +292,19 @@ export function ProductListPage({
           ) : visibleProducts.length === 0 ? (
             <div className="bg-dark-surface rounded-2xl border border-dark-border p-12 text-center shadow-sm">
               <p className="text-4xl sm:text-6xl md:text-8xl font-airstrike text-premium-gold mb-6 tracking-wider">
-                Próximamente
+                {hasActiveFilters ? 'Sin resultados' : 'Próximamente'}
               </p>
               <p className="text-text-secondary mb-8 text-lg">
-                Estamos reponiendo stock, vuelve a visitarnos pronto.
+                {hasActiveFilters
+                  ? 'No hay productos que coincidan con los filtros. Restablécelos para ver todos los productos de este catálogo.'
+                  : 'Estamos reponiendo stock, vuelve a visitarnos pronto.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {hasActiveFilters && (
+                  <button type="button" onClick={resetFilters} className="btn btn-secondary">
+                    Restablecer filtros
+                  </button>
+                )}
                 {language && (
                   <Link
                     href={buildLangHref(null)}
@@ -306,6 +325,7 @@ export function ProductListPage({
               sentinelRef={sentinelRef}
               hasMore={hasMore}
               showLanguageFlag={showLanguageFlag}
+              showAddToCart={pathname === '/raw'}
               onNavigateAway={saveSnapshot}
             />
           )}

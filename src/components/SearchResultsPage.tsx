@@ -7,7 +7,12 @@ import type { Product } from '@/types';
 import { ProductGridInfinite } from './ProductGridInfinite';
 import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 import { trackProductSearch } from '@/lib/analytics/events';
-import { SEARCH_MAX_LIMIT, type SearchResponse, tokenize } from '@/lib/products/search';
+import { tokenize } from '@/lib/products/search';
+import { fetchAllSearchProducts } from '@/lib/products/search-client';
+import { CatalogPriceControls } from '@/components/CatalogPriceControls';
+import { useCatalogPriceFilter } from '@/hooks/useCatalogPriceFilter';
+import { useB2BSession } from '@/context/B2BSessionContext';
+import { useB2BPrices } from '@/hooks/useB2BPrices';
 
 interface SearchResultsPageProps {
   /** Raw `q` from the URL search params. */
@@ -39,15 +44,7 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
       try {
         setLoading(true);
         setError(null);
-        const params = new URLSearchParams({
-          q: trimmedQuery,
-          limit: String(SEARCH_MAX_LIMIT),
-        });
-        const res = await fetch(`/api/search?${params.toString()}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Search failed (${res.status})`);
-        const data = (await res.json()) as SearchResponse;
+        const data = await fetchAllSearchProducts(trimmedQuery, controller.signal);
         if (cancelled) return;
         setProducts(data.products);
         setTotal(data.total);
@@ -78,9 +75,14 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
     });
   }, [loading, trimmedQuery, total, tokens.length]);
 
+  const { isB2B } = useB2BSession();
+  const overrides = useB2BPrices(isB2B ? products.map((product) => product.id) : []);
+  const b2bLoading = isB2B && overrides.size === 0 && products.length > 0;
+  const { visibleProducts, priceOptions, setPriceOptions, hasPriceFilter, priceKey, priceBounds } =
+    useCatalogPriceFilter(products, isB2B ? overrides : undefined);
   const { visibleCount, sentinelRef, hasMore, saveSnapshot } = useInfiniteReveal({
-    total: products.length,
-    snapshotKey: `search:${trimmedQuery}`,
+    total: visibleProducts.length,
+    snapshotKey: `search:${trimmedQuery}:${priceKey}`,
   });
 
   return (
@@ -115,6 +117,7 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
 
       <section className="bg-dark-bg">
         <div className="container-custom px-4 py-10 md:py-14">
+          {trimmedQuery && <CatalogPriceControls options={priceOptions} onChange={setPriceOptions} priceBounds={priceBounds} resultCount={visibleProducts.length} loading={loading || b2bLoading} />}
           {error && (
             <div className="bg-danger-bg border border-danger/30 rounded-lg p-4 mb-8 text-danger text-sm">
               {error}
@@ -126,16 +129,18 @@ export function SearchResultsPage({ query }: SearchResultsPageProps) {
               title="Empieza tu búsqueda"
               message="Escribe el nombre de un producto, una colección o un tipo (booster box, ETB, bundle…)."
             />
-          ) : loading ? (
+          ) : loading || b2bLoading ? (
             <SkeletonGrid />
-          ) : products.length === 0 ? (
+          ) : visibleProducts.length === 0 ? (
             <EmptyState
               title="Sin resultados"
-              message={`No hemos encontrado productos para “${trimmedQuery}”. Prueba con otros términos o revisa la ortografía.`}
+              message={hasPriceFilter
+                ? 'No hay productos en este rango de precios. Ajusta los límites o quita el filtro de precio.'
+                : `No hemos encontrado productos para “${trimmedQuery}”. Prueba con otros términos o revisa la ortografía.`}
             />
           ) : (
             <ProductGridInfinite
-              products={products}
+              products={visibleProducts}
               visibleCount={visibleCount}
               sentinelRef={sentinelRef}
               hasMore={hasMore}

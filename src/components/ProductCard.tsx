@@ -21,9 +21,10 @@ interface ProductCardProps {
   product: Product;
   /** Show the language flag badge on the product image. Defaults to true. */
   showLanguageFlag?: boolean;
+  showAddToCart?: boolean;
 }
 
-export function ProductCard({ product, showLanguageFlag = true }: ProductCardProps) {
+export function ProductCard({ product, showLanguageFlag = true, showAddToCart = false }: ProductCardProps) {
   const flagInfo = getLanguageFlag(product.language);
   const inventoryState = getProductInventoryState({
     stock: product.stock,
@@ -58,6 +59,11 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
                 />
               </div>
             )}
+            {showAddToCart && (
+              <div className="absolute bottom-3 right-3 z-20 hidden md:block">
+                <AddToCartButton product={product} />
+              </div>
+            )}
           </div>
         )}
         
@@ -72,28 +78,29 @@ export function ProductCard({ product, showLanguageFlag = true }: ProductCardPro
           {product.description}
         </p>
 
-        <div className="mb-4 flex flex-col-reverse items-end gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-          <InventoryStatusLabel inventoryState={inventoryState} />
-          <ProductPriceDisplay
-            productId={product.id}
-            publicPrice={Number(product.price)}
-            discountPercentage={product.discountPercentage}
-            liveOpeningPrice={product.liveOpeningPrice}
-            className="ml-auto flex items-center justify-end gap-2"
-            priceClassName="text-premium-gold font-bold text-2xl"
-          />
-        </div>
-
-        <div className="mt-auto flex items-end justify-between gap-2">
-          {inventoryState.isPreorder && releaseDate ? (
-            <p className="text-xs font-semibold text-text-secondary">
-              Lanzamiento: {releaseDate}
-            </p>
-          ) : (
-            <span />
+        <div className="mt-auto flex items-center gap-2">
+          {showAddToCart && (
+            <div className={`flex-shrink-0 ${product.imageUrl ? 'md:hidden' : ''}`}>
+              <AddToCartButton product={product} />
+            </div>
           )}
-          <AddToCartButton product={product} />
+          <div className="min-w-0 flex-1 flex flex-col-reverse items-end gap-1 md:flex-row md:items-center md:justify-between md:gap-2">
+            <InventoryStatusLabel inventoryState={inventoryState} />
+            <ProductPriceDisplay
+              productId={product.id}
+              publicPrice={Number(product.price)}
+              discountPercentage={product.discountPercentage}
+              liveOpeningPrice={product.liveOpeningPrice}
+              className="ml-auto flex flex-wrap items-center justify-end gap-x-2 gap-y-1"
+              priceClassName="text-premium-gold font-bold text-lg md:text-2xl"
+            />
+          </div>
         </div>
+        {inventoryState.isPreorder && releaseDate && (
+          <p className="mt-2 text-xs font-semibold text-text-secondary">
+            Lanzamiento: {releaseDate}
+          </p>
+        )}
       </div>
     </div>
   );
