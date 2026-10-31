@@ -14,7 +14,7 @@ interface HitCardFormProps {
 export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCardFormProps) {
   const [formData, setFormData] = useState({
     name: hitCard?.name || '',
-    type: hitCard?.type || '',
+    type: hitCard?.type || 'SAR',
     imageUrl: hitCard?.imageUrl || '',
     marketPrice: hitCard?.marketPrice || '',
   });
@@ -94,7 +94,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1">Name *</label>
+        <label className="block text-sm font-medium mb-1 text-gray-900">Name *</label>
         <input
           type="text"
           name="name"
@@ -102,19 +102,19 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
           onChange={handleChange}
           placeholder="e.g., Charizard ex"
           required
-          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm focus-visible"
+          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus-visible"
           disabled={loading}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Type *</label>
+        <label className="block text-sm font-medium mb-1 text-gray-900">Type *</label>
         <select
           name="type"
           value={formData.type}
           onChange={handleChange}
           required
-          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm focus-visible"
+          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 focus-visible"
           disabled={loading}
         >
           <option value="SAR">SAR (Special Art Rare)</option>
@@ -126,7 +126,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Image *</label>
+        <label className="block text-sm font-medium mb-2 text-gray-900">Image *</label>
         <ImageUpload onUpload={handleImageUpload} />
         {formData.imageUrl && (
           <div className="mt-2">
@@ -140,7 +140,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Market Price (€) *</label>
+        <label className="block text-sm font-medium mb-1 text-gray-900">Market Price (€) *</label>
         <input
           type="number"
           name="marketPrice"
@@ -150,7 +150,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
           min="0"
           placeholder="e.g., 50.00"
           required
-          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm focus-visible"
+          className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus-visible"
           disabled={loading}
         />
       </div>
