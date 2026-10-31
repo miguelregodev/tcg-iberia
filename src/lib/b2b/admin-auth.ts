@@ -6,7 +6,8 @@
  */
 
 import type { NextRequest } from 'next/server';
+import { isAdminAuthenticated as verifyAdminSession } from '@/lib/admin-auth';
 
 export function isAdminAuthenticated(request: NextRequest): boolean {
-  return !!request.cookies.get('tcg_admin_auth');
+  return verifyAdminSession(request);
 }

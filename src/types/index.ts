@@ -16,7 +16,7 @@ export type Product = {
   releaseDate: string | null;
   stock: number;
   imageUrl: string | null;
-  language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH';
+  language: 'JAPANESE' | 'KOREAN' | 'ENGLISH' | 'SPANISH' | 'CHINESE';
   priority: number;
   visible: boolean;
   available: boolean;

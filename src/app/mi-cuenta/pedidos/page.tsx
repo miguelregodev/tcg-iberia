@@ -41,6 +41,15 @@ interface Order {
   shippingMode: ShippingMode;
   shipmentId: string | null;
   shipment: ShipmentSummary | null;
+  partyParticipation: {
+    partyId: string;
+    status: string;
+    refundStatus: string;
+    shippingRequestedAt: string | null;
+    isWinner: boolean;
+    partyStatus: string;
+    partyMode: 'SHARED' | 'BATTLE';
+  } | null;
 }
 
 interface EligibleOrder {
@@ -51,6 +60,7 @@ interface EligibleOrder {
   shippingPostalCode: string;
   shippingCity: string;
   createdAt: string;
+  partyParticipation?: { partyMode: 'SHARED' | 'BATTLE' } | null;
 }
 
 interface ExpandedOrder {
@@ -87,14 +97,24 @@ const PAYMENT_STATUS_STYLE: Record<PaymentStatus, string> = {
   CANCELLED: 'bg-dark-surfaceHover text-text-secondary',
 };
 
+/** Party orders only ship to whoever receives the packs: everyone in Compartida, the winner in Batalla. */
+function receivesPartyPacks(order: Order): boolean {
+  const party = order.partyParticipation;
+  return !party || party.partyMode === 'SHARED' || party.isWinner;
+}
+
 /** Human-readable shipping state for "Agrupar Envío" orders, layered on top of the
  * existing fulfillment status badge rather than replacing it. */
 function getGroupedShippingLabel(order: Order): { label: string; className: string } | null {
+  if (!receivesPartyPacks(order)) return null;
   if (order.shippingMode !== 'GROUPED') return null;
   if (order.status === 'SHIPPED' || order.status === 'COMPLETED') return null; // fulfillment badge already says it all
 
   if (!order.shipmentId) {
-    return { label: 'Envío agrupado', className: 'bg-premium-gold/15 text-premium-gold' };
+    return {
+      label: order.partyParticipation ? 'Sobres pendientes de envío' : 'Envío agrupado',
+      className: 'bg-premium-gold/15 text-premium-gold',
+    };
   }
   if (order.shipment?.paymentStatus === 'PENDING_PAYMENT') {
     return { label: 'Envío solicitado (pago pendiente)', className: 'bg-warning-bg text-warning' };
@@ -107,7 +127,11 @@ function canRequestShipment(order: Order): boolean {
     order.shippingMode === 'GROUPED' &&
     order.shipmentId === null &&
     order.paymentStatus === 'PAID' &&
-    order.status === 'PROCESSING'
+    order.status === 'PROCESSING' &&
+    (!order.partyParticipation ||
+      (receivesPartyPacks(order) &&
+        order.partyParticipation.partyStatus === 'COMPLETED' &&
+        order.partyParticipation.shippingRequestedAt === null))
   );
 }
 
@@ -181,11 +205,17 @@ export default function PedidosPage() {
       if (!res.ok) throw new Error('No se pudieron cargar los pedidos elegibles.');
       const json = await res.json();
       const list = (json.data ?? []) as EligibleOrder[];
-      setEligibleOrders(list);
+      const clickedOrder = orders.find((order) => order.id === orderId);
+      // Batalla prizes ship on their own; every other order (incl. Compartida) can be combined.
+      const visibleList =
+        clickedOrder?.partyParticipation?.partyMode === 'BATTLE'
+          ? list.filter((order) => order.id === orderId)
+          : list.filter((order) => order.partyParticipation?.partyMode !== 'BATTLE');
+      setEligibleOrders(visibleList);
       // Only orders sharing the same address as the clicked order can actually be combined.
-      const reference = list.find((o) => o.id === orderId);
+      const reference = visibleList.find((o) => o.id === orderId);
       if (reference) {
-        const combinable = list.filter(
+        const combinable = visibleList.filter(
           (o) =>
             o.shippingPostalCode === reference.shippingPostalCode &&
             o.shippingAddress.trim().toLowerCase() === reference.shippingAddress.trim().toLowerCase()
@@ -450,6 +480,14 @@ export default function PedidosPage() {
               {/* Order Items - Expandable */}
               {expandedOrders[order.id] && (
                 <div className="border-t border-dark-border bg-dark-bgSecondary p-5">
+                  {order.partyParticipation && (
+                    <Link
+                      href={`/parties/${order.partyParticipation.partyId}`}
+                      className="mb-4 inline-flex text-sm font-semibold text-premium-gold underline"
+                    >
+                      Ver los detalles de esta Party
+                    </Link>
+                  )}
                   {order.paymentStatus === 'PENDING_PAYMENT' && order.status !== 'CANCELLED' && (
                     <div className="mb-4 rounded-lg border border-warning/30 bg-warning-bg p-3 text-xs text-text-secondary">
                       <p className="font-semibold text-warning mb-1">Pago pendiente</p>
@@ -463,18 +501,26 @@ export default function PedidosPage() {
                       </button>
                     </div>
                   )}
-                  {order.shippingMode === 'GROUPED' && order.status !== 'CANCELLED' && (
+                  {order.shippingMode === 'GROUPED' &&
+                    order.status !== 'CANCELLED' &&
+                    receivesPartyPacks(order) && (
                     <div className="mb-4 rounded-lg border border-premium-gold/30 bg-premium-gold/10 p-3 text-xs text-text-secondary">
                       <p className="font-semibold text-premium-gold mb-1">Envío: {groupedLabel?.label ?? 'Agrupado'}</p>
                       {!order.shipmentId ? (
                         <>
-                          <p>Has elegido agrupar este pedido con futuras compras.</p>
+                          <p>
+                            {order.partyParticipation
+                              ? order.partyParticipation.partyMode === 'SHARED'
+                                ? 'Esta Party es Compartida: los sobres que compraste son para ti. Solicita su envío cuando la Party finalice; puedes agruparlo con otros pedidos.'
+                                : 'Has ganado esta Party Batalla con el mejor hit. Solicita el envío de todos los sobres; se tramitará como un envío independiente.'
+                              : 'Has elegido agrupar este pedido con futuras compras.'}
+                          </p>
                           {canRequestShipment(order) && (
                             <button
                               onClick={() => openRequestPanel(order.id)}
                               className="btn btn-primary mt-3 text-xs py-2 px-4"
                             >
-                              Solicitar envío
+                              {order.partyParticipation ? 'Solicitar envío de los sobres' : 'Solicitar envío'}
                             </button>
                           )}
                         </>

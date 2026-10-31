@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { captureServerError } from '@/lib/observability/sentry';
 import { sendShippingNotificationEmail } from '@/lib/email';
 import { ShippingProvider } from '@/lib/shipping/tracking-urls';
+import { isAdminAuthenticated } from '@/lib/admin-auth';
+import { ownsPartyPrize } from '@/lib/parties/core';
 
 const VALID_ORDER_STATUS = ['PROCESSING', 'SHIPPED', 'COMPLETED', 'FAILED', 'CANCELLED', 'DEVUELTO'] as const;
 type OrderStatus = (typeof VALID_ORDER_STATUS)[number];
@@ -11,8 +13,7 @@ const VALID_SHIPPING_PROVIDERS = ['CORREOS', 'MRW', 'SEUR', 'CTT_EXPRESS'] as co
 type ShippingProviderType = (typeof VALID_SHIPPING_PROVIDERS)[number];
 
 function isAuthenticated(request: NextRequest): boolean {
-  const cookie = request.cookies.get('tcg_admin_auth');
-  return !!cookie;
+  return isAdminAuthenticated(request);
 }
 
 export async function GET(request: NextRequest) {
@@ -60,6 +61,14 @@ export async function GET(request: NextRequest) {
               orders: { select: { id: true, orderNumber: true, status: true } },
             },
           },
+          partyParticipation: {
+            select: {
+              id: true,
+              status: true,
+              shippingRequestedAt: true,
+              party: { select: { id: true, status: true, mode: true, winnerParticipationId: true } },
+            },
+          },
         },
       }),
       db.order.count({ where }),
@@ -98,6 +107,17 @@ export async function GET(request: NextRequest) {
             merchandiseTotal: parseFloat(o.shipment.merchandiseTotal.toString()),
             paymentStatus: o.shipment.paymentStatus,
             orders: o.shipment.orders,
+          }
+        : null,
+      partyParticipation: o.partyParticipation
+        ? {
+            status: o.partyParticipation.status,
+            shippingRequestedAt: o.partyParticipation.shippingRequestedAt,
+            partyId: o.partyParticipation.party.id,
+            partyStatus: o.partyParticipation.party.status,
+            partyMode: o.partyParticipation.party.mode,
+            isWinner:
+              o.partyParticipation.party.winnerParticipationId === o.partyParticipation.id,
           }
         : null,
       createdAt: o.createdAt,
@@ -180,11 +200,39 @@ export async function PATCH(request: NextRequest) {
         status: true,
         shippingProvider: true,
         shipmentId: true,
+        shipment: { select: { paymentStatus: true } },
+        partyParticipation: {
+          select: {
+            id: true,
+            shippingRequestedAt: true,
+            party: { select: { status: true, mode: true, winnerParticipationId: true } },
+          },
+        },
       },
     });
 
     if (!currentOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    const partyOrder = currentOrder.partyParticipation;
+    const ownsPrize = partyOrder
+      ? ownsPartyPrize(partyOrder.party.mode, partyOrder.party.winnerParticipationId, partyOrder.id)
+      : false;
+    if (
+      partyOrder &&
+      ((status === 'SHIPPED' &&
+        (partyOrder.party.status !== 'COMPLETED' ||
+          !ownsPrize ||
+          !partyOrder.shippingRequestedAt ||
+          !currentOrder.shipmentId ||
+          currentOrder.shipment?.paymentStatus !== 'PAID')) ||
+        (status === 'COMPLETED' && ownsPrize && currentOrder.status !== 'SHIPPED'))
+    ) {
+      return NextResponse.json(
+        { error: 'La orden de una Party solo puede enviarse tras la solicitud de quien recibe los sobres y no puede marcarse entregada antes del envío.' },
+        { status: 409 },
+      );
     }
 
     // Check if we're transitioning from PROCESSING to SHIPPED (to send email)

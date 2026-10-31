@@ -18,6 +18,7 @@ export default async function B2BCatalogRoute({ searchParams }: PageProps) {
     | 'JAPANESE'
     | 'KOREAN'
     | 'SPANISH'
+    | 'CHINESE'
     | undefined;
 
   return (

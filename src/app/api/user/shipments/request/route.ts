@@ -24,6 +24,8 @@ import { generateSignature, toBase64 } from '@/lib/payments/redsys/signature';
 import type { RedsysMerchantParameters } from '@/lib/payments/redsys/types';
 import { notifyShipmentRequested } from '@/lib/shipments/notify';
 import { getBaseProductId } from '@/lib/orders/pricing';
+import { isSameOriginRequest } from '@/lib/security/request';
+import { ownsPartyPrize } from '@/lib/parties/core';
 
 interface OrderItemSnapshot {
   id?: string;
@@ -35,6 +37,9 @@ interface OrderItemSnapshot {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: 'Solicitud no válida.' }, { status: 403 });
+    }
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
@@ -59,6 +64,13 @@ export async function POST(request: NextRequest) {
     // another customer simply won't be returned here, so they fail the count check below.
     const orders = await db.order.findMany({
       where: { id: { in: orderIds }, userId },
+      include: {
+        partyParticipation: {
+          include: {
+            party: { select: { status: true, mode: true, winnerParticipationId: true } },
+          },
+        },
+      },
     });
 
     if (orders.length !== orderIds.length) {
@@ -68,7 +80,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!orders.every(isOrderEligibleForShipmentRequest)) {
+    const partyOrders = orders.filter((order) => order.partyParticipation !== null);
+    const hasIneligiblePartyOrder = partyOrders.some((order) => {
+      const participation = order.partyParticipation!;
+      return (
+        participation.status !== 'PAID' ||
+        participation.party.status !== 'COMPLETED' ||
+        !ownsPartyPrize(
+          participation.party.mode,
+          participation.party.winnerParticipationId,
+          participation.id,
+        )
+      );
+    });
+    if (hasIneligiblePartyOrder) {
+      return NextResponse.json(
+        { error: 'Solo puedes solicitar el envío de los sobres de una Party finalizada que te correspondan.' },
+        { status: 403 },
+      );
+    }
+    // Batalla prizes ship on their own; Compartida orders can be grouped with any other order.
+    if (
+      orders.length > 1 &&
+      partyOrders.some((order) => order.partyParticipation!.party.mode === 'BATTLE')
+    ) {
+      return NextResponse.json(
+        { error: 'Los sobres de una Party Batalla se envían de forma independiente.' },
+        { status: 403 },
+      );
+    }
+    let partyShippingData: {
+      shippingAddress: string;
+      shippingPostalCode: string;
+      shippingCity: string;
+      shippingLocality: string;
+      shippingProvince: string;
+    } | null = null;
+    if (partyOrders.length > 0) {
+      const profile = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          addressLine: true,
+          postalCode: true,
+          city: true,
+          locality: true,
+          province: true,
+        },
+      });
+      if (!profile?.addressLine || !profile.postalCode || !profile.city) {
+        return NextResponse.json(
+          { error: 'Completa tu dirección de envío en tu perfil antes de solicitar el envío de tu Party.' },
+          { status: 400 },
+        );
+      }
+      partyShippingData = {
+        shippingAddress: profile.addressLine,
+        shippingPostalCode: profile.postalCode,
+        shippingCity: profile.city,
+        shippingLocality: profile.locality ?? '',
+        shippingProvince: profile.province ?? '',
+      };
+    }
+    const partyOrderIds = new Set(partyOrders.map((order) => order.id));
+    const effectiveOrders = partyShippingData
+      ? orders.map((order) =>
+          partyOrderIds.has(order.id) ? { ...order, ...partyShippingData } : order,
+        )
+      : orders;
+
+    if (!effectiveOrders.every(isOrderEligibleForShipmentRequest)) {
       return NextResponse.json(
         {
           error:
@@ -78,20 +158,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!haveSameShippingAddress(orders)) {
+    if (!haveSameShippingAddress(effectiveOrders)) {
       return NextResponse.json(
         { error: 'Solo puedes agrupar pedidos con la misma dirección de envío.' },
         { status: 409 }
       );
     }
 
-    const referenceOrder = orders[0];
-    const merchandiseTotal = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount.toString()), 0);
+    const referenceOrder = effectiveOrders[0];
+    const merchandiseTotal = effectiveOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount.toString()), 0);
 
     // Combine items across every selected order and fetch product weight/dimensions,
     // exactly like the checkout route does, to run the same shipping calculation once
     // over the combined package.
-    const combinedItems = orders.flatMap((o) =>
+    const combinedItems = effectiveOrders.flatMap((o) =>
       Array.isArray(o.items) ? (o.items as unknown as OrderItemSnapshot[]) : []
     );
     const productIds = Array.from(
@@ -169,6 +249,23 @@ export async function POST(request: NextRequest) {
         if (claim.count !== orderIds.length) {
           throw new Error('SHIPMENT_CLAIM_CONFLICT');
         }
+        if (partyShippingData) {
+          await tx.order.updateMany({
+            where: { id: { in: Array.from(partyOrderIds) } },
+            data: partyShippingData,
+          });
+        }
+        if (partyOrders.length > 0) {
+          const requested = await tx.partyParticipation.updateMany({
+            where: {
+              id: { in: partyOrders.map((order) => order.partyParticipation!.id) },
+              status: 'PAID',
+              shippingRequestedAt: null,
+            },
+            data: { shippingRequestedAt: new Date() },
+          });
+          if (requested.count !== partyOrders.length) throw new Error('PARTY_SHIPPING_ALREADY_REQUESTED');
+        }
 
         return shipment;
       });
@@ -178,6 +275,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Uno o más pedidos ya han sido incluidos en otra solicitud de envío.' },
           { status: 409 }
+        );
+      }
+      if (error instanceof Error && error.message === 'PARTY_SHIPPING_ALREADY_REQUESTED') {
+        return NextResponse.json(
+          { error: 'La solicitud de envío de tu Party ya está en curso.' },
+          { status: 409 },
         );
       }
       throw error;

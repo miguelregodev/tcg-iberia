@@ -145,6 +145,21 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
             <h2 className="text-lg sm:text-2xl font-bold text-text-primary">
               Tu Bolsa
             </h2>
+            {items.length > 0 && (
+              <button
+                type="button"
+                disabled={isCheckingOut || isSubmittingB2B}
+                onClick={() => {
+                  clearCart();
+                  setError(null);
+                  setB2bNotes('');
+                  setB2bSuccess(null);
+                }}
+                className="ml-auto mr-3 rounded-lg border border-danger/30 px-3 py-2 text-sm font-semibold text-danger hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Vaciar carrito
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-text-secondary hover:text-premium-gold transition-colors"
@@ -176,7 +191,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
 
             {items.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-text-secondary text-lg mb-4">El carrito está vacío</p>
+                <p role="status" className="text-text-secondary text-lg mb-4">El carrito está vacío</p>
                 <button
                   onClick={onClose}
                   className="text-premium-gold hover:text-premium-gold_dark font-semibold"

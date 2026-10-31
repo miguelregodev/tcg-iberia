@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const lineItems = session.line_items?.data || [];
     const persistedCart = await db.checkoutSessionCart.findUnique({
       where: { sessionId },
-      select: { items: true },
+      select: { items: true, inventoryConflictAt: true },
     });
     const orderItems = Array.isArray(persistedCart?.items)
       ? (persistedCart.items.filter(isOrderItemSnapshot) as unknown as OrderItemSnapshot[])
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       lineItems: formattedLineItems,
       customerEmail: session.customer_email,
       createdAt: new Date(session.created * 1000).toLocaleDateString(),
+      inventoryConflict: persistedCart?.inventoryConflictAt !== null && persistedCart?.inventoryConflictAt !== undefined,
     });
   } catch (error: unknown) {
     console.error('Session retrieval error:', error);

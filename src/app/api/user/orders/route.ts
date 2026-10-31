@@ -50,6 +50,16 @@ export async function GET(request: NextRequest) {
             paymentStatus: true,
           },
         },
+        partyParticipation: {
+          select: {
+            id: true,
+            partyId: true,
+            status: true,
+            refundStatus: true,
+            shippingRequestedAt: true,
+            party: { select: { status: true, mode: true, winnerParticipationId: true } },
+          },
+        },
       },
     });
 
@@ -82,6 +92,18 @@ export async function GET(request: NextRequest) {
       totalAmount: parseFloat(o.totalAmount.toString()),
       shipment: o.shipment
         ? { ...o.shipment, shippingCost: parseFloat(o.shipment.shippingCost.toString()) }
+        : null,
+      partyParticipation: o.partyParticipation
+        ? {
+            partyId: o.partyParticipation.partyId,
+            status: o.partyParticipation.status,
+            refundStatus: o.partyParticipation.refundStatus,
+            shippingRequestedAt: o.partyParticipation.shippingRequestedAt,
+            isWinner:
+              o.partyParticipation.party.winnerParticipationId === o.partyParticipation.id,
+            partyStatus: o.partyParticipation.party.status,
+            partyMode: o.partyParticipation.party.mode,
+          }
         : null,
     }));
 

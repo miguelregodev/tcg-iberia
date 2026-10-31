@@ -33,6 +33,7 @@ const LANGUAGES = [
   { value: 'JAPANESE', label: 'Japonés' },
   { value: 'KOREAN', label: 'Coreano' },
   { value: 'SPANISH', label: 'Español' },
+  { value: 'CHINESE', label: 'Chino' },
 ];
 
 function FormSection({
@@ -104,7 +105,7 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
     description: seed?.description || '',
     price: seed?.price ? String(seed.price) : '',
     discountPercentage: seed?.discountPercentage ? String(seed.discountPercentage) : '',
-    liveOpeningPrice: seed?.liveOpeningPrice ? String(seed.liveOpeningPrice) : '',
+    liveOpeningPrice: seed?.liveOpeningPrice != null ? String(seed.liveOpeningPrice) : '',
     b2bPrice: seed?.b2bPrice ? String(seed.b2bPrice) : '',
     notes: seed?.notes || '',
     type: seed?.type || '',
@@ -273,6 +274,12 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
         ? Number(formData.price) *
           (1 - Number(formData.discountPercentage) / 100)
         : Number(formData.price)
+      : null;
+  const previewLiveFinalPrice =
+    formData.liveOpeningPrice !== '' &&
+    Number.isFinite(Number(formData.liveOpeningPrice)) &&
+    Number(formData.liveOpeningPrice) >= 0
+      ? Number(formData.liveOpeningPrice) * (1 - Number(formData.discountPercentage) / 100)
       : null;
 
   return (
@@ -464,13 +471,20 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
 
               {previewFinalPrice !== null &&
                 Number(formData.discountPercentage) > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
-                    <span className="text-green-700 font-medium">
+                  <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm space-y-2" aria-live="polite">
+                    <p className="text-green-700 font-medium">
                       Precio final con descuento
-                    </span>
-                    <span className="font-bold text-green-700">
-                      {previewFinalPrice.toFixed(2)}€
-                    </span>
+                    </p>
+                    <div className="flex items-center justify-between gap-4 text-green-700">
+                      <span>Sellado</span>
+                      <span className="font-bold">{previewFinalPrice.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-green-700">
+                      <span>Apertura en directo</span>
+                      <span className={previewLiveFinalPrice !== null ? 'font-bold' : ''}>
+                        {previewLiveFinalPrice !== null ? `${previewLiveFinalPrice.toFixed(2)}€` : 'No configurada'}
+                      </span>
+                    </div>
                   </div>
                 )}
 

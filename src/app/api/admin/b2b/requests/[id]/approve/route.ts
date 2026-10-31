@@ -78,8 +78,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const activationToken = issueActivationToken();
-  const adminEmail =
-    request.cookies.get('tcg_admin_auth')?.value ?? 'admin@tcgiberia.com';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@tcgiberia.com').trim().toLowerCase();
 
   try {
     const activationUrl = `${getB2bAppUrl(request.nextUrl.origin)}/b2b/activar/${activationToken.raw}`;

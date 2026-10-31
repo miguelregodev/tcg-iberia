@@ -20,6 +20,7 @@ function getLanguageFlag(language: string): { path: string; name: string } {
     JAPANESE: { path: '/images/japan.png', name: 'Japanese' },
     KOREAN: { path: '/images/south-korea.png', name: 'Korean' },
     SPANISH: { path: '/images/spain.png', name: 'Spanish' },
+    CHINESE: { path: '/images/china.png', name: 'Chinese' },
   };
   return flags[language] || flags.ENGLISH;
 }

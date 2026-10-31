@@ -2,12 +2,16 @@
 
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import Link from 'next/link';
 
 import { useEffect, useState } from 'react';
 import { trackCheckoutCompleted, trackCheckoutFailed } from '@/lib/analytics/events';
 
 interface Props {
   sessionId: string | null;
+  partyParticipationId?: string | null;
+  redsysMerchantParameters?: string | null;
+  redsysSignature?: string | null;
 }
 
 
@@ -31,17 +35,98 @@ interface SessionData {
   customerEmail?: string;
   createdAt: string;
   orderNumber?: string;
+  inventoryConflict?: boolean;
+}
+
+interface PartyPurchase {
+  id: string;
+  participationStatus: string;
+  confirmed: boolean;
+  amountPaid: number;
+  orderNumber: string | null;
+  party: {
+    id: string;
+    status: string;
+    productName: string;
+    language: string;
+  };
 }
 
 export default function CheckoutSuccessClient({
   sessionId,
+  partyParticipationId,
+  redsysMerchantParameters,
+  redsysSignature,
 }: Props) {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
+  const [partyPurchase, setPartyPurchase] = useState<PartyPurchase | null>(null);
+  const [partyConfirmationError, setPartyConfirmationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (partyParticipationId) {
+      let cancelled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      const fetchPartyParticipation = async () => {
+        try {
+          const response = await fetch(
+            `/api/user/parties/checkout-confirmation?participation_id=${encodeURIComponent(partyParticipationId)}`,
+          );
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'No se pudo cargar la participación Party.');
+          }
+          const data = (await response.json()) as { partyPurchase: PartyPurchase | null };
+          if (!data.partyPurchase) throw new Error('No se encontró esta participación.');
+          if (cancelled) return;
+          setPartyPurchase(data.partyPurchase);
+          if (
+            !data.partyPurchase.confirmed &&
+            data.partyPurchase.participationStatus === 'PENDING_PAYMENT' &&
+            attempts < maxAttempts
+          ) {
+            attempts += 1;
+            timer = setTimeout(fetchPartyParticipation, 3000);
+            return;
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : 'No se pudo cargar la participación Party.');
+          }
+        }
+        if (!cancelled) setLoading(false);
+      };
+
+      const confirmAndFetch = async () => {
+        if (redsysMerchantParameters && redsysSignature) {
+          try {
+            await fetch('/api/user/parties/checkout-confirmation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                participationId: partyParticipationId,
+                Ds_MerchantParameters: redsysMerchantParameters,
+                Ds_Signature: redsysSignature,
+              }),
+            });
+          } catch {
+            // Fall back to polling; the server notification may still confirm it.
+          }
+        }
+        await fetchPartyParticipation();
+      };
+      void confirmAndFetch();
+      return () => {
+        cancelled = true;
+        if (timer) clearTimeout(timer);
+      };
+    }
+
     if (!sessionId) {
       setError('No session ID provided');
       setLoading(false);
@@ -68,6 +153,20 @@ export default function CheckoutSuccessClient({
         const data = (await response.json()) as SessionData;
         setSessionData(data);
 
+        try {
+          const partyResponse = await fetch(
+            `/api/user/parties/checkout-confirmation?session_id=${encodeURIComponent(sessionId)}`,
+          );
+          if (partyResponse.ok) {
+            const partyData = (await partyResponse.json()) as { partyPurchase: PartyPurchase | null };
+            setPartyPurchase(partyData.partyPurchase);
+          } else if (partyResponse.status !== 401) {
+            setPartyConfirmationError('No pudimos cargar los detalles de la participación Party.');
+          }
+        } catch {
+          setPartyConfirmationError('No pudimos cargar los detalles de la participación Party.');
+        }
+
         if (data.status === 'paid') {
           trackCheckoutCompleted({
             orderId: resolvedOrderNumber,
@@ -90,7 +189,7 @@ export default function CheckoutSuccessClient({
     };
 
     fetchOrderAndSession();
-  }, [sessionId]);
+  }, [sessionId, partyParticipationId, redsysMerchantParameters, redsysSignature]);
 
 return (
     <>
@@ -120,12 +219,24 @@ return (
 
             {/* Title */}
             <h1 className="text-4xl font-bold text-text-primary mb-4">
-              Pedido Confirmado.
+              {sessionData?.inventoryConflict
+                ? 'Pago reembolsado — stock no disponible'
+                : partyPurchase?.confirmed
+                ? '¡Tu participación en la Party está confirmada!'
+                : partyPurchase
+                  ? 'Estamos confirmando tu participación en la Party'
+                  : 'Pedido Confirmado.'}
             </h1>
 
             {/* Description */}
             <p className="text-lg text-text-secondary">
-              Muchas gracias por su compra, su pedido ha sido confirmado. Recibirá un correo electrónico de confirmación con los detalles de su pedido y un número de seguimiento una vez que su pedido haya sido enviado.
+              {sessionData?.inventoryConflict
+                ? 'El producto se reservó o agotó antes de confirmar tu compra. Hemos solicitado el reembolso completo al proveedor de pago; el abono aparecerá según los plazos de tu banco.'
+                : partyPurchase
+                ? partyPurchase.confirmed
+                  ? 'Tu plaza ya está confirmada. Consulta el progreso y los detalles actualizados de la apertura en la página de la Party.'
+                  : 'El pago está siendo verificado por nuestro sistema. La plaza solo se confirmará cuando recibamos la confirmación segura del pago.'
+                : 'Muchas gracias por su compra, su pedido ha sido confirmado. Recibirá un correo electrónico de confirmación con los detalles de su pedido y un número de seguimiento una vez que su pedido haya sido enviado.'}
             </p>
           </div>
 
@@ -147,9 +258,47 @@ return (
             </div>
           )}
 
+          {partyConfirmationError && !loading && (
+            <p role="alert" className="mb-6 rounded-lg border border-warning/30 bg-warning-bg p-4 text-warning">
+              {partyConfirmationError}
+            </p>
+          )}
+
           {/* Order Summary */}
-          {sessionData && !loading && (
+          {(sessionData || partyPurchase) && !loading && (
             <>
+              {partyPurchase && (
+                <section
+                  aria-live="polite"
+                  className="bg-dark-surface rounded-xl border border-premium-gold/40 p-6 mb-8"
+                >
+                  <h2 className="text-xl font-bold text-text-primary">
+                    {partyPurchase.confirmed
+                      ? '¡Tu participación en la Party está confirmada!'
+                      : 'Participación de Party pendiente de confirmación'}
+                  </h2>
+                  <p className="mt-3 text-text-secondary">
+                    {partyPurchase.party.productName} ({partyPurchase.party.language})
+                  </p>
+                  <p className="mt-1 text-premium-gold font-semibold">
+                    {partyPurchase.amountPaid.toFixed(2)} €
+                  </p>
+                  {partyPurchase.orderNumber && (
+                    <p className="mt-2 text-sm text-text-secondary">
+                      Referencia del pedido: {partyPurchase.orderNumber}
+                    </p>
+                  )}
+                  <Link
+                    href={`/parties/${partyPurchase.party.id}`}
+                    className="btn btn-primary inline-flex mt-5"
+                  >
+                    Ver esta Party
+                  </Link>
+                </section>
+              )}
+
+              {sessionData && (
+                <>
               {/* Order Number & Date */}
               <div className="bg-dark-surface rounded-xl border border-dark-border p-8 mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -255,6 +404,8 @@ return (
                   </p>
                 </div>
               </div>
+                </>
+              )}
 
               {/* Support Info */}
               <div className="bg-dark-bgSecondary rounded-xl p-6 mb-8 border border-dark-border">

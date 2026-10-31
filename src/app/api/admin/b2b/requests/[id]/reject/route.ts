@@ -41,8 +41,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // No body is fine — reason is optional.
   }
 
-  const adminEmail =
-    request.cookies.get('tcg_admin_auth')?.value ?? 'admin@tcgiberia.com';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@tcgiberia.com').trim().toLowerCase();
 
   try {
     const updated = await db.b2bRequest.update({

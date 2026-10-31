@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH';
+type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
 
 interface LanguageSubmenuProps {
   category: 'booster-boxes' | 'booster-packs' | 'booster-bundles' | 'etbs';
@@ -14,10 +14,11 @@ const LANGUAGES: { value: Language; label: string; flag: string }[] = [
   { value: 'JAPANESE', label: 'Japanese', flag: '/images/japan.png' },
   { value: 'KOREAN', label: 'Korean', flag: '/images/south-korea.png' },
   { value: 'SPANISH', label: 'Spanish', flag: '/images/spain.png' },
+  { value: 'CHINESE', label: 'Chinese', flag: '/images/china.png' },
 ];
 
 const CATEGORY_LANGUAGES: Record<string, Language[]> = {
-  'booster-boxes':   ['JAPANESE', 'KOREAN'],
+  'booster-boxes':   ['JAPANESE', 'KOREAN', 'CHINESE'],
   'booster-bundles': ['ENGLISH', 'SPANISH'],
   'etbs':            ['ENGLISH', 'SPANISH'],
 };

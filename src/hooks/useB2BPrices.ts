@@ -20,6 +20,30 @@ export interface B2BPriceOverride {
   b2bPrice: number | null;
 }
 
+export async function fetchB2BPriceOverrides(
+  productIds: string[],
+  signal: AbortSignal,
+): Promise<Map<string, B2BPriceOverride>> {
+  // Match the maximum IDs accepted by /api/b2b/prices.
+  const batchSize = 200;
+  const requests: Promise<Record<string, B2BPriceOverride>>[] = [];
+  for (let offset = 0; offset < productIds.length; offset += batchSize) {
+    const ids = productIds.slice(offset, offset + batchSize).join(',');
+    requests.push((async () => {
+      const response = await fetch(`/api/b2b/prices?ids=${encodeURIComponent(ids)}`, {
+        cache: 'no-store',
+        credentials: 'include',
+        signal,
+      });
+      if (!response.ok) throw new Error(`B2B price request failed (${response.status})`);
+      const data = (await response.json()) as { prices: Record<string, B2BPriceOverride> };
+      return data.prices;
+    })());
+  }
+  const batches = await Promise.all(requests);
+  return new Map(batches.flatMap((prices) => Object.entries(prices)));
+}
+
 export function useB2BPrices(productIds: string[]): Map<string, B2BPriceOverride> {
   const { isB2B } = useB2BSession();
   const [overrides, setOverrides] = useState<Map<string, B2BPriceOverride>>(new Map());
@@ -41,26 +65,12 @@ export function useB2BPrices(productIds: string[]): Map<string, B2BPriceOverride
 
     (async () => {
       try {
-        const res = await fetch(`/api/b2b/prices?ids=${encodeURIComponent(stableKey)}`, {
-          cache: 'no-store',
-          credentials: 'include',
-          signal: controller.signal,
-        });
-        if (!res.ok) {
-          setOverrides(new Map());
-          return;
-        }
-
-        const data = (await res.json()) as { prices: Record<string, B2BPriceOverride> };
-        const next = new Map<string, B2BPriceOverride>();
-        for (const [id, values] of Object.entries(data.prices ?? {})) {
-          next.set(id, values);
-        }
-
-        setOverrides(next);
+        const next = await fetchB2BPriceOverrides(stableKey.split(','), controller.signal);
+        if (!controller.signal.aborted) setOverrides(next);
         
       } catch (err) {
-        if ((err as DOMException).name !== 'AbortError') {
+        if (!controller.signal.aborted) {
+          console.error('Failed to fetch B2B prices:', err);
           setOverrides(new Map());
         }
       }

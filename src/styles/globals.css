@@ -27,6 +27,58 @@ body {
   @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-premium-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dark-bg disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
+.catalog-price-range {
+  @apply absolute inset-0 h-11 w-full appearance-none bg-transparent;
+  pointer-events: none;
+  margin: 0;
+  outline: none;
+}
+
+.catalog-price-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+
+.catalog-price-range::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+
+.catalog-price-range::-webkit-slider-thumb {
+  @apply h-6 w-6 rounded-full border-2 border-premium-gold bg-premium-gold;
+  appearance: none;
+  margin-top: -10px;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.catalog-price-range::-moz-range-thumb {
+  @apply h-6 w-6 rounded-full border-2 border-premium-gold bg-premium-gold;
+  box-sizing: border-box;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.catalog-price-range:focus-visible::-webkit-slider-thumb {
+  @apply ring-2 ring-premium-gold ring-offset-2 ring-offset-dark-bg;
+}
+
+.catalog-price-range:focus-visible::-moz-range-thumb {
+  @apply ring-2 ring-premium-gold ring-offset-2 ring-offset-dark-bg;
+}
+
+.catalog-price-range:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.catalog-price-range:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .btn-primary {
   @apply bg-premium-gold text-dark-bg hover:bg-premium-gold_dark shadow-elevated;
 }

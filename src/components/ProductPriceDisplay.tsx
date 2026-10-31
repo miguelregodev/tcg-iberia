@@ -15,6 +15,7 @@
 
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices, resolveEffectivePrice } from '@/hooks/useB2BPrices';
+import { getPublicPriceDetails } from '@/lib/products/price-filter';
 
 interface Props {
   productId: string;
@@ -44,16 +45,15 @@ export function ProductPriceDisplay({
     overrides,
   });
 
-  const discounted = !usingB2B && !!discountPercentage && discountPercentage > 0;
-  const applyDiscount = (value: number) =>
-    discounted ? value * (1 - (discountPercentage ?? 0) / 100) : value;
-  const hasLiveOpening = !usingB2B && liveOpeningPrice != null;
-  // The discount applies to both formats; show the cheapest one.
-  const sealedFinal = applyDiscount(publicPrice);
-  const liveFinal = hasLiveOpening ? applyDiscount(liveOpeningPrice as number) : null;
-  const useLive = liveFinal != null && liveFinal <= sealedFinal;
-  const originalPrice = useLive ? (liveOpeningPrice as number) : publicPrice;
-  const displayPrice = usingB2B ? price : useLive ? (liveFinal as number) : sealedFinal;
+  const publicDetails = getPublicPriceDetails({
+    price: publicPrice,
+    discountPercentage: discountPercentage ?? null,
+    liveOpeningPrice: liveOpeningPrice ?? null,
+  });
+  const discounted = !usingB2B && publicDetails.discounted;
+  const hasLiveOpening = !usingB2B && publicDetails.hasLiveOpening;
+  const { originalPrice } = publicDetails;
+  const displayPrice = usingB2B ? price : publicDetails.displayPrice;
 
   return (
     <div className={className ?? 'flex items-center gap-2'}>

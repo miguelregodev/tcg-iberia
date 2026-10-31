@@ -33,6 +33,7 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   { key: 'home', label: 'Inicio', href: '/' },
   { key: 'booster-boxes', label: 'Cajas Selladas', category: 'booster-boxes' },
+  { key: 'parties', label: 'Parties', href: '/parties' },
   { key: 'booster-packs', label: 'Sobres', category: 'booster-packs' },
   { key: 'booster-bundles', label: 'Booster Bundles', category: 'booster-bundles' },
   { key: 'etbs', label: 'Elite Trainer Boxes', category: 'etbs' },

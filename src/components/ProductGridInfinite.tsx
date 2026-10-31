@@ -16,6 +16,9 @@ interface ProductGridInfiniteProps {
   hasMore: boolean;
   /** Show the language flag badge on each card. Defaults to true. */
   showLanguageFlag?: boolean;
+  showAddToCart?: boolean;
+  /** Called when a product link is clicked, before navigating away. */
+  onNavigateAway?: () => void;
 }
 
 /**
@@ -27,14 +30,16 @@ const AnimatedCard = memo(function AnimatedCard({
   product,
   animationDelay,
   showLanguageFlag,
+  showAddToCart,
 }: {
   product: Product;
   animationDelay: number;
   showLanguageFlag: boolean;
+  showAddToCart: boolean;
 }) {
   return (
     <div className="product-reveal" style={{ animationDelay: `${animationDelay}ms` }}>
-      <ProductCard product={product} showLanguageFlag={showLanguageFlag} />
+      <ProductCard product={product} showLanguageFlag={showLanguageFlag} showAddToCart={showAddToCart} />
     </div>
   );
 });
@@ -51,17 +56,24 @@ export const ProductGridInfinite = memo(function ProductGridInfinite({
   sentinelRef,
   hasMore,
   showLanguageFlag = true,
+  showAddToCart = false,
+  onNavigateAway,
 }: ProductGridInfiniteProps) {
   const visible = products.slice(0, visibleCount);
 
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+      <div
+        className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6"
+        onClickCapture={(event) => {
+          if ((event.target as HTMLElement).closest('a')) onNavigateAway?.();
+        }}
+      >
         {visible.map((product, index) => {
           // Stagger delay within each batch: 0 → 60 → 120 … → max 600 ms.
           const delay = Math.min((index % PRODUCTS_PER_BATCH) * 60, 600);
           return (
-            <AnimatedCard key={product.id} product={product} animationDelay={delay} showLanguageFlag={showLanguageFlag} />
+            <AnimatedCard key={product.id} product={product} animationDelay={delay} showLanguageFlag={showLanguageFlag} showAddToCart={showAddToCart} />
           );
         })}
       </div>

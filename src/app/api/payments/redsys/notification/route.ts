@@ -21,7 +21,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
 import { captureServerError } from '@/lib/observability/sentry';
 import {
   parseRedsysNotificationPayload,
@@ -50,6 +49,7 @@ import {
   handleShipmentPaymentFailure,
   verifyShipmentPaymentAmount,
 } from '@/lib/payments/shipmentPaymentService';
+import { processPartyParticipationPayment } from '@/lib/parties/payment';
 
 export async function POST(request: NextRequest) {
   try {
@@ -142,6 +142,16 @@ export async function POST(request: NextRequest) {
         { received: true },
         { status: 200 }
       );
+    }
+
+    const partyPaymentResult = await processPartyParticipationPayment(
+      redsysOrderId,
+      responseCode,
+      params,
+      request,
+    );
+    if (partyPaymentResult) {
+      return NextResponse.json({ received: true, ...partyPaymentResult });
     }
 
     // Find order by redsysOrderId
@@ -298,7 +308,7 @@ export async function POST(request: NextRequest) {
         await db.order.update({
           where: { id: order.id },
           data: {
-            redsysTransactionId: transactionId,
+            redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
             redsysAuthCode: authCode,
           },
@@ -336,7 +346,7 @@ export async function POST(request: NextRequest) {
         await db.order.update({
           where: { id: order.id },
           data: {
-            redsysTransactionId: transactionId,
+            redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
             paymentStatus: 'CANCELLED',
           },
@@ -368,7 +378,7 @@ export async function POST(request: NextRequest) {
         await db.order.update({
           where: { id: order.id },
           data: {
-            redsysTransactionId: transactionId,
+            redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
             redsysAuthCode: authCode,
           },
