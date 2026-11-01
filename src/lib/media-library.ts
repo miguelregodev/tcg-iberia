@@ -38,6 +38,7 @@ export interface AssignedProduct {
   productId: string;
   productName: string;
   productSlug: string;
+  kind?: 'product' | 'hit_card';
 }
 
 export type MigrationStatus = 'not_applicable' | 'not_started' | 'migrated' | 'failed';
@@ -115,13 +116,21 @@ export async function getAllImages(
       images.push(...r2Images);
     }
 
-    // Fetch products and link assignments
+    // Fetch products and hit cards to link assignments
     const products = await db.product.findMany({
       where: { imageUrl: { not: null } },
       select: { id: true, name: true, slug: true, imageUrl: true },
     });
+    const hitCards = await db.hitCard.findMany({
+      select: {
+        name: true,
+        imageUrl: true,
+        productId: true,
+        product: { select: { slug: true } },
+      },
+    });
 
-    // Assign products to images based on URL matching
+    // Assign products and hit cards to images based on URL matching
     for (const image of images) {
       const assignedProducts: AssignedProduct[] = [];
 
@@ -131,6 +140,18 @@ export async function getAllImages(
             productId: product.id,
             productName: product.name,
             productSlug: product.slug,
+            kind: 'product',
+          });
+        }
+      }
+
+      for (const hitCard of hitCards) {
+        if (hitCard.imageUrl && urlsMatch(hitCard.imageUrl, image.publicUrl)) {
+          assignedProducts.push({
+            productId: hitCard.productId,
+            productName: `Hit card: ${hitCard.name}`,
+            productSlug: hitCard.product.slug,
+            kind: 'hit_card',
           });
         }
       }

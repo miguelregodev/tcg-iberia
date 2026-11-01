@@ -541,8 +541,8 @@ function MediaLibraryImageInspector({
             <p className="text-sm text-gray-700">No asignada a ningún producto</p>
           ) : (
             <ul className="space-y-2">
-              {image.assignedProducts.map((product) => (
-                <li key={product.productId} className="text-sm bg-gray-100 p-2 rounded border border-gray-200">
+              {image.assignedProducts.map((product, index) => (
+                <li key={`${product.kind ?? 'product'}-${product.productId}-${index}`} className="text-sm bg-gray-100 p-2 rounded border border-gray-200">
                   <p className="font-medium text-gray-900">{product.productName}</p>
                   <a
                     href={`/admin/products#${product.productId}`}
