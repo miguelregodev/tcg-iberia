@@ -441,7 +441,7 @@ function MediaLibraryImageInspector({
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/admin/media-library/${image.id}`, {
+      const response = await fetch(`/api/admin/media-library/${encodeURIComponent(image.id)}`, {
         method: 'DELETE',
       });
 
