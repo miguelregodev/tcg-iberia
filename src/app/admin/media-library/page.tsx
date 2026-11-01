@@ -592,7 +592,7 @@ function MediaLibraryImageInspector({
 
         {image.assignedProducts.length === 0 && (
           <button
-            onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
+            onClick={handleDelete}
             disabled={deleting}
             className={`w-full px-3 py-2 text-sm font-medium rounded transition ${
               showDeleteConfirm
