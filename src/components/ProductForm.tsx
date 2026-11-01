@@ -643,10 +643,10 @@ export function ProductForm({ product, initialData, isDuplicate = false, onSucce
                       Quitar
                     </button>
                   </div>
-                  <ImageUpload onUpload={handleImageUpload} />
+                  <ImageUpload provider="r2" onUpload={handleImageUpload} />
                 </div>
               ) : (
-                <ImageUpload onUpload={handleImageUpload} />
+                <ImageUpload provider="r2" onUpload={handleImageUpload} />
               )}
             </FormSection>
 

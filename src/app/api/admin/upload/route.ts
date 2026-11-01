@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadToSupabaseStorage, getSupabaseAdmin } from '@/lib/supabase-storage';
+import { uploadToR2 } from '@/lib/r2';
 
 function isAuthenticated(request: NextRequest): boolean {
   const cookie = request.cookies.get('tcg_admin_auth');
@@ -22,11 +23,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const provider = formData.get('provider') === 'r2' ? 'r2' : 'supabase';
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    if (provider === 'r2') {
+      const ext = file.name.split('.').pop() || 'bin';
+      const key = `products/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const { publicUrl } = await uploadToR2(key, buffer, file.type);
+      return NextResponse.json({ url: publicUrl, success: true, provider });
+    }
+
     const fileName = `${Date.now()}-${file.name}`;
     const url = await uploadToSupabaseStorage(buffer, fileName);
 
-    return NextResponse.json({ url, success: true });
+    return NextResponse.json({ url, success: true, provider });
   } catch (error) {
     console.error('Upload handler error:', error);
 

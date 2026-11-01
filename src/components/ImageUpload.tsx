@@ -4,9 +4,11 @@ import { useState } from 'react';
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
+  /** Storage backend for the uploaded file. Defaults to Supabase. */
+  provider?: 'supabase' | 'r2';
 }
 
-export function ImageUpload({ onUpload }: ImageUploadProps) {
+export function ImageUpload({ onUpload, provider = 'supabase' }: ImageUploadProps) {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function ImageUpload({ onUpload }: ImageUploadProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('provider', provider);
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
