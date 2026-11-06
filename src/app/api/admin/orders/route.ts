@@ -4,7 +4,6 @@ import { captureServerError } from '@/lib/observability/sentry';
 import { sendShippingNotificationEmail } from '@/lib/email';
 import { ShippingProvider } from '@/lib/shipping/tracking-urls';
 import { isAdminAuthenticated } from '@/lib/admin-auth';
-import { ownsPartyPrize } from '@/lib/parties/core';
 
 const VALID_ORDER_STATUS = ['PROCESSING', 'SHIPPED', 'COMPLETED', 'FAILED', 'CANCELLED', 'DEVUELTO'] as const;
 type OrderStatus = (typeof VALID_ORDER_STATUS)[number];
@@ -201,38 +200,11 @@ export async function PATCH(request: NextRequest) {
         shippingProvider: true,
         shipmentId: true,
         shipment: { select: { paymentStatus: true } },
-        partyParticipation: {
-          select: {
-            id: true,
-            shippingRequestedAt: true,
-            party: { select: { status: true, mode: true, winnerParticipationId: true } },
-          },
-        },
       },
     });
 
     if (!currentOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
-
-    const partyOrder = currentOrder.partyParticipation;
-    const ownsPrize = partyOrder
-      ? ownsPartyPrize(partyOrder.party.mode, partyOrder.party.winnerParticipationId, partyOrder.id)
-      : false;
-    if (
-      partyOrder &&
-      ((status === 'SHIPPED' &&
-        (partyOrder.party.status !== 'COMPLETED' ||
-          !ownsPrize ||
-          !partyOrder.shippingRequestedAt ||
-          !currentOrder.shipmentId ||
-          currentOrder.shipment?.paymentStatus !== 'PAID')) ||
-        (status === 'COMPLETED' && ownsPrize && currentOrder.status !== 'SHIPPED'))
-    ) {
-      return NextResponse.json(
-        { error: 'La orden de una Party solo puede enviarse tras la solicitud de quien recibe los sobres y no puede marcarse entregada antes del envío.' },
-        { status: 409 },
-      );
     }
 
     // Check if we're transitioning from PROCESSING to SHIPPED (to send email)
