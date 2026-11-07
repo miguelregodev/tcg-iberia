@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatReleaseDate,
+  getB2BStockLabel,
   getProductInventoryState,
   getProductPurchaseLabel,
   getProductStatusLabel,
@@ -91,6 +92,13 @@ describe('product inventory state', () => {
     expect(isPreorderProduct('2026-09-15T00:00:00.000Z', now)).toBe(true);
     expect(isPreorderProduct('2026-06-15T10:00:00.000Z', now)).toBe(false);
     expect(isPreorderProduct('2026-05-30T00:00:00.000Z', now)).toBe(false);
+  });
+
+  it('formats exact B2B stock wording', () => {
+    expect(getB2BStockLabel(0)).toBe('Agotado');
+    expect(getB2BStockLabel(1)).toBe('Queda 1 unidad');
+    expect(getB2BStockLabel(2)).toBe('Quedan 2 unidades');
+    expect(getB2BStockLabel(40)).toBe('Quedan 40 unidades');
   });
 
   it('formats release dates in spanish locale', () => {
