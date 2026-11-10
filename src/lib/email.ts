@@ -697,6 +697,137 @@ export async function sendOrderEmails(payload: OrderEmailPayload): Promise<void>
   });
 }
 
+// --- Lottery participation decision emails ---
+
+export interface LotteryDecisionEmailPayload {
+  email: string;
+  lotteryTitle: string;
+  lotteryUrl: string;
+  decision: 'APPROVED' | 'REJECTED';
+  rejectionReasonLabel?: string | null;
+  rejectionDetails?: string | null;
+}
+
+function buildLotteryDecisionHtml(payload: LotteryDecisionEmailPayload): string {
+  const approved = payload.decision === 'APPROVED';
+  const body = approved
+    ? '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">Tu participación en el sorteo <strong>' +
+      escapeHtml(payload.lotteryTitle) +
+      '</strong> ha sido validada correctamente. ¡Mucha suerte!</p>'
+    : '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">No hemos podido validar tu participación en el sorteo <strong>' +
+      escapeHtml(payload.lotteryTitle) +
+      '</strong>.</p>' +
+      (payload.rejectionReasonLabel
+        ? '<p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;"><strong>Motivo:</strong> ' +
+          escapeHtml(payload.rejectionReasonLabel) +
+          '</p>'
+        : '') +
+      (payload.rejectionDetails
+        ? '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">' + escapeHtml(payload.rejectionDetails) + '</p>'
+        : '');
+  return htmlShell(
+    approved ? 'Participación ACEPTADA' : 'Participación RECHAZADA',
+    body +
+      '<p style="margin:0;font-size:14px;"><a href="' +
+      escapeHtml(payload.lotteryUrl) +
+      '" style="color:' +
+      BRAND.primary +
+      ';">Ver el sorteo</a></p>',
+  );
+}
+
+function buildLotteryDecisionText(payload: LotteryDecisionEmailPayload): string {
+  if (payload.decision === 'APPROVED') {
+    return `Tu participación en el sorteo "${payload.lotteryTitle}" ha sido validada correctamente. ¡Mucha suerte!\n\n${payload.lotteryUrl}`;
+  }
+  const reason = payload.rejectionReasonLabel ? `Motivo: ${payload.rejectionReasonLabel}\n` : '';
+  const details = payload.rejectionDetails ? `${payload.rejectionDetails}\n` : '';
+  return `No hemos podido validar tu participación en el sorteo "${payload.lotteryTitle}".\n${reason}${details}\n${payload.lotteryUrl}`;
+}
+
+/** Sends the approval or rejection email for a lottery participation. Never throws. */
+export async function sendLotteryParticipationDecisionEmail(payload: LotteryDecisionEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error('[email] Cannot send lottery decision email: SMTP not configured.');
+    return;
+  }
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const to = (payload.email || '').trim().toLowerCase();
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject:
+        payload.decision === 'APPROVED'
+          ? `Tu participación en el sorteo "${payload.lotteryTitle}" ha sido validada - TCG Iberia`
+          : `Tu participación en el sorteo "${payload.lotteryTitle}" no ha sido validada - TCG Iberia`,
+      html: buildLotteryDecisionHtml(payload),
+      text: buildLotteryDecisionText(payload),
+    });
+  } catch (error) {
+    console.error(`[email] Failed to send lottery decision email to ${to}\nError: ${String(error)}`);
+  }
+}
+
+// --- Lottery winner email ---
+
+export interface LotteryWinnerEmailPayload {
+  email: string;
+  lotteryTitle: string;
+  prize: string;
+  lotteryUrl: string;
+}
+
+const LOTTERY_WINNER_CONTACT_TEXT =
+  'Nos pondremos en contacto contigo para acordar la fecha de envío y confirmar los datos de envío del premio.';
+
+function buildLotteryWinnerHtml(payload: LotteryWinnerEmailPayload): string {
+  return htmlShell(
+    '¡Has ganado el sorteo!',
+    '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">¡Enhorabuena! Has sido elegido ganador del sorteo <strong>' +
+      escapeHtml(payload.lotteryTitle) +
+      '</strong>.</p>' +
+      '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;"><strong>Premio:</strong> ' +
+      escapeHtml(payload.prize) +
+      '</p>' +
+      '<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">' +
+      LOTTERY_WINNER_CONTACT_TEXT +
+      '</p>' +
+      '<p style="margin:0;font-size:14px;"><a href="' +
+      escapeHtml(payload.lotteryUrl) +
+      '" style="color:' +
+      BRAND.primary +
+      ';">Ver el sorteo</a></p>',
+  );
+}
+
+function buildLotteryWinnerText(payload: LotteryWinnerEmailPayload): string {
+  return `¡Enhorabuena! Has sido elegido ganador del sorteo "${payload.lotteryTitle}".\nPremio: ${payload.prize}\n\n${LOTTERY_WINNER_CONTACT_TEXT}\n\n${payload.lotteryUrl}`;
+}
+
+/** Sends the winner notification for a drawn lottery. Never throws. */
+export async function sendLotteryWinnerEmail(payload: LotteryWinnerEmailPayload): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error('[email] Cannot send lottery winner email: SMTP not configured.');
+    return;
+  }
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const to = (payload.email || '').trim().toLowerCase();
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject: `¡Has ganado el sorteo "${payload.lotteryTitle}"! - TCG Iberia`,
+      html: buildLotteryWinnerHtml(payload),
+      text: buildLotteryWinnerText(payload),
+    });
+  } catch (error) {
+    console.error(`[email] Failed to send lottery winner email to ${to}\nError: ${String(error)}`);
+  }
+}
+
 // --- Party participation emails ---
 
 function partyUrls(partyId: string): { party: string; admin: string } {

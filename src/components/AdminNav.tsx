@@ -6,9 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 const NAV_LINKS = [
   { href: '/admin/orders', label: 'Pedidos' },
   { href: '/admin/parties', label: 'Parties' },
+  { href: '/admin/lotteries', label: 'Sorteos' },
   { href: '/admin/media-library', label: 'Biblioteca Multimedia' },
   { href: '/admin/products', label: 'Productos' },
   { href: '/admin/banners', label: 'Banners' },
+  { href: '/admin/hero-slides', label: 'Hero Home' },
   { href: '/admin/price-import', label: 'Precios' },
   { href: '/admin/b2b', label: 'B2B' },
 ];

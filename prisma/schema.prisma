@@ -123,6 +123,26 @@ model AnnouncementBanner {
   @@index([displayOrder])
 }
 
+/// Homepage hero slider item.
+/// Only slides with isActive=true are served to the storefront, ordered by sortOrder asc.
+/// sortOrder is normalized to 0..n-1 inside a transaction on every mutation.
+/// name is internal (admin only) and is never exposed publicly.
+model HeroSlide {
+  id             String   @id @default(cuid())
+  name           String   @db.VarChar(255)
+  imageUrl       String   @db.VarChar(500)
+  destinationUrl String   @db.VarChar(500)
+  headline       String?  @db.VarChar(160)
+  buttonLabel    String?  @db.VarChar(60)
+  subtitle       String?  @db.VarChar(240)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 /// Product model represents a TCG/Pokemon card product in the catalog
 /// Fields:
 /// - id: Unique identifier (auto-generated CUID)
@@ -507,6 +527,103 @@ model PartyAuditLog {
 /// Fields:
 /// - name: ORDER
 /// - value: incrementing value
+enum LotteryStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  FINISHED
+  DRAWN
+  CANCELLED
+}
+
+enum LotteryParticipationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LotteryPurchasePlatform {
+  TIKTOK
+  WEBSITE
+}
+
+enum LotteryRejectionReason {
+  INVALID_ORDER_DATE
+  MINIMUM_AMOUNT_NOT_MET
+  ORDER_NOT_FOUND
+  OTHER
+}
+
+model Lottery {
+  id                    String        @id @default(cuid())
+  title                 String        @db.VarChar(160)
+  slug                  String        @unique @db.VarChar(180)
+  prize                 String        @db.VarChar(255)
+  prizeImageUrl         String?       @db.VarChar(500)
+  description           String        @db.Text
+  startDate             DateTime
+  endDate               DateTime
+  minimumOrderAmount    Decimal?      @db.Decimal(10, 2)
+  status                LotteryStatus @default(DRAFT)
+  createdById           String        @db.VarChar(255)
+  finishedAt            DateTime?
+  drawnAt               DateTime?
+  drawnById             String?       @db.VarChar(255)
+  eligibleCountAtDraw   Int?
+  winnerParticipationId String?       @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  participations      LotteryParticipation[] @relation("LotteryParticipations")
+  winnerParticipation LotteryParticipation?  @relation("LotteryWinner", fields: [winnerParticipationId], references: [id], onDelete: SetNull)
+  auditLogs           LotteryAuditLog[]
+
+  @@index([status, startDate])
+  @@index([status, endDate])
+}
+
+model LotteryParticipation {
+  id                    String                     @id @default(cuid())
+  lotteryId             String
+  userId                String
+  userEmailSnapshot     String                     @db.VarChar(255)
+  orderNumber           String                     @db.VarChar(50)
+  normalizedOrderNumber String                     @db.VarChar(50)
+  platform              LotteryPurchasePlatform
+  tiktokUsername        String?                    @db.VarChar(60)
+  orderDate             DateTime                   @db.Date
+  status                LotteryParticipationStatus @default(PENDING)
+  rejectionReason       LotteryRejectionReason?
+  rejectionReasonDetails String?                   @db.VarChar(500)
+  reviewedById          String?                    @db.VarChar(255)
+  reviewedAt            DateTime?
+  submittedAt           DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  lottery      Lottery  @relation("LotteryParticipations", fields: [lotteryId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  wonLottery   Lottery? @relation("LotteryWinner")
+
+  @@unique([lotteryId, normalizedOrderNumber])
+  @@index([lotteryId, status])
+  @@index([userId])
+  @@index([orderNumber])
+}
+
+model LotteryAuditLog {
+  id              String   @id @default(cuid())
+  lotteryId       String
+  participationId String?  @db.VarChar(255)
+  action          String   @db.VarChar(100)
+  adminId         String?  @db.VarChar(255)
+  details         Json?
+  createdAt       DateTime @default(now())
+
+  lottery Lottery @relation(fields: [lotteryId], references: [id], onDelete: Cascade)
+
+  @@index([lotteryId, createdAt])
+}
+
 model Sequence {
   name                  String      @id
   value                 Int
@@ -549,6 +666,7 @@ model User {
   stockAlerts   StockAlert[]
   shipments     Shipment[]
   partyParticipations PartyParticipation[]
+  lotteryParticipations LotteryParticipation[]
 
   @@index([email])
 }

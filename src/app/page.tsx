@@ -1,10 +1,13 @@
 import { Suspense } from 'react';
 import { Navigation } from "@/components/Navigation";
-import { Hero } from "@/components/Hero";
+import { HomeHero } from "@/components/HomeHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { TrustSection } from "@/components/TrustSection";
 import { Footer } from "@/components/Footer";
 import { HomeClient } from './HomeClient';
+
+// Safety net for the hero slides query; admin mutations also call revalidatePath('/').
+export const revalidate = 60;
 
 export default function Home() {
   return (
@@ -13,7 +16,7 @@ export default function Home() {
         <HomeClient />
       </Suspense>
       <Navigation />
-      <Hero />
+      <HomeHero />
       <CategoryGrid />
       <TrustSection />
       <Footer />
