@@ -26,8 +26,9 @@ export default function PoliticaEnvioPage() {
               <section>
                 <h2 className="text-h4 text-text-primary mb-4">Costos de Envío</h2>
                 <ul className="list-disc list-inside space-y-2 text-text-secondary">
-                  <li>España continental: Desde €3.99</li>
-                  <li>Islas Canarias: Desde €10.99</li>
+                  <li>España peninsular: Desde €3.99</li>
+                  <li>Islas Baleares: Desde €6.99</li>
+                  <li>Islas Canarias: Desde €11.99</li>
                   <li>Envío gratis en compras superiores a €200</li>
                 </ul>
               </section>
@@ -36,8 +37,8 @@ export default function PoliticaEnvioPage() {
                 <h2 className="text-h4 text-text-primary mb-4">Plazos de Entrega</h2>
                 <p className="text-text-secondary mb-3">Los plazos de entrega estimados son:</p>
                 <ul className="list-disc list-inside space-y-2 text-text-secondary">
-                  <li>España continental: 2-3 días hábiles</li>
-                  <li>Islas: 3-5 días hábiles</li>
+                  <li>España peninsular: 2-3 días hábiles</li>
+                  <li>Islas: 4-7 días hábiles</li>
                 </ul>
               </section>
 
