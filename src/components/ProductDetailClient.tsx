@@ -203,7 +203,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   {/* Badge Overlay */}
                   {product.discountPercentage && (
                     <div className="absolute top-4 left-4 bg-premium-gold text-dark-bg px-4 py-2 rounded-full font-bold text-sm shadow-elevated">
-                      -{Number(product.discountPercentage)}%
+                      -{Math.round(Number(product.discountPercentage))}%
                     </div>
                   )}
 

@@ -223,7 +223,7 @@ export default function FavoritosPage() {
                       )}
                       {product.discountPercentage && (
                         <div className="absolute top-2 right-2 bg-premium-gold text-dark-bg text-xs font-bold px-2 py-0.5 rounded-full">
-                          -{Number(product.discountPercentage)}%
+                          -{Math.round(Number(product.discountPercentage))}%
                         </div>
                       )}
                     </div>
