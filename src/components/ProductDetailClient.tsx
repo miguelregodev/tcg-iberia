@@ -12,7 +12,6 @@ import { trackPreorderViewed, trackProductViewed } from '@/lib/analytics/events'
 import { formatReleaseDate, getProductInventoryState, getProductPurchaseLabel, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
 import { getEstimatedDeliveryRange } from '@/lib/shipping/delivery-estimate';
 import { useB2BSession } from '@/context/B2BSessionContext';
-import { useB2BPrices } from '@/hooks/useB2BPrices';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -37,8 +36,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   );
   const { addToCart, items } = useCart();
   const { isB2B } = useB2BSession();
-  const b2bOverrides = useB2BPrices(isB2B ? [product.id] : []);
-  const b2bSealedPrice = isB2B ? (b2bOverrides.get(product.id)?.b2bPrice ?? null) : null;
   const flagInfo = getLanguageFlag(product.language);
   // Accesorios aren't region/language-specific, so the flag badge doesn't apply.
   const showLanguageFlag = !product.type?.toLowerCase().includes('accesorio');
@@ -64,18 +61,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     releaseDate: product.releaseDate,
   });
 
-  // Active price depends on variant selection; B2B overrides take priority
-  const activeBasePrice = variant === 'sealed' && b2bSealedPrice
-    ? b2bSealedPrice
-    : variantProduct.price;
-  // No discount for B2B users
-  const activeDiscount = isB2B ? null : variantProduct.discountPercentage;
+  // This page always shows the public price, even for B2B users.
+  const activeBasePrice = variantProduct.price;
+  const activeDiscount = variantProduct.discountPercentage;
 
   // Format prices shown on the toggle: the discount applies to both formats.
-  const formatDiscount = isB2B ? null : product.discountPercentage;
+  const formatDiscount = product.discountPercentage;
   const applyDiscount = (value: number) =>
     formatDiscount ? value * (1 - Number(formatDiscount) / 100) : value;
-  const sealedBasePrice = b2bSealedPrice ?? Number(product.price);
+  const sealedBasePrice = Number(product.price);
   const sealedFinalPrice = applyDiscount(sealedBasePrice);
   const liveBasePrice = hasLiveOpening ? Number(product.liveOpeningPrice) : 0;
   const liveFinalPrice = applyDiscount(liveBasePrice);
@@ -277,7 +271,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     {formatDiscount && (
                       <span className="ml-1 text-xs line-through opacity-70">{sealedBasePrice.toFixed(2)}€</span>
                     )}
-                    {b2bSealedPrice && <span className="ml-1 text-[10px] font-bold bg-dark-bg/20 text-dark-bg px-1 rounded">B2B</span>}
                   </button>
                   <button
                     type="button"
@@ -351,14 +344,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       -{liveSavingsPercent}% (ahorras {liveSavingsAmount.toFixed(2)}€)
                     </span>
                   </div>
-                )}
-                {isB2B && b2bSealedPrice && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-premium-gold/15 text-premium-gold">
-                    Precio B2B
-                  </span>
-                )}
-                {isB2B && b2bSealedPrice && (
-                  <span className="text-xs text-text-muted">Impuestos no incluidos</span>
                 )}
               </div>
 
