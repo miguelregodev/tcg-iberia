@@ -3,7 +3,12 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { isAdminAuthenticated } from '@/lib/admin-auth';
 import { captureServerError } from '@/lib/observability/sentry';
-import { getPartyPricing, isPartyMode, parseMoneyToCents } from '@/lib/parties/core';
+import {
+  getDiscountedPriceCents,
+  getPartyPricing,
+  isPartyMode,
+  parseMoneyToCents,
+} from '@/lib/parties/core';
 import { reconcileVerifiedPartyPayments } from '@/lib/parties/reconcile';
 
 export async function GET(request: NextRequest) {
@@ -85,12 +90,13 @@ export async function POST(request: NextRequest) {
           name: string;
           price: Prisma.Decimal;
           liveOpeningPrice: Prisma.Decimal | null;
+          discountPercentage: Prisma.Decimal | null;
           stock: number;
           visible: boolean;
           type: string | null;
         }>
       >(Prisma.sql`
-        SELECT "id", "name", "price", "liveOpeningPrice", "stock", "visible", "type"
+        SELECT "id", "name", "price", "liveOpeningPrice", "discountPercentage", "stock", "visible", "type"
         FROM "Product"
         WHERE "id" = ${productId}
         FOR UPDATE
@@ -100,7 +106,14 @@ export async function POST(request: NextRequest) {
         throw new Error('PARTY_PRODUCT_NOT_FOUND');
       }
       // Parties are sold as live openings, so that variant's price wins when defined.
-      const boxPriceCents = parseMoneyToCents((product.liveOpeningPrice ?? product.price).toString());
+      const basePriceCents = parseMoneyToCents((product.liveOpeningPrice ?? product.price).toString());
+      const boxPriceCents =
+        basePriceCents === null
+          ? null
+          : getDiscountedPriceCents(
+              basePriceCents,
+              product.discountPercentage == null ? null : Number(product.discountPercentage.toString()),
+            );
       const pricing =
         boxPriceCents === null
           ? null
