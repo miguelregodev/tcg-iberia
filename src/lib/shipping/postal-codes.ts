@@ -42,3 +42,15 @@ export function isBalearicIslandsPostalCode(postalCode: string): boolean {
   const normalized = postalCode.trim().replace(/\s+/g, '');
   return normalized.startsWith('07');
 }
+
+/**
+ * Detects whether a Spanish postal code belongs to Ceuta (prefix 51).
+ *
+ * @param postalCode The postal code string (may contain spaces or formatting).
+ * @returns true if the postal code is in Ceuta.
+ */
+export function isCeutaPostalCode(postalCode: string): boolean {
+  if (!postalCode) return false;
+  const normalized = postalCode.trim().replace(/\s+/g, '');
+  return normalized.startsWith('51');
+}

@@ -4,7 +4,11 @@
  * Provides real-time shipping cost estimates based on postal code and cart items.
  */
 
-import { isBalearicIslandsPostalCode, isCanaryIslandsPostalCode } from './postal-codes';
+import {
+  isBalearicIslandsPostalCode,
+  isCanaryIslandsPostalCode,
+  isCeutaPostalCode,
+} from './postal-codes';
 import { SHIPPING_CONFIG, parseNumber } from './config';
 
 export interface ClientShippingItem {
@@ -27,6 +31,7 @@ export function estimateShippingCost(
   // Determine zone
   const isCanary = isCanaryIslandsPostalCode(postalCode);
   const isBalearic = isBalearicIslandsPostalCode(postalCode);
+  const isCeuta = isCeutaPostalCode(postalCode);
 
   // Calculate total weight
   let totalWeight = 0;
@@ -41,7 +46,9 @@ export function estimateShippingCost(
     ? SHIPPING_CONFIG_CANARY
     : isBalearic
       ? SHIPPING_CONFIG_BALEARIC
-      : SHIPPING_CONFIG_STANDARD;
+      : isCeuta
+        ? SHIPPING_CONFIG_CEUTA
+        : SHIPPING_CONFIG_STANDARD;
 
   if (totalWeight <= 2000) {
     return config.tier1;
@@ -63,6 +70,12 @@ const SHIPPING_CONFIG_CANARY = {
 const SHIPPING_CONFIG_BALEARIC = {
   tier1: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_BALEARIC_TIER1, 6.99), // ≤2kg
   tier2: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_BALEARIC_TIER2, 7.99), // 2-5kg
+} as const;
+
+// Ceuta shipping prices (same amounts as Balearic Islands)
+const SHIPPING_CONFIG_CEUTA = {
+  tier1: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_CEUTA_TIER1, 6.99), // ≤2kg
+  tier2: parseNumber(process.env.NEXT_PUBLIC_SHIPPING_CEUTA_TIER2, 7.99), // 2-5kg
 } as const;
 
 // Standard zone shipping prices
