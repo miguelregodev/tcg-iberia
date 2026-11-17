@@ -285,7 +285,7 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                           </p>
                           {!isB2B && item.product.discountPercentage && (
                             <p className="text-[10px] sm:text-xs text-premium-gold font-semibold mb-1 sm:mb-2">
-                              -{item.product.discountPercentage}% discount applied
+                              -{Math.round(Number(item.product.discountPercentage))}% discount applied
                             </p>
                           )}
 

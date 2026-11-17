@@ -107,6 +107,117 @@ export async function deleteFromSupabaseStorage(imageUrl: string): Promise<void>
 }
 
 /**
+ * Download file from Supabase Storage
+ */
+export async function downloadFromSupabaseStorage(imageUrl: string): Promise<Buffer> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const url = new URL(imageUrl);
+    const pathParts = url.pathname.split('/');
+    const storageIndex = pathParts.indexOf('object');
+    const filePath = storageIndex !== -1 ? pathParts.slice(storageIndex + 3).join('/') : pathParts.slice(3).join('/');
+
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .download(filePath);
+
+    if (error) {
+      console.error('Supabase download error:', error);
+      throw new Error(`Download failed: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('No data received from Supabase');
+    }
+
+    // Convert Blob to Buffer
+    const arrayBuffer = await data.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch (error) {
+    console.error('Storage download error:', error);
+    throw error instanceof Error ? error : new Error('Failed to download from Supabase');
+  }
+}
+
+/**
+ * List objects in Supabase Storage bucket with pagination
+ */
+export interface SupabaseObjectMetadata {
+  key: string;
+  filename: string;
+  size: number;
+  createdAt: Date;
+  publicUrl: string;
+  mimeType?: string;
+}
+
+export interface SupabaseListResult {
+  objects: SupabaseObjectMetadata[];
+}
+
+export async function listSupabaseStorageObjects(
+  prefix?: string
+): Promise<SupabaseListResult> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .list(prefix || 'products', {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' },
+      });
+
+    if (error) {
+      console.error('Supabase list error:', error);
+      throw error;
+    }
+
+    const objects: SupabaseObjectMetadata[] = (data || [])
+      .filter((item) => item.name && item.id) // Filter out directories
+      .map((item) => ({
+        key: `${prefix || 'products'}/${item.name}`,
+        filename: item.name,
+        size: item.metadata?.size || 0,
+        createdAt: item.created_at ? new Date(item.created_at) : new Date(),
+        publicUrl: supabaseAdmin.storage
+          .from(BUCKET_NAME)
+          .getPublicUrl(`${prefix || 'products'}/${item.name}`).data.publicUrl,
+        mimeType: item.metadata?.mimetype,
+      }));
+
+    return { objects };
+  } catch (error) {
+    console.error('Storage list error:', error);
+    throw error instanceof Error ? error : new Error('Failed to list storage objects');
+  }
+}
+
+/**
+ * Extract Supabase Storage key from public URL
+ */
+export function extractSupabaseKeyFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+
+    // URL pathname like: /storage/v1/object/public/product-images/products/xxx
+    const pathParts = pathname.split('/');
+    const objectIndex = pathParts.indexOf('object');
+
+    if (objectIndex !== -1 && pathParts[objectIndex + 1] === 'public') {
+      return pathParts.slice(objectIndex + 3).join('/');
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Initialize Supabase storage bucket for product images
  * Call this once during setup
  */

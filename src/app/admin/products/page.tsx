@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Product } from '@/types';
 import { AdminNav } from '@/components/AdminNav';
 import { ProductForm, PRODUCT_TYPES } from '@/components/ProductForm';
+import { InlineStockEditor } from '@/components/InlineStockEditor';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 
@@ -429,17 +430,19 @@ export default function AdminProducts() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                outOfStock
-                                  ? 'bg-danger-bg text-danger'
-                                  : lowStock
-                                  ? 'bg-warning-bg text-warning'
-                                  : 'bg-success-bg text-success'
-                              }`}
-                            >
-                              {product.stock}
-                            </span>
+                            <InlineStockEditor
+                              productId={product.id}
+                              initialStock={product.stock}
+                              onStockUpdated={(newStock) => {
+                                setProducts((prev) =>
+                                  prev.map((p) =>
+                                    p.id === product.id
+                                      ? { ...p, stock: newStock }
+                                      : p
+                                  )
+                                );
+                              }}
+                            />
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap">
                             {finalLiveOpeningPrice != null ? (

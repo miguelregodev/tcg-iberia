@@ -1,15 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { ImageLibraryModal } from '@/components/ImageLibraryModal';
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
+  /** Storage backend for the uploaded file. Defaults to Supabase. */
+  provider?: 'supabase' | 'r2';
 }
 
-export function ImageUpload({ onUpload }: ImageUploadProps) {
+export function ImageUpload({ onUpload, provider = 'supabase' }: ImageUploadProps) {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   const handleFile = async (file: File) => {
     setError(null);
@@ -28,6 +32,7 @@ export function ImageUpload({ onUpload }: ImageUploadProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('provider', provider);
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -90,7 +95,15 @@ export function ImageUpload({ onUpload }: ImageUploadProps) {
           <p className="text-xs text-gray-500 mt-1">Max 5MB • JPG, PNG, WebP</p>
         </label>
       </div>
+      <button
+        type="button"
+        onClick={() => setLibraryOpen(true)}
+        className="mt-3 inline-flex items-center rounded-lg border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+      >
+        Seleccionar de la biblioteca
+      </button>
       {error && <p className="text-premium-red text-sm mt-2">{error}</p>}
+      <ImageLibraryModal isOpen={libraryOpen} onClose={() => setLibraryOpen(false)} onSelect={onUpload} />
     </div>
   );
 }

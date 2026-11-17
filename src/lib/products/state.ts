@@ -134,6 +134,13 @@ export function getProductStatusLabel(state: ProductInventoryState) {
   }
 }
 
+/** Exact stock wording for B2B users only (never shown on the public storefront). */
+export function getB2BStockLabel(stock: number) {
+  const units = Math.max(0, Math.floor(Number(stock) || 0));
+  if (units === 0) return 'Agotado';
+  return units === 1 ? 'Queda 1 unidad' : `Quedan ${units} unidades`;
+}
+
 export function getProductPurchaseLabel(state: ProductInventoryState) {
   return state.isPreorder ? 'Reservar' : 'Añadir al carrito';
 }

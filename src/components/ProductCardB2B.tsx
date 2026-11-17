@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Product } from '@/types';
-import { formatReleaseDate, getProductInventoryState } from '@/lib/products/state';
+import { formatReleaseDate, getB2BStockLabel, getProductInventoryState } from '@/lib/products/state';
 
 interface Props {
   product: Product;
@@ -78,6 +78,13 @@ export function ProductCardB2B({ product, b2bPrice }: Props) {
           {inventoryState.isPreorder && releaseDate ? (
             <p className="text-xs font-semibold text-text-secondary">Lanzamiento: {releaseDate}</p>
           ) : null}
+          <p
+            className={`text-xs font-semibold ${
+              inventoryState.isOutOfStock ? 'text-danger' : 'text-text-secondary'
+            }`}
+          >
+            {getB2BStockLabel(product.stock)}
+          </p>
         </div>
       </div>
     </Link>

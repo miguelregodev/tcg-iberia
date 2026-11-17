@@ -598,7 +598,7 @@ export default function PedidosPage() {
                             </p>
                             {(item.discountPercentage ?? 0) > 0 && (
                               <p className="text-xs text-premium-gold font-medium mt-1">
-                                -{item.discountPercentage}%
+                                -{Math.round(Number(item.discountPercentage))}%
                               </p>
                             )}
                           </div>

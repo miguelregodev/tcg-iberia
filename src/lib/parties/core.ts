@@ -38,6 +38,15 @@ export function parseMoneyToCents(value: string): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+/** Applies the product discount the same way the storefront does. */
+export function getDiscountedPriceCents(
+  baseCents: number,
+  discountPercentage: number | null | undefined,
+): number {
+  if (!discountPercentage || discountPercentage <= 0) return baseCents;
+  return Math.round((baseCents * (100 - discountPercentage)) / 100);
+}
+
 export function getPartyPricing(configuration: PartyConfiguration) {
   const { boxPriceCents, packsPerBox, participantCount } = configuration;
   if (

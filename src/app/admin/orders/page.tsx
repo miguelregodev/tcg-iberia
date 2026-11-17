@@ -555,7 +555,8 @@ export default function AdminOrdersPage() {
                                     href="/admin/parties"
                                     className="inline-flex max-w-full items-center rounded-md border border-purple-400/30 bg-purple-400/15 px-2 py-1 text-xs font-semibold leading-snug text-purple-200 hover:bg-purple-400/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
                                   >
-                                    PARTY {order.partyParticipation.partyMode === 'SHARED' ? 'COMPARTIDA' : 'BATALLA'} · {order.partyParticipation.partyMode === 'BATTLE' && order.partyParticipation.isWinner ? 'GANADOR' : 'PARTICIPANTE'}
+                                    PARTY {order.partyParticipation.partyMode === 'SHARED' ? 'COMPARTIDA' : 'BATALLA'}
+                                    {order.partyParticipation.partyMode === 'BATTLE' && ` · ${order.partyParticipation.isWinner ? 'GANADOR' : 'PARTICIPANTE'}`}
                                     {(order.partyParticipation.partyMode === 'SHARED' || order.partyParticipation.isWinner) && order.partyParticipation.shippingRequestedAt
                                       ? ' · ENVÍO SOLICITADO'
                                       : ''}

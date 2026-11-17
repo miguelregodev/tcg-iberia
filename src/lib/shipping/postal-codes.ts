@@ -30,3 +30,27 @@ export function isCanaryIslandsPostalCode(postalCode: string): boolean {
   const normalized = postalCode.trim().replace(/\s+/g, '');
   return normalized.startsWith('35') || normalized.startsWith('38');
 }
+
+/**
+ * Detects whether a Spanish postal code belongs to the Balearic Islands (prefix 07).
+ *
+ * @param postalCode The postal code string (may contain spaces or formatting).
+ * @returns true if the postal code is in the Balearic Islands.
+ */
+export function isBalearicIslandsPostalCode(postalCode: string): boolean {
+  if (!postalCode) return false;
+  const normalized = postalCode.trim().replace(/\s+/g, '');
+  return normalized.startsWith('07');
+}
+
+/**
+ * Detects whether a Spanish postal code belongs to Ceuta (prefix 51).
+ *
+ * @param postalCode The postal code string (may contain spaces or formatting).
+ * @returns true if the postal code is in Ceuta.
+ */
+export function isCeutaPostalCode(postalCode: string): boolean {
+  if (!postalCode) return false;
+  const normalized = postalCode.trim().replace(/\s+/g, '');
+  return normalized.startsWith('51');
+}

@@ -7,7 +7,7 @@ import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
-import { getProductInventoryState, formatReleaseDate } from '@/lib/products/state';
+import { getB2BStockLabel, getProductInventoryState, formatReleaseDate } from '@/lib/products/state';
 
 interface Props {
   product: Product;
@@ -145,6 +145,14 @@ export function B2BProductDetailClient({ product }: Props) {
                 Lanzamiento: {releaseDate}
               </p>
             )}
+
+            <p
+              className={`text-sm font-semibold mb-4 ${
+                inventoryState.isOutOfStock ? 'text-danger' : 'text-text-secondary'
+              }`}
+            >
+              {getB2BStockLabel(product.stock)}
+            </p>
 
             <div className="mb-6" />
 

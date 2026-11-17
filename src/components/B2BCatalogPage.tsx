@@ -8,7 +8,7 @@
  * - Fetches ALL products (no type restriction).
  * - Keeps only those that have at least one B2B tariff set.
  * - Renders each with its B2B price via ProductPriceDisplay.
- * - Language filter, defaulting to Japanese.
+ * - Optional language filter, defaulting to all languages.
  * - Clicking a card navigates to the standard product detail page,
  *   which already shows B2B prices when the user is logged in as B2B.
  */
@@ -26,6 +26,7 @@ import { CatalogPriceControls } from '@/components/CatalogPriceControls';
 import { useCatalogPriceFilter } from '@/hooks/useCatalogPriceFilter';
 
 type Language = 'ENGLISH' | 'JAPANESE' | 'KOREAN' | 'SPANISH' | 'CHINESE';
+type LanguageFilter = 'ALL' | Language;
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   ENGLISH: 'Inglés',
@@ -46,7 +47,7 @@ const LANGUAGE_FLAGS: Record<Language, string> = {
 const LANGUAGES: Language[] = ['ENGLISH', 'JAPANESE', 'KOREAN', 'SPANISH', 'CHINESE'];
 
 interface Props {
-  language?: Language;
+  language?: LanguageFilter;
 }
 
 export function B2BCatalogPage({ language }: Props) {
@@ -63,12 +64,13 @@ export function B2BCatalogPage({ language }: Props) {
     }
   }, [isB2B, sessionLoading, router]);
 
-  // Default language to Japanese when none supplied
-  const activeLanguage: Language = language ?? 'JAPANESE';
+  // Show all languages when none supplied
+  const activeLanguage: LanguageFilter = language ?? 'ALL';
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   // Fetch all products (no type filter)
   useEffect(() => {
@@ -117,24 +119,32 @@ export function B2BCatalogPage({ language }: Props) {
       if (!hasTariff) return false;
 
       // Language filter
-      return p.language === activeLanguage;
+      return activeLanguage === 'ALL' || p.language === activeLanguage;
     });
   }, [products, b2bOverrides, activeLanguage]);
+  const inStockCount = useMemo(
+    () => tariffProducts.filter((p) => p.available).length,
+    [tariffProducts],
+  );
+  const stockFilteredProducts = useMemo(() => {
+    if (!inStockOnly) return tariffProducts;
+    return tariffProducts.filter((p) => p.available);
+  }, [tariffProducts, inStockOnly]);
   const { visibleProducts, priceOptions, setPriceOptions, hasPriceFilter, priceKey, priceBounds } =
-    useCatalogPriceFilter(tariffProducts, b2bOverrides);
+    useCatalogPriceFilter(stockFilteredProducts, b2bOverrides);
 
   // Don't show "empty" while B2B overrides are still loading
   const b2bLoading = isB2B && b2bOverrides.size === 0 && products.length > 0;
 
   const { visibleCount, sentinelRef, hasMore } = useInfiniteReveal({
     total: visibleProducts.length,
-    snapshotKey: `b2b:${activeLanguage}:${priceKey}`,
+    snapshotKey: `b2b:${activeLanguage}:${inStockOnly}:${priceKey}`,
   });
 
   // Build language-pill href, preserving the path
-  const buildLangHref = (lang: Language | null) => {
-    if (lang) return `/b2b-catalog?language=${lang}`;
-    return '/b2b-catalog';
+  const buildLangHref = (lang: LanguageFilter) => {
+    if (lang === 'ALL') return '/b2b-catalog';
+    return `/b2b-catalog?language=${lang}`;
   };
 
   if (sessionLoading) {
@@ -182,7 +192,7 @@ export function B2BCatalogPage({ language }: Props) {
 
           {/* Language pills */}
           <div className="mt-6 flex flex-wrap items-center gap-2">
-            {LANGUAGES.map((lang) => {
+            {(['ALL', ...LANGUAGES] as LanguageFilter[]).map((lang) => {
               const active = lang === activeLanguage;
               return (
                 <Link
@@ -194,15 +204,33 @@ export function B2BCatalogPage({ language }: Props) {
                       : 'bg-dark-surfaceHover text-text-secondary border-dark-border hover:text-text-primary'
                   }`}
                 >
-                  <img
-                    src={LANGUAGE_FLAGS[lang]}
-                    alt=""
-                    className="w-4 h-3 object-cover rounded-sm"
-                  />
-                  {LANGUAGE_LABELS[lang]}
+                  {lang !== 'ALL' && (
+                    <img
+                      src={LANGUAGE_FLAGS[lang]}
+                      alt=""
+                      className="w-4 h-3 object-cover rounded-sm"
+                    />
+                  )}
+                  {lang === 'ALL' ? 'Todos' : LANGUAGE_LABELS[lang]}
                 </Link>
               );
             })}
+          </div>
+          {/* In-stock-only filter */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setInStockOnly((v) => !v)}
+            aria-pressed={inStockOnly}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide border transition-colors ${
+              inStockOnly
+                ? 'bg-premium-gold text-dark-bg border-premium-gold shadow-sm'
+                : 'bg-dark-surfaceHover text-text-secondary border-dark-border hover:text-text-primary'
+            }`}
+          >
+            {inStockOnly && <span aria-hidden="true">✓</span>}
+            Disponible ({inStockCount})
+          </button>
           </div>
         </div>
       </section>
@@ -239,8 +267,9 @@ export function B2BCatalogPage({ language }: Props) {
                 No hay productos disponibles
               </p>
               <p className="text-text-secondary mb-6">
-                No hay productos con tarifas mayoristas en{' '}
-                {LANGUAGE_LABELS[activeLanguage]} todavía. Contacta con{' '}
+                No hay productos con tarifas mayoristas
+                {activeLanguage === 'ALL' ? '' : ` en ${LANGUAGE_LABELS[activeLanguage]}`} todavía.
+                Contacta con{' '}
                 <a
                   href="mailto:sales@tcgiberia.com"
                   className="text-premium-gold font-medium hover:underline"
@@ -250,7 +279,7 @@ export function B2BCatalogPage({ language }: Props) {
                 para más información.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {LANGUAGES.filter((l) => l !== activeLanguage).map((l) => (
+                {activeLanguage !== 'ALL' && LANGUAGES.filter((l) => l !== activeLanguage).map((l) => (
                   <Link key={l} href={buildLangHref(l)} className="btn btn-secondary">
                     Ver en {LANGUAGE_LABELS[l]}
                   </Link>
@@ -261,8 +290,8 @@ export function B2BCatalogPage({ language }: Props) {
             <>
               <p className="text-sm text-text-secondary mb-6">
                 {visibleProducts.length} producto
-                {visibleProducts.length !== 1 ? 's' : ''} con tarifa mayorista en{' '}
-                {LANGUAGE_LABELS[activeLanguage]}
+                {visibleProducts.length !== 1 ? 's' : ''} con tarifa mayorista
+                {activeLanguage === 'ALL' ? '' : ` en ${LANGUAGE_LABELS[activeLanguage]}`}
               </p>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                 {visibleProducts.slice(0, visibleCount).map((product, index) => {

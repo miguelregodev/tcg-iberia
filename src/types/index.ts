@@ -70,6 +70,43 @@ export type AnnouncementBanner = {
 
 export type AnnouncementBannerInput = Omit<AnnouncementBanner, 'id' | 'createdAt' | 'updatedAt'>;
 
+/** Homepage hero slider item (admin model; createdAt/updatedAt serialized as ISO strings) */
+export interface HeroSlide {
+  id: string;
+  name: string;
+  imageUrl: string;
+  destinationUrl: string;
+  headline: string | null;
+  buttonLabel: string | null;
+  subtitle: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Public projection of a hero slide. `name` is intentionally omitted (admin only). */
+export interface PublicHeroSlide {
+  id: string;
+  imageUrl: string;
+  destinationUrl: string;
+  headline: string | null;
+  buttonLabel: string | null;
+  subtitle: string | null;
+}
+
+export interface HeroSlideInput {
+  name: string;
+  imageUrl: string;
+  destinationUrl: string;
+  headline?: string | null;
+  buttonLabel?: string | null;
+  subtitle?: string | null;
+  isActive: boolean;
+  /** Zero-based position. Omit to append (create) or keep current position (update). */
+  sortOrder?: number;
+}
+
 export type UserRole = 'USER' | 'ADMIN';
 
 export type UserProfile = {

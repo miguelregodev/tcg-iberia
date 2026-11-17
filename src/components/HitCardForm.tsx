@@ -127,7 +127,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
 
       <div>
         <label className="block text-sm font-medium mb-2 text-gray-900">Image *</label>
-        <ImageUpload onUpload={handleImageUpload} />
+        <ImageUpload provider="r2" onUpload={handleImageUpload} />
         {formData.imageUrl && (
           <div className="mt-2">
             <img

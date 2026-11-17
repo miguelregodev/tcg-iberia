@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getDiscountedPriceCents,
   getPartyPricing,
   getStartPartyError,
   isValidPartyPaymentConfirmation,
@@ -7,6 +8,19 @@ import {
   ownsPartyPrize,
   parseMoneyToCents,
 } from './core';
+
+describe('Party discounted box price', () => {
+  it('applies the product discount before splitting the box', () => {
+    const boxPriceCents = getDiscountedPriceCents(10000, 20);
+    expect(boxPriceCents).toBe(8000);
+    expect(getPartyPricing({ boxPriceCents, packsPerBox: 30, participantCount: 3 })?.participationPriceCents).toBe(2667);
+  });
+
+  it('keeps the base price when there is no discount', () => {
+    expect(getDiscountedPriceCents(10000, null)).toBe(10000);
+    expect(getDiscountedPriceCents(10000, 0)).toBe(10000);
+  });
+});
 
 describe('Party mode prize ownership', () => {
   it('gives every participant their packs in a Compartida party', () => {

@@ -252,7 +252,7 @@ export default function CheckoutPaymentSuccessClient({ orderNumber }: Props) {
                             <p className="text-sm text-text-secondary">Cantidad: {item.quantity}</p>
                             {discount > 0 && (
                               <p className="text-xs text-premium-gold font-medium mt-1">
-                                -{discount}% de descuento • {actualPrice.toFixed(2)}€/unidad
+                                -{Math.round(Number(discount))}% de descuento • {actualPrice.toFixed(2)}€/unidad
                               </p>
                             )}
                           </div>

@@ -85,7 +85,7 @@ function SuggestionCard({ product }: { product: Product }) {
           </div>
           {product.discountPercentage ? (
             <div className="absolute top-3 right-3 bg-premium-gold text-dark-bg px-2.5 py-1 rounded-full font-bold text-xs shadow-md">
-              -{Number(product.discountPercentage)}%
+              -{Math.round(Number(product.discountPercentage))}%
             </div>
           ) : null}
         </div>

@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
-import { getPartyPricing, parseMoneyToCents, PARTY_MODE_INFO, type PartyMode } from '@/lib/parties/core';
+import {
+  getDiscountedPriceCents,
+  getPartyPricing,
+  parseMoneyToCents,
+  PARTY_MODE_INFO,
+  type PartyMode,
+} from '@/lib/parties/core';
 
 interface Product {
   id: string;
@@ -11,6 +17,7 @@ interface Product {
   language: string;
   price: string | number;
   liveOpeningPrice?: string | number | null;
+  discountPercentage?: string | number | null;
   stock: number;
   imageUrl: string | null;
   type: string | null;
@@ -109,7 +116,11 @@ export default function AdminPartiesPage() {
   }, [loadParties]);
 
   const selectedProduct = products.find((product) => product.id === productId);
-  const priceCents = selectedProduct ? parseMoneyToCents(String(getPartyBoxPrice(selectedProduct))) : null;
+  const basePriceCents = selectedProduct ? parseMoneyToCents(String(getPartyBoxPrice(selectedProduct))) : null;
+  const priceCents =
+    basePriceCents === null
+      ? null
+      : getDiscountedPriceCents(basePriceCents, Number(selectedProduct?.discountPercentage ?? 0));
   const pricing = priceCents && Number.isInteger(Number(packsPerBox)) && Number.isInteger(Number(participantCount))
     ? getPartyPricing({
         boxPriceCents: priceCents,

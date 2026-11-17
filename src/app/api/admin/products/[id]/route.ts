@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteFromSupabaseStorage } from '@/lib/supabase-storage';
+import { deleteFromR2, extractR2KeyFromUrl } from '@/lib/r2';
 import * as Sentry from '@sentry/nextjs';
 import { dispatchStockAlertsForProduct } from '@/lib/stock-alerts';
 
@@ -100,7 +101,12 @@ export async function DELETE(
     const existing = await db.product.findUnique({ where: { id } });
     if (existing?.imageUrl) {
       try {
-        await deleteFromSupabaseStorage(existing.imageUrl);
+        const r2Key = extractR2KeyFromUrl(existing.imageUrl);
+        if (r2Key) {
+          await deleteFromR2(r2Key);
+        } else {
+          await deleteFromSupabaseStorage(existing.imageUrl);
+        }
       } catch (err) {
         console.warn('Failed to delete image from storage:', err);
       }
