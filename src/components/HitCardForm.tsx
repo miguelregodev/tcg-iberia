@@ -129,6 +129,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
           <option value="B/RGB">B/RGB (Red/Green/Blue Rare)</option>
           <option value="G/RGB">G/RGB (Red/Green/Blue Rare)</option>
           <option value="MA">MA (Mega Atack Rare)</option>
+          <option value="Classic">Classic (Classic)</option>
         </select>
       </div>
 
