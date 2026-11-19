@@ -119,9 +119,15 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
         >
           <option value="SAR">SAR (Special Art Rare)</option>
           <option value="AR">AR (Art Rare)</option>
+          <option value="CHR">CHR (Character Rare)</option>
           <option value="SR">SR (Secret Rare)</option>
           <option value="UR">UR (Ultra Rare)</option>
           <option value="MUR">MUR (Mega Ultra Rare)</option>
+          <option value="BWR">BWR (Black White Rare)</option>
+          <option value="R/RGB">R/RGB (Red/Green/Blue Rare)</option>
+          <option value="B/RGB">B/RGB (Red/Green/Blue Rare)</option>
+          <option value="G/RGB">G/RGB (Red/Green/Blue Rare)</option>
+          <option value="MA">MA (Mega Atack Rare)</option>
         </select>
       </div>
 
