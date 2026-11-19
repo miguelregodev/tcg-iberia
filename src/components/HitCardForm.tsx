@@ -122,6 +122,7 @@ export function HitCardForm({ productId, hitCard, onSuccess, onCancel }: HitCard
           <option value="CHR">CHR (Character Rare)</option>
           <option value="SR">SR (Secret Rare)</option>
           <option value="UR">UR (Ultra Rare)</option>
+          <option value="FUR">FUR (Futuristic Rare)</option>
           <option value="MUR">MUR (Mega Ultra Rare)</option>
           <option value="BWR">BWR (Black White Rare)</option>
           <option value="R/RGB">R/RGB (Red/Green/Blue Rare)</option>
