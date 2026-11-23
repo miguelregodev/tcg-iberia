@@ -76,6 +76,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             ? normalizeVat(body.vatNumber).slice(0, 64)
             : null,
         modelo036Verified: Boolean(body.modelo036Verified),
+        equivalenceSurcharge: body.equivalenceSurcharge === true,
         activity,
         activityOther:
           activity === 'OTHER'

@@ -30,6 +30,8 @@ export type B2BSessionCustomer = {
   companyName: string;
   contactName: string;
   status: 'PENDING' | 'ACTIVE' | 'DISABLED';
+  /** Customer under "Recargo de Equivalencia" (5.2% added on the taxable base). */
+  equivalenceSurcharge: boolean;
 };
 
 interface Ctx {

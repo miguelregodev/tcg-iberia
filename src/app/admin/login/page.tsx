@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import { trackUserLoggedIn } from '@/lib/analytics/events';
 
+/** Only allow redirects back into the admin area (prevents open redirects). */
+function safeNextPath(next: string | null): string {
+  if (next && next.startsWith('/admin/') && !next.startsWith('//') && !next.startsWith('/admin/login')) {
+    return next;
+  }
+  return '/admin';
+}
+
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +35,8 @@ export default function AdminLogin() {
         trackUserLoggedIn({
           userType: 'admin',
         });
-        router.push('/admin/products');
+        router.replace(safeNextPath(new URLSearchParams(window.location.search).get('next')));
+        router.refresh();
       } else {
         setError('Invalid password');
       }

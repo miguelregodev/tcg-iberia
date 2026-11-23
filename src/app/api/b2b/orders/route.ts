@@ -1,41 +1,27 @@
 /**
  * POST /api/b2b/orders
- * GET  /api/b2b/orders
+ * GET  /api/b2b/orders?page=1&pageSize=10
  *
  * POST — Create a new B2B order request from the current cart.
  *        Requires an ACTIVE B2B session. Prices are re-fetched from the
- *        database (never trust client-supplied prices) and the actual VAT
- *        breakdown is computed server-side. On success the sales team gets
+ *        database (never trust client-supplied prices) and the VAT breakdown
+ *        is computed server-side by the shared pricing service. An optional
+ *        `idempotencyKey` makes retries safe. On success the sales team gets
  *        an email + the customer gets a copy.
  *
- * GET  — List the current B2B customer's own orders (most recent first).
+ * GET  — Paginated list of the current customer's own orders (most recent
+ *        first). Internal notes / audit data are never included.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { db } from '@/lib/db';
 import { getActiveB2bCustomer } from '@/lib/b2b/session';
-import { generateB2bOrderNumber } from '@/lib/b2b/order-numbers';
-import { sendB2bOrderRequestEmail, type OrderEmailLine } from '@/lib/b2b/emails';
-import { B2B_IVA_RATE, b2bNetPrice } from '@/lib/b2b/company';
+import { sendB2bOrderRequestEmail } from '@/lib/b2b/emails';
 import { truncate } from '@/lib/b2b/validation';
-
-// ── Types ───────────────────────────────────────────────────────────────────
-
-interface OrderItemInput {
-  productId: string;
-  quantity: number;
-}
-
-interface PersistedItem extends OrderItemInput {
-  name: string;
-  unitPriceEur: number;
-  lineTotal: number;
-}
-
-const MAX_QTY_PER_LINE = 999;
-const MAX_LINES = 100;
-
+import { parseOrderLines } from '@/lib/b2b/pricing';
+import { createB2bOrder, listCustomerB2bOrders } from '@/lib/b2b/orders';
+import { CUSTOMER_ACTOR } from '@/lib/b2b/audit';
+import { B2bServiceError, b2bErrorResponse, optionalString, readJsonBody } from '@/lib/b2b/errors';
 
 // ── GET: list current customer's orders ────────────────────────────────────
 export async function GET(request: NextRequest) {
@@ -44,221 +30,87 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const orders = await db.b2bOrder.findMany({
-    where: { customerId: customer.id },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      orderNumber: true,
-      status: true,
-      subtotal: true,
-      ivaAmount: true,
-      total: true,
-      invoiceNumber: true,
-      invoicedAt: true,
-      acceptedAt: true,
-      paidAt: true,
-      cancelledAt: true,
-      rejectedAt: true,
-      items: true,
-      notes: true,
-      createdAt: true,
-    },
-  });
+  const url = new URL(request.url);
+  const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number.parseInt(url.searchParams.get('pageSize') ?? '10', 10) || 10));
 
-  // Serialise decimals to numbers for the browser.
-  return NextResponse.json({
-    orders: orders.map((o) => ({
-      ...o,
-      subtotal: Number(o.subtotal),
-      ivaAmount: Number(o.ivaAmount),
-      total: Number(o.total),
-    })),
-  });
+  try {
+    const result = await listCustomerB2bOrders(customer.id, page, pageSize);
+    return NextResponse.json(result);
+  } catch (err) {
+    return b2bErrorResponse(err, 'list_customer_orders', { customerId: customer.id });
+  }
 }
 
 // ── POST: create order from cart ───────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  console.log("POST /api/b2b/orders");
-  console.log("Creating order from cart with request ...", request);
   const customer = await getActiveB2bCustomer(request);
   if (!customer) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { items?: unknown; notes?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 400 });
+  const body = await readJsonBody(request);
+  const { lines, errors } = parseOrderLines(body.items, { strict: false, allowDiscount: false });
+  if (lines.length === 0) {
+    return NextResponse.json({ error: errors[0] ?? 'El carrito está vacío.' }, { status: 400 });
   }
-
-  if (!Array.isArray(body.items) || body.items.length === 0) {
-    return NextResponse.json(
-      { error: 'El carrito está vacío.' },
-      { status: 400 }
-    );
-  }
-  if (body.items.length > MAX_LINES) {
-    return NextResponse.json(
-      { error: `El pedido supera el máximo de ${MAX_LINES} líneas.` },
-      { status: 400 }
-    );
-  }
-
-  // ── Normalise & validate line items ──────────────────────────────────────
-  const rawItems: OrderItemInput[] = [];
-  for (const raw of body.items) {
-    if (!raw || typeof raw !== 'object') continue;
-    const r = raw as Record<string, unknown>;
-    const productId = typeof r.productId === 'string' ? r.productId.trim() : '';
-    const quantity =
-      typeof r.quantity === 'number' ? Math.floor(r.quantity) : parseInt(String(r.quantity), 10);
-    if (!productId) continue;
-    if (!Number.isFinite(quantity) || quantity <= 0) continue;
-    if (quantity > MAX_QTY_PER_LINE) continue;
-    rawItems.push({ productId, quantity });
-  }
-
-  if (rawItems.length === 0) {
-    return NextResponse.json(
-      { error: 'Ninguna línea del carrito es válida.' },
-      { status: 400 }
-    );
-  }
-
-  // Merge duplicate productId lines — sum quantities.
-  const merged = new Map<string, OrderItemInput>();
-  for (const i of rawItems) {
-    const prev = merged.get(i.productId);
-    merged.set(i.productId, prev ? { ...prev, quantity: prev.quantity + i.quantity } : i);
-  }
-  const items = Array.from(merged.values());
-
-  // ── Fetch canonical product data ─────────────────────────────────────────
-  const products = await db.product.findMany({
-    where: { id: { in: items.map((i) => i.productId) } },
-    select: {
-      id: true,
-      name: true,
-      price: true,
-      b2bPrice: true,
-      stock: true,
-      visible: true,
-    },
-  });
-  const productMap = new Map(products.map((p) => [p.id, p]));
-
-  const persisted: PersistedItem[] = [];
-  const rejections: Array<{ productId: string; reason: string }> = [];
-
-  for (const line of items) {
-    const p = productMap.get(line.productId);
-    if (!p || !p.visible) {
-      rejections.push({ productId: line.productId, reason: 'unavailable' });
-      continue;
-    }
-
-    // Products without a wholesale price cannot be ordered.
-    if (customer === null || p.b2bPrice === null) {
-      rejections.push({ productId: line.productId, reason: 'no_price' });
-      continue;
-    }
-
-    // Unit price is VAT-excluded. Stock is not enforced: B2B orders are
-    // requests that are reviewed before invoicing.
-    const unit = b2bNetPrice(Number(p.b2bPrice));
-
-    // Round to 2 decimals (EUR cents) to avoid floating-point drift.
-    const lineTotal = Math.round(unit * line.quantity * 100) / 100;
-    persisted.push({
-      productId: line.productId,
-      quantity: line.quantity,
-      name: p.name,
-      unitPriceEur: unit,
-      lineTotal,
-    });
-  }
-
-  if (persisted.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          'Ningún producto del carrito está disponible para realizar el pedido.',
-        rejections,
-      },
-      { status: 409 }
-    );
-  }
-
-  // Unit prices are VAT-excluded; IVA (21 %) is added on top of the base.
-  const subtotal = Math.round(persisted.reduce((s, i) => s + i.lineTotal, 0) * 100) / 100;
-  const ivaAmount = Math.round(subtotal * B2B_IVA_RATE * 100) / 100;
-  const total = Math.round((subtotal + ivaAmount) * 100) / 100;
-
   const notes = truncate(typeof body.notes === 'string' ? body.notes : null, 2000);
 
   try {
-    const order = await db.$transaction(async (tx) => {
-      const orderNumber = await generateB2bOrderNumber(tx);
-      return tx.b2bOrder.create({
-        data: {
-          customerId: customer.id,
-          orderNumber,
-          status: 'PENDING',
-          items: persisted as unknown as object[],
-          subtotal,
-          ivaAmount,
-          total,
-          notes,
-        },
-      });
+    const { order, pricing, duplicate } = await createB2bOrder({
+      customer,
+      lines,
+      shippingCostCents: 0,
+      notes,
+      internalNotes: null,
+      source: 'CUSTOMER',
+      actor: CUSTOMER_ACTOR,
+      idempotencyKey: optionalString(body.idempotencyKey, 100),
+      initialStatus: 'PENDING',
+      rejectOnUnpricedLines: false,
     });
 
-    // Fire-and-forget notification emails.
-    const emailLines: OrderEmailLine[] = persisted.map((i) => ({
-      name: i.name,
-      quantity: i.quantity,
-      unitPriceEur: i.unitPriceEur,
-      lineTotal: i.lineTotal,
-    }));
-    void sendB2bOrderRequestEmail({
-      orderNumber: order.orderNumber,
-      customerCompany: customer.companyName,
-      customerEmail: customer.email,
-      contactName: customer.contactName,
-      items: emailLines,
-      subtotal,
-      ivaAmount,
-      total,
-      notes,
-    }).catch((err) => {
-      Sentry.captureException(err, {
-        tags: { module: 'b2b', action: 'order_request_email' },
-        extra: { orderId: order.id },
+    if (!duplicate) {
+      void sendB2bOrderRequestEmail({
+        orderNumber: order.orderNumber,
+        customerCompany: customer.companyName,
+        customerEmail: customer.email,
+        contactName: customer.contactName,
+        items: pricing.items,
+        subtotal: pricing.subtotal,
+        ivaAmount: pricing.ivaAmount,
+        surchargeRate: pricing.surchargeRate,
+        surchargeAmount: pricing.surchargeAmount,
+        total: pricing.total,
+        notes,
+      }).catch((err) => {
+        Sentry.captureException(err, {
+          tags: { module: 'b2b', action: 'order_request_email' },
+          extra: { orderId: order.id },
+        });
       });
-    });
+    }
 
     return NextResponse.json({
       success: true,
+      duplicate,
       order: {
         id: order.id,
         orderNumber: order.orderNumber,
         status: order.status,
-        subtotal,
-        ivaAmount,
-        total,
+        subtotal: pricing.subtotal,
+        ivaAmount: pricing.ivaAmount,
+        surchargeAmount: pricing.surchargeAmount,
+        total: pricing.total,
       },
-      rejections: rejections.length > 0 ? rejections : undefined,
+      rejections: pricing.rejections.length > 0 ? pricing.rejections : undefined,
     });
   } catch (err) {
+    if (err instanceof B2bServiceError) return b2bErrorResponse(err, 'create_order');
     Sentry.captureException(err, {
       tags: { module: 'b2b', action: 'create_order' },
       extra: { customerId: customer.id },
     });
-    return NextResponse.json(
-      { error: 'No se pudo registrar el pedido.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'No se pudo registrar el pedido.' }, { status: 500 });
   }
 }

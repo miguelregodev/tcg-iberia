@@ -3,13 +3,14 @@
 /**
  * Admin B2B management page.
  *
- * Two tabs:
+ * Three tabs:
  *   1. Solicitudes  → pending / approved / rejected requests
  *                      · Review form (edit collected documentation)
  *                      · Approve / Reject actions
  *   2. Clientes     → approved customers
  *                      · Filter by status + free-text search
  *                      · Edit / Enable / Disable / Delete / Resend activation
+ *   3. Pedidos      → B2B order management (src/components/b2b-orders/)
  *
  * All API calls go through `/api/admin/b2b/**` which are gated by the
  * existing `tcg_admin_auth` cookie — this page inherits admin auth from the
@@ -18,6 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AdminNav } from '@/components/AdminNav';
+import { AdminB2bOrdersPanel } from '@/components/b2b-orders/AdminB2bOrdersPanel';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,7 @@ interface B2bRequest {
   companyName: string | null;
   vatNumber: string | null;
   modelo036Verified: boolean;
+  equivalenceSurcharge: boolean;
   activity: B2bActivity | null;
   activityOther: string | null;
   shippingAddress: string | null;
@@ -62,6 +65,7 @@ interface B2bCustomer {
   status: B2bCustomerStatus;
   companyName: string;
   vatNumber: string;
+  equivalenceSurcharge: boolean;
   activity: B2bActivity;
   activityOther: string | null;
   shippingAddress: string;
@@ -210,7 +214,7 @@ export default function AdminB2bPage() {
         ) : tab === 'customers' ? (
           <CustomersTab notify={pushNotification} />
         ) : (
-          <OrdersTab notify={pushNotification} />
+          <AdminB2bOrdersPanel notify={pushNotification} />
         )}
       </div>
     </div>
@@ -365,6 +369,7 @@ function RequestReviewModal({
     companyName: request.companyName ?? '',
     vatNumber: request.vatNumber ?? '',
     modelo036Verified: request.modelo036Verified,
+    equivalenceSurcharge: request.equivalenceSurcharge,
     activity: (request.activity ?? '') as B2bActivity | '',
     activityOther: request.activityOther ?? '',
     shippingAddress: request.shippingAddress ?? '',
@@ -522,6 +527,26 @@ function RequestReviewModal({
             <label htmlFor="modelo036" className="text-sm text-text-primary">
               Modelo 036 verificado
             </label>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <input
+                id="request-equivalence-surcharge"
+                type="checkbox"
+                checked={form.equivalenceSurcharge}
+                onChange={(e) => setForm((p) => ({ ...p, equivalenceSurcharge: e.target.checked }))}
+                disabled={readOnly}
+                aria-describedby="request-equivalence-surcharge-help"
+                className="h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold"
+              />
+              <label htmlFor="request-equivalence-surcharge" className="text-sm text-text-primary">
+                Cliente en Recargo de Equivalencia
+              </label>
+            </div>
+            <p id="request-equivalence-surcharge-help" className="mt-1 ml-6 text-xs text-text-secondary">
+              Aplica un 5,2% adicional sobre la base imponible en los pedidos nuevos y aparece como concepto propio en la factura.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -797,26 +822,26 @@ function CustomersTab({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-        <div className="p-4 flex flex-wrap items-center gap-3 border-b border-gray-100">
+      <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-sm">
+        <div className="p-4 flex flex-wrap items-center gap-3 border-b border-dark-border">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar empresa, email, CIF…"
-            className="flex-1 min-w-[220px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="flex-1 min-w-[220px] rounded-lg border border-dark-border px-3 py-2 text-sm bg-dark-bg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-premium-gold"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'ALL' | B2bCustomerStatus)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="rounded-lg border border-dark-border px-3 py-2 text-sm bg-dark-bg text-text-primary focus:outline-none focus:ring-2 focus:ring-premium-gold"
           >
             <option value="ALL">Todos los estados</option>
             <option value="PENDING">Pendiente</option>
             <option value="ACTIVE">Activo</option>
             <option value="DISABLED">Desactivado</option>
           </select>
-          <span className="ml-auto text-xs text-gray-500">
+          <span className="ml-auto text-xs text-text-muted">
             {customers.length} clientes
           </span>
         </div>
@@ -870,10 +895,10 @@ function CustomersTab({
                         {CUSTOMER_STATUS_LABEL[c.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                       {formatDate(c.createdAt)}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                       {formatDate(c.lastLoginAt)}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -881,7 +906,7 @@ function CustomersTab({
                         <button
                           type="button"
                           onClick={() => setEditing(c)}
-                          className="px-2.5 py-1 rounded text-xs font-medium text-gray-700 hover:bg-gray-100"
+                          className="px-2.5 py-1 rounded text-xs font-medium text-text-primary hover:bg-dark-surfaceHover"
                         >
                           Editar
                         </button>
@@ -889,7 +914,7 @@ function CustomersTab({
                           <button
                             type="button"
                             onClick={() => handleEnable(c)}
-                            className="px-2.5 py-1 rounded text-xs font-medium text-green-700 hover:bg-green-50"
+                            className="px-2.5 py-1 rounded text-xs font-medium text-success hover:bg-success-bg"
                           >
                             Activar
                           </button>
@@ -897,7 +922,7 @@ function CustomersTab({
                           <button
                             type="button"
                             onClick={() => handleDisable(c)}
-                            className="px-2.5 py-1 rounded text-xs font-medium text-amber-700 hover:bg-amber-50"
+                            className="px-2.5 py-1 rounded text-xs font-medium text-warning hover:bg-warning-bg"
                           >
                             Desactivar
                           </button>
@@ -906,7 +931,7 @@ function CustomersTab({
                           <button
                             type="button"
                             onClick={() => handleResend(c)}
-                            className="px-2.5 py-1 rounded text-xs font-medium text-blue-700 hover:bg-blue-50"
+                            className="px-2.5 py-1 rounded text-xs font-medium text-premium-gold hover:bg-dark-surfaceHover"
                           >
                             Reenviar activación
                           </button>
@@ -914,7 +939,7 @@ function CustomersTab({
                         <button
                           type="button"
                           onClick={() => handleDelete(c)}
-                          className="px-2.5 py-1 rounded text-xs font-medium text-red-700 hover:bg-red-50"
+                          className="px-2.5 py-1 rounded text-xs font-medium text-danger hover:bg-danger-bg"
                         >
                           Eliminar
                         </button>
@@ -956,6 +981,7 @@ function CustomerEditModal({
   const [form, setForm] = useState({
     companyName: customer.companyName,
     vatNumber: customer.vatNumber,
+    equivalenceSurcharge: customer.equivalenceSurcharge,
     activity: customer.activity,
     activityOther: customer.activityOther ?? '',
     shippingAddress: customer.shippingAddress,
@@ -1026,6 +1052,24 @@ function CustomerEditModal({
                 onChange={(e) => setForm((p) => ({ ...p, vatNumber: e.target.value }))}
               />
             </Field>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <input
+                id="customer-equivalence-surcharge"
+                type="checkbox"
+                checked={form.equivalenceSurcharge}
+                onChange={(e) => setForm((p) => ({ ...p, equivalenceSurcharge: e.target.checked }))}
+                aria-describedby="customer-equivalence-surcharge-help"
+                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <label htmlFor="customer-equivalence-surcharge" className="text-sm font-medium text-gray-700">
+                Cliente en Recargo de Equivalencia
+              </label>
+            </div>
+            <p id="customer-equivalence-surcharge-help" className="mt-1 ml-6 text-xs text-gray-500">
+              Aplica un 5,2% adicional sobre la base imponible en los pedidos nuevos y aparece como concepto propio en la factura. Los pedidos ya creados no cambian.
+            </p>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Actividad" required>
@@ -1171,368 +1215,6 @@ function Field({
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Orders Tab
-// ─────────────────────────────────────────────────────────────────────────────
-
-type B2bOrderStatus = 'PENDING' | 'ACCEPTED' | 'PAID' | 'CANCELLED' | 'REJECTED';
-
-interface AdminOrderLine {
-  productId: string;
-  name: string;
-  quantity: number;
-  unitPriceEur: number;
-  lineTotal: number;
-}
-
-interface AdminOrder {
-  id: string;
-  orderNumber: string;
-  status: B2bOrderStatus;
-  subtotal: number;
-  ivaAmount: number;
-  total: number;
-  invoiceNumber: string | null;
-  invoicedAt: string | null;
-  acceptedAt: string | null;
-  paidAt: string | null;
-  cancelledAt: string | null;
-  rejectedAt: string | null;
-  items: AdminOrderLine[];
-  notes: string | null;
-  createdAt: string;
-  customer: {
-    id: string;
-    companyName: string;
-    email: string;
-    vatNumber: string;
-    contactName: string;
-    phone: string;
-    shippingAddress: string;
-  };
-}
-
-const ORDER_STATUS_LABEL: Record<B2bOrderStatus, string> = {
-  PENDING: 'Pendiente',
-  ACCEPTED: 'Aprobado',
-  PAID: 'Pagado',
-  CANCELLED: 'Cancelado',
-  REJECTED: 'Rechazado',
-};
-
-const ORDER_STATUS_BADGE: Record<B2bOrderStatus, string> = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  ACCEPTED: 'bg-blue-100 text-blue-800',
-  PAID: 'bg-green-100 text-green-800',
-  CANCELLED: 'bg-gray-200 text-gray-700',
-  REJECTED: 'bg-gray-200 text-gray-700',
-};
-
-const eurFmtAdmin = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 2,
-});
-
-function OrdersTab({
-  notify,
-}: {
-  notify: (type: 'success' | 'error', message: string) => void;
-}) {
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | B2bOrderStatus>('ALL');
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const url =
-        statusFilter === 'ALL'
-          ? '/api/admin/b2b/orders'
-          : `/api/admin/b2b/orders?status=${statusFilter}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('load');
-      const data = (await res.json()) as { orders: AdminOrder[] };
-      setOrders(data.orders ?? []);
-    } catch {
-      notify('error', 'No se pudieron cargar los pedidos.');
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, notify]);
-
-  useEffect(() => {
-    void fetchOrders();
-  }, [fetchOrders]);
-
-  const accept = useCallback(
-    async (o: AdminOrder) => {
-      if (
-        !window.confirm(
-          `¿Aprobar el pedido ${o.orderNumber} de ${o.customer.companyName}? Se generará la factura y se enviará por email.`
-        )
-      )
-        return;
-      setBusy(o.id);
-      try {
-        const res = await fetch(`/api/admin/b2b/orders/${o.id}/accept`, {
-          method: 'POST',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error ?? 'accept');
-        notify('success', `Pedido ${o.orderNumber} aprobado. Factura ${data.order.invoiceNumber} enviada.`);
-        void fetchOrders();
-      } catch (err) {
-        notify('error', err instanceof Error ? err.message : 'Error al aprobar.');
-      } finally {
-        setBusy(null);
-      }
-    },
-    [notify, fetchOrders]
-  );
-
-  const reject = useCallback(
-    async (o: AdminOrder) => {
-      const reason = window.prompt(`Motivo del rechazo del pedido ${o.orderNumber} (opcional):`);
-      if (reason === null) return;
-      setBusy(o.id);
-      try {
-        const res = await fetch(`/api/admin/b2b/orders/${o.id}/reject`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: reason.trim() || undefined }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error ?? 'reject');
-        notify('success', `Pedido ${o.orderNumber} rechazado.`);
-        void fetchOrders();
-      } catch (err) {
-        notify('error', err instanceof Error ? err.message : 'Error al rechazar.');
-      } finally {
-        setBusy(null);
-      }
-    },
-    [notify, fetchOrders]
-  );
-
-  const markPaid = useCallback(
-    async (o: AdminOrder) => {
-      if (!window.confirm(`Marcar el pedido ${o.orderNumber} como pagado?`)) return;
-      setBusy(o.id);
-      try {
-        const res = await fetch(`/api/admin/b2b/orders/${o.id}/mark-paid`, {
-          method: 'POST',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error ?? 'mark-paid');
-        notify('success', `Pedido ${o.orderNumber} marcado como pagado.`);
-        void fetchOrders();
-      } catch (err) {
-        notify('error', err instanceof Error ? err.message : 'Error.');
-      } finally {
-        setBusy(null);
-      }
-    },
-    [notify, fetchOrders]
-  );
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-      <div className="p-4 flex flex-wrap items-center gap-3 border-b border-gray-100">
-        <label className="text-sm text-gray-600">Estado:</label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'ALL' | B2bOrderStatus)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          <option value="ALL">Todos</option>
-          <option value="PENDING">Pendientes</option>
-          <option value="ACCEPTED">Aprobados</option>
-          <option value="PAID">Pagados</option>
-          <option value="CANCELLED">Cancelados</option>
-          <option value="REJECTED">Rechazados</option>
-        </select>
-        <span className="ml-auto text-xs text-gray-500">{orders.length} pedidos</span>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-dark-bgSecondary text-xs uppercase tracking-wider text-text-muted">
-            <tr>
-              <th className="px-4 py-3 text-left">Pedido</th>
-              <th className="px-4 py-3 text-left">Cliente</th>
-              <th className="px-4 py-3 text-left">Fecha</th>
-              <th className="px-4 py-3 text-left">Factura</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3 text-left">Estado</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dark-border">
-            {loading && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
-                  Cargando…
-                </td>
-              </tr>
-            )}
-            {!loading && orders.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
-                  No hay pedidos para este filtro.
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              orders.map((o) => {
-                const isOpen = expanded === o.id;
-                return (
-                  <>
-                    <tr key={o.id} className="hover:bg-dark-surfaceHover">
-                      <td className="px-4 py-3 font-mono text-xs text-text-secondary">
-                        <button
-                          type="button"
-                          className="text-premium-gold hover:underline"
-                          onClick={() => setExpanded(isOpen ? null : o.id)}
-                        >
-                          {o.orderNumber}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {o.customer.companyName}
-                        </div>
-                        <div className="text-xs text-gray-500">{o.customer.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                        {formatDate(o.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 font-mono text-xs">
-                        {o.invoiceNumber ? (
-                          <a
-                            href={`/api/admin/b2b/orders/${o.id}/invoice`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-700 hover:underline"
-                          >
-                            {o.invoiceNumber}
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono font-semibold">
-                        {eurFmtAdmin.format(o.total)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${ORDER_STATUS_BADGE[o.status]}`}
-                        >
-                          {ORDER_STATUS_LABEL[o.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
-                          {o.status === 'PENDING' && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => accept(o)}
-                                disabled={busy === o.id}
-                                className="px-2.5 py-1 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                              >
-                                Aprobar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => reject(o)}
-                                disabled={busy === o.id}
-                                className="px-2.5 py-1 rounded text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                              >
-                                Rechazar
-                              </button>
-                            </>
-                          )}
-                          {o.status === 'ACCEPTED' && (
-                            <button
-                              type="button"
-                              onClick={() => markPaid(o)}
-                              disabled={busy === o.id}
-                              className="px-2.5 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              Marcar pagado
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {isOpen && (
-                      <tr key={`${o.id}-detail`} className="bg-dark-surfaceHover">
-                        <td colSpan={7} className="px-6 py-4">
-                          <div className="grid md:grid-cols-2 gap-6">
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                                Cliente
-                              </div>
-                              <div className="text-sm text-gray-800 space-y-0.5">
-                                <div><strong>{o.customer.companyName}</strong></div>
-                                <div>NIF/CIF: {o.customer.vatNumber}</div>
-                                <div>Contacto: {o.customer.contactName}</div>
-                                <div>{o.customer.email} · {o.customer.phone}</div>
-                                <div>Dirección: {o.customer.shippingAddress}</div>
-                              </div>
-                              {o.notes && (
-                                <div className="mt-3 p-2 rounded bg-white border border-gray-200 text-xs text-gray-600">
-                                  <strong>Notas:</strong> {o.notes}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                                Líneas
-                              </div>
-                              <ul className="divide-y divide-gray-200 text-sm">
-                                {o.items.map((it, idx) => (
-                                  <li
-                                    key={`${o.id}-${idx}`}
-                                    className="flex justify-between py-1.5"
-                                  >
-                                    <div className="min-w-0">
-                                      <div className="truncate" title={it.name}>
-                                        {it.name}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        {it.quantity} × {eurFmtAdmin.format(it.unitPriceEur)}
-                                      </div>
-                                    </div>
-                                    <div className="font-mono">
-                                      {eurFmtAdmin.format(it.lineTotal)}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="mt-3 pt-2 border-t border-gray-200 flex justify-end gap-6 text-xs">
-                                <div>Base: <span className="font-mono">{eurFmtAdmin.format(o.subtotal)}</span></div>
-                                <div>IVA 21%: <span className="font-mono">{eurFmtAdmin.format(o.ivaAmount)}</span></div>
-                                <div className="font-bold">Total: <span className="font-mono">{eurFmtAdmin.format(o.total)}</span></div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

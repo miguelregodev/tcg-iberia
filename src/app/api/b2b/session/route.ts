@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       companyName: customer.companyName,
       contactName: customer.contactName,
       status: customer.status,
+      equivalenceSurcharge: customer.equivalenceSurcharge,
     },
   });
 }

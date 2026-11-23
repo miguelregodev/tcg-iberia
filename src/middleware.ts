@@ -33,14 +33,28 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/admin/') &&
     pathname !== '/api/admin/auth/login' &&
     pathname !== '/api/admin/auth/logout';
-  if (
-    isAdminApi &&
-    !(await isValidAdminCookie(
-      request.cookies.get('tcg_admin_auth')?.value,
-      process.env.ADMIN_PASSWORD,
-    ))
-  ) {
+  const isAdminLoginPage = pathname === '/admin/login';
+  const isAdminPage = !isAdminLoginPage && (pathname === '/admin' || pathname.startsWith('/admin/'));
+
+  if (!isAdminApi && !isAdminPage && !isAdminLoginPage) return NextResponse.next();
+
+  const authenticated = await isValidAdminCookie(
+    request.cookies.get('tcg_admin_auth')?.value,
+    process.env.ADMIN_PASSWORD,
+  );
+
+  if (isAdminApi && !authenticated) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // Already signed in: never show the login form again, go to the admin home.
+  if (isAdminLoginPage && authenticated) {
+    return NextResponse.redirect(new URL('/admin', request.url));
+  }
+  // Admin pages require a valid session; remember where the admin was going.
+  if (isAdminPage && !authenticated) {
+    const loginUrl = new URL('/admin/login', request.url);
+    if (pathname !== '/admin') loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
   return NextResponse.next();
 }
