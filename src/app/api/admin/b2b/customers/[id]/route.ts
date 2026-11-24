@@ -56,6 +56,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           typeof body.vatNumber === 'string' && body.vatNumber.trim().length > 0
             ? normalizeVat(body.vatNumber).slice(0, 64)
             : undefined,
+        equivalenceSurcharge:
+          typeof body.equivalenceSurcharge === 'boolean' ? body.equivalenceSurcharge : undefined,
         activity,
         activityOther:
           activity === 'OTHER'

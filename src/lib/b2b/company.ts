@@ -32,6 +32,13 @@ export const B2B_COMPANY_ADDRESS_LINES: readonly string[] = [
 /** Spanish B2B VAT rate applied to every wholesale invoice. */
 export const B2B_IVA_RATE = 0.21;
 
+/**
+ * "Recargo de Equivalencia" rate that corresponds to the 21% IVA rate
+ * (art. 161 Ley 37/1992). Applied on the taxable base for customers under
+ * that regime (`B2bCustomer.equivalenceSurcharge`).
+ */
+export const B2B_EQUIVALENCE_SURCHARGE_RATE = 0.052;
+
 /** Converts the stored `b2bPrice` into the VAT-excluded price shown to B2B customers. */
 export function b2bNetPrice(storedPrice: number): number {
   return Math.round((storedPrice / (1 + B2B_IVA_RATE)) * 100) / 100;

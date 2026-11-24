@@ -89,6 +89,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           status: 'PENDING',
           companyName: req.companyName!,
           vatNumber: req.vatNumber!,
+          equivalenceSurcharge: req.equivalenceSurcharge,
           activity: req.activity!,
           activityOther: req.activityOther,
           shippingAddress: req.shippingAddress!,

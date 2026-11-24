@@ -787,12 +787,77 @@ enum B2bActivity {
   OTHER
 }
 
+/// Order LIFECYCLE only. Payment, fulfillment and documents are tracked by
+/// their own independent fields (see B2bPaymentStatus / B2bFulfillmentStatus /
+/// B2bDocument). The legacy PAID value was migrated to paymentStatus = PAID.
 enum B2bOrderStatus {
-  PENDING     // Newly submitted, awaiting admin acceptance
-  ACCEPTED    // Admin accepted → invoice generated, awaiting payment
-  PAID        // Invoice paid → order will be prepared / shipped
-  CANCELLED   // Cancelled by customer or admin (only while not yet PAID)
+  PENDING     // Customer request (or admin quotation) awaiting confirmation
+  ACCEPTED    // Confirmed order
+  CANCELLED   // Cancelled by customer or admin
   REJECTED    // Admin rejected the request
+}
+
+enum B2bPaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+enum B2bFulfillmentStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+enum B2bOrderSource {
+  CUSTOMER
+  ADMIN
+}
+
+/// INVOICE and CORRECTIVE_INVOICE are legally issued documents with their own
+/// gap-free number series. PROFORMA and QUOTATION are preliminary documents
+/// with no fiscal value.
+enum B2bDocumentType {
+  INVOICE
+  PROFORMA
+  QUOTATION
+  CORRECTIVE_INVOICE
+}
+
+enum B2bDocumentStatus {
+  GENERATING
+  ISSUED
+  FAILED
+}
+
+enum B2bOrderEventType {
+  ORDER_CREATED
+  ORDER_CREATED_BY_ADMIN
+  ORDER_ACCEPTED
+  ORDER_REJECTED
+  ORDER_UPDATED
+  ORDER_CANCELLED
+  PAYMENT_STATUS_CHANGED
+  FULFILLMENT_STATUS_CHANGED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  ORDER_RETURNED
+  TRACKING_UPDATED
+  CARRIER_CHANGED
+  ADMIN_NOTE_UPDATED
+  CUSTOMER_NOTE_UPDATED
+  DOCUMENT_GENERATED
+  DOCUMENT_GENERATION_FAILED
+  DOCUMENT_GENERATION_RETRIED
+  DOCUMENT_EMAIL_SENT
+  DOCUMENT_EMAIL_FAILED
+  SHIPPING_EMAIL_SENT
+  SHIPPING_EMAIL_FAILED
+  SHIPPING_EMAIL_RETRIED
 }
 
 /// A B2B account request submitted from the public site. Contains the email
@@ -820,6 +885,8 @@ model B2bRequest {
   estimatedVolume     String?           @db.VarChar(255)
   preferredLanguages  String?           @db.VarChar(255)
   notes               String?           @db.Text
+  /// "Recargo de Equivalencia" regime, copied to the customer on approval.
+  equivalenceSurcharge Boolean          @default(false)
 
   reviewedAt          DateTime?
   reviewedByEmail     String?           @db.VarChar(255)
@@ -859,6 +926,9 @@ model B2bCustomer {
   estimatedVolume    String?             @db.VarChar(255)
   preferredLanguages String?             @db.VarChar(255)
   notes              String?             @db.Text
+  /// Customer taxed under the Spanish "Recargo de Equivalencia" regime: new
+  /// orders add B2B_EQUIVALENCE_SURCHARGE_RATE (5.2%) on the taxable base.
+  equivalenceSurcharge Boolean           @default(false)
 
   lastLoginAt        DateTime?
   disabledAt         DateTime?
@@ -872,6 +942,7 @@ model B2bCustomer {
   activationTokens   B2bActivationToken[]
   loginAudits        B2bLoginAudit[]
   orders             B2bOrder[]
+  documents          B2bDocument[]
 
   @@index([status])
   @@index([email])
@@ -932,52 +1003,148 @@ model B2bLoginAudit {
   @@index([createdAt])
 }
 
-/// A B2B (wholesale) order request.
+/// A B2B (wholesale) order — submitted by the customer from the cart
+/// (source = CUSTOMER) or created manually by an admin (source = ADMIN).
 ///
-/// Lifecycle:
-///   PENDING   -> ACCEPTED (admin) -> PAID (admin, when the invoice is settled)
-///             -> REJECTED (admin)
-///             -> CANCELLED (customer or admin, only while status is
-///                          PENDING or ACCEPTED -- PAID orders cannot be
-///                          cancelled)
+/// Status dimensions are INDEPENDENT (see src/lib/b2b/order-status.ts):
+///   status            order lifecycle   PENDING -> ACCEPTED | REJECTED | CANCELLED
+///   paymentStatus     money             PENDING -> PAID -> REFUNDED, PENDING -> CANCELLED
+///   fulfillmentStatus logistics         PENDING -> PROCESSING -> SHIPPED -> DELIVERED -> RETURNED
+///   documents         invoices / proformas / quotations (B2bDocument rows)
 ///
-/// items is a JSON snapshot at request time so future price/name changes
-/// don't rewrite historical invoices. Each element has the shape:
-///   { productId, name, quantity, unitPriceEur, lineTotal }
-/// (B2B only ever sells the SEALED variant; older rows may carry a legacy
-/// `variant` key which is ignored.)
+/// `items` is an immutable JSON snapshot (B2bOrderLineSnapshot in src/types):
+///   { productId, name, sku, language, variant, imageUrl, quantity,
+///     listUnitPriceEur, discountPercent, discountAmountEur, unitPriceEur,
+///     vatRate, lineTotal }
+/// Legacy rows only carry { productId, name, quantity, unitPriceEur, lineTotal }.
 ///
-/// Money columns are stored net of VAT:
-///   - subtotal   = sum of line totals (pre-tax)
-///   - ivaAmount  = 21% of subtotal (Spanish B2B rate)
-///   - total      = subtotal + ivaAmount
-///
-/// Invoice numbers are generated on ACCEPTANCE and are legally required to
-/// be sequential per Spanish tax law -- see getNextB2bInvoiceSequence() in
-/// src/lib/b2b/order-numbers.ts (Sequence row with name = 'B2B_INVOICE').
+/// Money columns are net of VAT:
+///   subtotal      = sum of line totals (after line discounts)
+///   discountTotal = sum of line discounts (informative)
+///   shippingCost  = shipping, net (taxed at vatRate)
+///   ivaAmount     = (subtotal + shippingCost) * vatRate
+///   surchargeAmount = (subtotal + shippingCost) * surchargeRate   (Recargo de Equivalencia, 0 if N/A)
+///   total         = subtotal + shippingCost + ivaAmount + surchargeAmount
 model B2bOrder {
-  id             String          @id @default(cuid())
-  customerId     String
-  orderNumber    String          @unique @db.VarChar(50)
-  status         B2bOrderStatus  @default(PENDING)
-  items          Json
-  subtotal       Decimal         @db.Decimal(12, 2)
-  ivaAmount      Decimal         @db.Decimal(12, 2)
-  total          Decimal         @db.Decimal(12, 2)
-  invoiceNumber  String?         @unique @db.VarChar(50)
-  invoicedAt     DateTime?
-  acceptedAt     DateTime?
-  rejectedAt     DateTime?
-  paidAt         DateTime?
-  cancelledAt    DateTime?
-  cancelledBy    String?         @db.VarChar(120)  // 'customer' | 'admin:<email>'
-  notes          String?         @db.Text
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                  String               @id @default(cuid())
+  customerId          String
+  orderNumber         String               @unique @db.VarChar(50)
+  source              B2bOrderSource       @default(CUSTOMER)
+  status              B2bOrderStatus       @default(PENDING)
+  paymentStatus       B2bPaymentStatus     @default(PENDING)
+  fulfillmentStatus   B2bFulfillmentStatus @default(PENDING)
+  items               Json
+  /// Snapshot of the customer's company / addresses when the order was placed.
+  customerSnapshot    Json
+  vatRate             Decimal              @default(0.21) @db.Decimal(5, 4)
+  subtotal            Decimal              @db.Decimal(12, 2)
+  discountTotal       Decimal              @default(0) @db.Decimal(12, 2)
+  shippingCost        Decimal              @default(0) @db.Decimal(12, 2)
+  ivaAmount           Decimal              @db.Decimal(12, 2)
+  /// Recargo de Equivalencia frozen at order creation (0 when not applicable).
+  surchargeRate       Decimal              @default(0) @db.Decimal(5, 4)
+  surchargeAmount     Decimal              @default(0) @db.Decimal(12, 2)
+  total               Decimal              @db.Decimal(12, 2)
 
-  customer       B2bCustomer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  acceptedAt          DateTime?
+  rejectedAt          DateTime?
+  cancelledAt         DateTime?
+  cancelledBy         String?              @db.VarChar(120)  // 'customer' | 'admin:<email>'
+  cancellationReason  String?              @db.Text
+
+  paidAt              DateTime?
+  paymentMethod       String?              @db.VarChar(60)
+  paymentReference    String?              @db.VarChar(120)
+  refundedAt          DateTime?
+
+  shippingProvider    ShippingProvider?
+  trackingNumber      String?              @db.VarChar(100)
+  processingAt        DateTime?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+  returnedAt          DateTime?
+  returnReason        String?              @db.Text
+  shippingEmailSentAt DateTime?
+  shippingEmailError  String?              @db.VarChar(500)
+
+  /// Customer-visible notes (customer request notes or admin-written notes).
+  notes               String?              @db.Text
+  /// Internal notes — NEVER serialised to B2B customers.
+  internalNotes       String?              @db.Text
+  createdBy           String?              @db.VarChar(120)  // 'customer' | 'admin:<email>'
+  /// Client-generated key that makes order creation retry-safe.
+  idempotencyKey      String?              @unique @db.VarChar(100)
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  customer            B2bCustomer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  documents           B2bDocument[]
+  events              B2bOrderEvent[]
 
   @@index([customerId])
   @@index([status])
+  @@index([paymentStatus])
+  @@index([fulfillmentStatus])
+  @@index([source])
   @@index([createdAt])
+  @@index([total])
+}
+
+/// A generated commercial document (PDF stored in the PRIVATE R2 bucket
+/// `R2_B2B_INVOICES_BUCKET`). Once ISSUED a document is immutable: its PDF is
+/// never regenerated or overwritten. Corrections are made through a
+/// CORRECTIVE_INVOICE pointing at the original via `correctsDocumentId`.
+///
+/// `payload` freezes exactly what is rendered (order snapshot + customer
+/// fiscal data at issue time) so retries render identical content.
+/// `uniquenessKey` (unique) prevents concurrent/duplicate active documents:
+///   INVOICE/PROFORMA/QUOTATION -> '<orderId>:<TYPE>' while active
+///   CORRECTIVE_INVOICE        -> 'corrects:<originalDocumentId>'
+model B2bDocument {
+  id                 String            @id @default(cuid())
+  orderId            String
+  customerId         String
+  type               B2bDocumentType
+  status             B2bDocumentStatus @default(GENERATING)
+  number             String            @unique @db.VarChar(50)
+  issuedAt           DateTime
+  total              Decimal           @db.Decimal(12, 2)
+  payload            Json?
+  storageKey         String?           @unique @db.VarChar(500)
+  fileName           String?           @db.VarChar(255)
+  fileSize           Int?
+  generatedAt        DateTime?
+  attempts           Int               @default(0)
+  lastError          String?           @db.VarChar(500)
+  lastAttemptAt      DateTime?
+  uniquenessKey      String?           @unique @db.VarChar(120)
+  correctsDocumentId String?
+  correctionReason   String?           @db.Text
+  createdBy          String?           @db.VarChar(120)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  order              B2bOrder          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer           B2bCustomer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  correctsDocument   B2bDocument?      @relation("B2bDocumentCorrection", fields: [correctsDocumentId], references: [id], onDelete: Restrict)
+  corrections        B2bDocument[]     @relation("B2bDocumentCorrection")
+
+  @@index([orderId])
+  @@index([customerId])
+  @@index([type, status])
+}
+
+/// Internal audit trail of B2B order events. NEVER exposed to customers.
+model B2bOrderEvent {
+  id        String            @id @default(cuid())
+  orderId   String
+  type      B2bOrderEventType
+  actor     String?           @db.VarChar(120)  // 'customer' | 'admin:<email>' | 'system'
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  order     B2bOrder          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
 }

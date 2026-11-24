@@ -1,15 +1,14 @@
 /**
  * POST /api/admin/b2b/orders/[id]/reject
  *
- * Reject a PENDING order. Records the admin identity and (optionally) a
- * reason. No PDF, no invoice number issued — REJECTED orders never enter
- * the sequential invoice register.
+ * Reject a PENDING order. Body (optional): { reason?: string }.
+ * No document is issued; the reason is shown to the customer.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { isAdminAuthenticated } from '@/lib/b2b/admin-auth';
-import { truncate } from '@/lib/b2b/validation';
+import { getAdminActor, isAdminAuthenticated } from '@/lib/b2b/admin-auth';
+import { rejectB2bOrder } from '@/lib/b2b/orders';
+import { b2bErrorResponse, optionalString, readJsonBody } from '@/lib/b2b/errors';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -20,43 +19,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const { id } = await context.params;
-
-  const order = await db.b2bOrder.findUnique({ where: { id } });
-  if (!order) {
-    return NextResponse.json({ error: 'Pedido no encontrado.' }, { status: 404 });
-  }
-  if (order.status !== 'PENDING') {
-    return NextResponse.json(
-      { error: 'Solo los pedidos pendientes pueden rechazarse.' },
-      { status: 409 }
-    );
-  }
-
-  let reason: string | null = null;
-  try {
-    const body = await request.json();
-    reason = truncate(body?.reason, 1000);
-  } catch {
-    // reason is optional
-  }
+  const body = await readJsonBody(request);
 
   try {
-    const updated = await db.b2bOrder.update({
-      where: { id },
-      data: {
-        status: 'REJECTED',
-        rejectedAt: new Date(),
-        notes: reason ?? order.notes,
-      },
-    });
-    return NextResponse.json({
-      success: true,
-      order: { id: updated.id, status: updated.status },
-    });
-  } catch {
-    return NextResponse.json(
-      { error: 'No se pudo rechazar el pedido.' },
-      { status: 500 }
-    );
+    const order = await rejectB2bOrder(id, getAdminActor(), optionalString(body.reason, 1000));
+    return NextResponse.json({ success: true, order: { id: order.id, status: order.status } });
+  } catch (err) {
+    return b2bErrorResponse(err, 'reject_order', { orderId: id });
   }
 }

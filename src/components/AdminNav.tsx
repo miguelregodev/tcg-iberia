@@ -29,7 +29,7 @@ export function AdminNav() {
       <div className="container-custom px-4 py-4 flex justify-between items-center gap-4">
         <div className="flex items-center gap-8">
           <Link
-            href="/admin/orders"
+            href="/admin"
             className="text-2xl font-bold text-red-600"
           >
             Admin Panel

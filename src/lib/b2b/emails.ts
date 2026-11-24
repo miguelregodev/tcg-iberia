@@ -20,6 +20,12 @@
  */
 
 import * as nodemailer from 'nodemailer';
+import type { B2bDocumentTypeValue } from '@/types';
+import {
+  getProviderLabel,
+  getTrackingUrl,
+  type ShippingProvider,
+} from '@/lib/shipping/tracking-urls';
 
 // ── Shared branding (mirror of src/lib/email.ts) ────────────────────────────
 const BRAND = {
@@ -518,6 +524,11 @@ interface OrderContext {
   subtotal: number;
   ivaAmount: number;
   total: number;
+  /** Net shipping cost (only shown when > 0). */
+  shippingCost?: number;
+  /** Recargo de Equivalencia (only shown when > 0). */
+  surchargeRate?: number;
+  surchargeAmount?: number;
   notes?: string | null;
 }
 
@@ -558,17 +569,25 @@ function orderItemsTable(items: OrderEmailLine[]): string {
   `;
 }
 
-function orderTotalsBlock(subtotal: number, iva: number, total: number): string {
+function totalsRow(label: string, value: number): string {
+  return `
+      <tr>
+        <td style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">${escapeHtml(label)}</td>
+        <td align="right" style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;">${eurFmt.format(value)}</td>
+      </tr>`;
+}
+
+function orderTotalsBlock(ctx: Pick<OrderContext, 'subtotal' | 'ivaAmount' | 'total' | 'shippingCost' | 'surchargeRate' | 'surchargeAmount'>): string {
+  const { subtotal, ivaAmount: iva, total } = ctx;
+  const shipping = ctx.shippingCost ?? 0;
+  const surcharge = ctx.surchargeAmount ?? 0;
+  const surchargePct = `${Number(((ctx.surchargeRate ?? 0) * 100).toFixed(2)).toLocaleString('es-ES')}%`;
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-collapse:collapse;">
-      <tr>
-        <td style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Base imponible</td>
-        <td align="right" style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;">${eurFmt.format(subtotal)}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">IVA 21%</td>
-        <td align="right" style="padding:6px 8px;font-family:${FONT_STACK};font-size:13px;">${eurFmt.format(iva)}</td>
-      </tr>
+      ${totalsRow(shipping > 0 ? 'Subtotal productos' : 'Base imponible', subtotal)}
+      ${shipping > 0 ? totalsRow('Gastos de envío', shipping) + totalsRow('Base imponible', subtotal + shipping) : ''}
+      ${totalsRow('IVA 21%', iva)}
+      ${surcharge > 0 ? totalsRow(`Recargo de Equivalencia ${surchargePct}`, surcharge) : ''}
       <tr>
         <td style="padding:8px 8px;border-top:2px solid ${BRAND.text};font-family:${FONT_STACK};font-size:15px;font-weight:700;">Total</td>
         <td align="right" style="padding:8px 8px;border-top:2px solid ${BRAND.text};font-family:${FONT_STACK};font-size:15px;font-weight:700;color:${BRAND.primary};">${eurFmt.format(total)}</td>
@@ -601,7 +620,7 @@ export async function sendB2bOrderRequestEmail(ctx: OrderContext): Promise<void>
       </td>
     </tr>
     <tr><td style="padding:0 32px;">${orderItemsTable(ctx.items)}</td></tr>
-    <tr><td style="padding:0 32px;">${orderTotalsBlock(ctx.subtotal, ctx.ivaAmount, ctx.total)}</td></tr>
+    <tr><td style="padding:0 32px;">${orderTotalsBlock(ctx)}</td></tr>
     ${notesBlock}
     <tr><td style="padding:24px 32px 32px 32px;" align="center">${primaryButton('Revisar pedido', `${appUrl}/admin/b2b`)}</td></tr>
   `;
@@ -614,7 +633,7 @@ export async function sendB2bOrderRequestEmail(ctx: OrderContext): Promise<void>
       </td>
     </tr>
     <tr><td style="padding:0 32px;">${orderItemsTable(ctx.items)}</td></tr>
-    <tr><td style="padding:0 32px 32px 32px;">${orderTotalsBlock(ctx.subtotal, ctx.ivaAmount, ctx.total)}</td></tr>
+    <tr><td style="padding:0 32px 32px 32px;">${orderTotalsBlock(ctx)}</td></tr>
   `;
 
   await Promise.allSettled([
@@ -666,7 +685,7 @@ export async function sendB2bOrderAcceptedEmail(params: {
       </td>
     </tr>
     <tr><td style="padding:0 32px;">${orderItemsTable(params.ctx.items)}</td></tr>
-    <tr><td style="padding:0 32px 32px 32px;">${orderTotalsBlock(params.ctx.subtotal, params.ctx.ivaAmount, params.ctx.total)}</td></tr>
+    <tr><td style="padding:0 32px 32px 32px;">${orderTotalsBlock(params.ctx)}</td></tr>
   `;
 
   await transporter.sendMail({
@@ -716,5 +735,131 @@ export async function sendB2bOrderCancelledEmail(params: {
     subject: `Pedido B2B cancelado · ${params.orderNumber}`,
     html: htmlShell('Pedido cancelado', content),
     text: `El pedido ${params.orderNumber} de ${params.customerCompany} ha sido cancelado por ${params.cancelledBy === 'customer' ? 'el cliente' : 'un administrador'}.`,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Document + shipping emails (admin order management)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DOCUMENT_EMAIL_COPY: Record<B2bDocumentTypeValue, { title: string; intro: string }> = {
+  INVOICE: { title: 'Factura', intro: 'Adjuntamos la factura de tu pedido' },
+  PROFORMA: { title: 'Factura proforma', intro: 'Adjuntamos la factura proforma (documento sin validez fiscal) de tu pedido' },
+  QUOTATION: { title: 'Presupuesto', intro: 'Adjuntamos el presupuesto (documento sin validez fiscal) solicitado para tu pedido' },
+  CORRECTIVE_INVOICE: { title: 'Factura rectificativa', intro: 'Adjuntamos la factura rectificativa correspondiente a tu pedido' },
+};
+
+/**
+ * Sends an issued B2B document (PDF attached) to the customer. Throws on
+ * failure so callers can record the outcome in the order audit trail.
+ */
+export async function sendB2bDocumentEmail(params: {
+  to: string;
+  contactName: string;
+  orderNumber: string;
+  documentType: B2bDocumentTypeValue;
+  documentNumber: string;
+  total: number;
+  pdf: Uint8Array;
+  orderUrl: string;
+}): Promise<void> {
+  const transporter = getTransporter();
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const copy = DOCUMENT_EMAIL_COPY[params.documentType];
+
+  const content = `
+    <tr>
+      <td style="padding:24px 32px 8px 32px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.text};">
+        <p style="margin:0 0 6px 0;">Hola ${escapeHtml(params.contactName)},</p>
+        <p style="margin:0 0 12px 0;">
+          ${copy.intro} <strong>${escapeHtml(params.orderNumber)}</strong>:
+          <strong>${escapeHtml(params.documentNumber)}</strong> por un total de <strong>${eurFmt.format(params.total)}</strong>.
+        </p>
+        <p style="margin:0 0 12px 0;">También puedes descargarlo en cualquier momento desde tu área de pedidos B2B.</p>
+      </td>
+    </tr>
+    <tr><td style="padding:8px 32px 32px 32px;" align="center">${primaryButton('Ver mi pedido', params.orderUrl)}</td></tr>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: params.to,
+    subject: `${copy.title} ${params.documentNumber} — Pedido ${params.orderNumber}`,
+    html: htmlShell(`${copy.title} ${params.documentNumber}`, content),
+    text: `${copy.intro} ${params.orderNumber}: ${params.documentNumber} (${eurFmt.format(params.total)}). Consulta tu pedido: ${params.orderUrl}`,
+    attachments: [
+      {
+        filename: `${params.documentNumber}.pdf`,
+        content: Buffer.from(params.pdf),
+        contentType: 'application/pdf',
+      },
+    ],
+  });
+}
+
+/**
+ * B2B adaptation of the consumer "order shipped" email: same carrier labels
+ * and tracking-link logic (`src/lib/shipping/tracking-urls.ts`), B2B branding,
+ * plus a link to the order in the B2B portal. Throws on failure so the
+ * caller can record it and offer a retry — the shipment itself is never
+ * rolled back.
+ */
+export async function sendB2bOrderShippedEmail(params: {
+  to: string;
+  contactName: string;
+  companyName: string;
+  orderNumber: string;
+  shippingProvider: ShippingProvider;
+  trackingNumber: string;
+  orderUrl: string;
+}): Promise<void> {
+  const transporter = getTransporter();
+  const from = getFromAddress('TCG Iberia <noreply@tcgiberia.com>');
+  const carrier = getProviderLabel(params.shippingProvider);
+  const trackingUrl = getTrackingUrl(params.shippingProvider, params.trackingNumber);
+  const trackingHtml = trackingUrl
+    ? `<a href="${escapeHtml(trackingUrl)}" style="color:${BRAND.primary};text-decoration:none;font-weight:600;">${escapeHtml(params.trackingNumber)}</a>`
+    : escapeHtml(params.trackingNumber);
+
+  const content = `
+    <tr>
+      <td style="padding:24px 32px 8px 32px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.text};">
+        <p style="margin:0 0 6px 0;">Hola ${escapeHtml(params.contactName)},</p>
+        <p style="margin:0 0 12px 0;">
+          El pedido <strong>${escapeHtml(params.orderNumber)}</strong> de <strong>${escapeHtml(params.companyName)}</strong>
+          ha sido enviado y ya está en tránsito.
+        </p>
+        <div style="padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;font-size:13px;line-height:1.8;">
+          <div><strong>Transportista:</strong> ${escapeHtml(carrier)}</div>
+          <div><strong>Número de seguimiento:</strong> ${trackingHtml}</div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 32px 32px 32px;" align="center">
+        ${trackingUrl ? primaryButton('Seguir envío', trackingUrl) : ''}
+        <p style="margin:16px 0 0 0;font-family:${FONT_STACK};font-size:13px;">
+          <a href="${escapeHtml(params.orderUrl)}" style="color:${BRAND.primary};text-decoration:none;">Ver el detalle del pedido en tu cuenta B2B</a>
+        </p>
+      </td>
+    </tr>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: params.to,
+    subject: `Tu pedido ${params.orderNumber} está en camino`,
+    html: htmlShell(`Pedido ${params.orderNumber} enviado`, content),
+    text: [
+      `Hola ${params.contactName},`,
+      '',
+      `El pedido ${params.orderNumber} ha sido enviado.`,
+      `Transportista: ${carrier}`,
+      `Número de seguimiento: ${params.trackingNumber}`,
+      trackingUrl ? `Seguimiento: ${trackingUrl}` : '',
+      `Detalle del pedido: ${params.orderUrl}`,
+    ]
+      .filter((l) => l !== null)
+      .join('\n'),
   });
 }

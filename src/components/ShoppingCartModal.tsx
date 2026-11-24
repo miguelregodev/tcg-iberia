@@ -8,7 +8,7 @@ import { getFreeShippingState } from '@/lib/shipping/free-shipping';
 import { formatReleaseDate, getProductInventoryState, getProductQuantityLimit, getProductStatusLabel } from '@/lib/products/state';
 import { useB2BSession } from '@/context/B2BSessionContext';
 import { useB2BPrices } from '@/hooks/useB2BPrices';
-import { B2B_IVA_RATE } from '@/lib/b2b/company';
+import { B2B_EQUIVALENCE_SURCHARGE_RATE, B2B_IVA_RATE } from '@/lib/b2b/company';
 
 interface ShoppingCartModalProps {
   isOpen: boolean;
@@ -65,7 +65,12 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
     () => (isB2B ? Math.round(b2bSubtotal * B2B_IVA_RATE * 100) / 100 : 0),
     [b2bSubtotal, isB2B]
   );
-  const b2bTotal = Math.round((b2bSubtotal + b2bIva) * 100) / 100;
+  // Recargo de Equivalencia: same rule as the server (src/lib/b2b/pricing.ts), on the taxable base.
+  const b2bSurcharge =
+    isB2B && customer?.equivalenceSurcharge
+      ? Math.round(b2bSubtotal * B2B_EQUIVALENCE_SURCHARGE_RATE * 100) / 100
+      : 0;
+  const b2bTotal = Math.round((b2bSubtotal + b2bIva + b2bSurcharge) * 100) / 100;
 
   if (!isOpen) return null;
 
@@ -368,6 +373,14 @@ export function ShoppingCartModal({ isOpen, onClose }: ShoppingCartModalProps) {
                         {b2bIva.toFixed(2)}€
                       </span>
                     </div>
+                    {b2bSurcharge > 0 && (
+                      <div className="flex justify-between items-center mb-1.5 sm:mb-2 text-xs sm:text-base">
+                        <span className="text-text-secondary">Recargo de Equivalencia (5,2%):</span>
+                        <span className="font-semibold text-text-primary">
+                          {b2bSurcharge.toFixed(2)}€
+                        </span>
+                      </div>
+                    )}
                     <div className="border-t border-dark-border pt-2 sm:pt-3 flex justify-between items-center">
                       <span className="text-xs sm:text-sm font-bold text-text-primary">Total:</span>
                       <span className="text-base sm:text-lg font-bold text-premium-gold">
