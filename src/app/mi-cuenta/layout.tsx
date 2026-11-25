@@ -4,6 +4,7 @@ import { getB2bSessionFromCookies } from '@/lib/b2b/session';
 import { MiCuentaNav } from './MiCuentaNav';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
 
 export default async function MiCuentaLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -36,7 +37,7 @@ export default async function MiCuentaLayout({ children }: { children: React.Rea
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Sidebar */}
               <aside className="lg:w-64 flex-shrink-0">
-                <MiCuentaNav userName={userName} />
+                <MiCuentaNav userName={userName} showLoyalty={isLoyaltyLocalPreview()} />
               </aside>
 
               {/* Main content */}

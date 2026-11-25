@@ -18,9 +18,11 @@ import { useMemo } from 'react';
 import { AnnouncementBannerBar } from './AnnouncementBannerBar';
 import { SearchPanel, type SearchPanelHandle } from './SearchPanel';
 import { DesktopNavMenu } from './DesktopNavMenu';
+import { AccountLoyaltyBalance } from './AccountLoyaltyBalance';
 
 const ACCOUNT_LINKS = [
   { href: '/mi-cuenta/pedidos', label: 'Historial de Pedidos', icon: '📦' },
+  { href: '/mi-cuenta/recompensas', label: 'Recompensas', icon: '🏆' },
   { href: '/mi-cuenta/favoritos', label: 'Favoritos', icon: '❤️' },
   { href: '/mi-cuenta/alertas-stock', label: 'Alertas de Stock', icon: '🔔' },
 ];
@@ -274,6 +276,7 @@ export function Navigation() {
                       <p className="font-bold text-sm truncate text-text-primary">
                         {session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0]}
                       </p>
+                      <AccountLoyaltyBalance key={session.user.id} />
                     </div>
 
                     {/* Links */}

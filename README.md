@@ -67,6 +67,12 @@ npm run dev
 
 Visit http://localhost:3000
 
+Development servers started with `npm run dev` use a separate compilation
+directory for each port (`.next/dev-3000` by default). For an additional local
+preview, use `npm run dev -- --port 34122`. This prevents parallel servers from
+overwriting chunks and causing `ChunkLoadError`. Production builds still use
+`.next`; do not run a production build while development servers are running.
+
 ## Admin Panel
 
 Navigate to http://localhost:3000/admin and log in with your `ADMIN_PASSWORD`.

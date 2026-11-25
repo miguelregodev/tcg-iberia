@@ -23,10 +23,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { id } = await params;
-    const order = await db.order.findUnique({ where: { id } });
+    const order = await db.order.findUnique({ where: { id }, include: { loyaltyPurchase: { select: { id: true } } } });
 
     if (!order || (order.userId !== session.user.id && order.email !== session.user.email)) {
       return NextResponse.json({ error: 'Pedido no encontrado.' }, { status: 404 });
+    }
+    if (order.loyaltyPurchase) {
+      return NextResponse.json(
+        { error: 'Para evitar pagos duplicados, este pedido de fidelización no admite reintentos. Contacta con la tienda si el pago sigue pendiente.' },
+        { status: 409 },
+      );
     }
 
     if (order.paymentStatus !== 'PENDING_PAYMENT') {

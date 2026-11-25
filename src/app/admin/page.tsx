@@ -25,6 +25,7 @@ const SECTIONS = [
   { href: '/admin/media-library', title: 'Biblioteca Multimedia', description: 'Imágenes del catálogo.' },
   { href: '/admin/banners', title: 'Banners', description: 'Anuncios superiores de la tienda.' },
   { href: '/admin/hero-slides', title: 'Hero Home', description: 'Carrusel de la página de inicio.' },
+  { href: '/admin/loyalty', title: 'Fidelización', description: 'Configuración del programa en preparación.' },
 ] as const;
 
 async function loadCounters() {

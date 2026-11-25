@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/admin/hero-slides', label: 'Hero Home' },
   { href: '/admin/price-import', label: 'Precios' },
   { href: '/admin/b2b', label: 'B2B' },
+  { href: '/admin/loyalty', label: 'Fidelización' },
 ];
 
 export function AdminNav() {

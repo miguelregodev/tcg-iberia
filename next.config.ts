@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DEV_DIST_DIR || '.next',
   reactStrictMode: true,
   images: {
     remotePatterns: [

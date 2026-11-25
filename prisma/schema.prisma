@@ -389,6 +389,11 @@ model Order {
   updatedAt             DateTime    @updatedAt
 
   user                  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  loyaltyReward         LoyaltyOrderReward?
+  loyaltyPurchase       LoyaltyPurchase?
+  loyaltyRedemption     LoyaltyRedemption?
+  loyaltyTransactions   LoyaltyTransaction[]
+  loyaltyRefunds        LoyaltyRefund[]
 
   @@index([email])
   @@index([userId])
@@ -667,8 +672,220 @@ model User {
   shipments     Shipment[]
   partyParticipations PartyParticipation[]
   lotteryParticipations LotteryParticipation[]
+  loyaltyAccount LoyaltyAccount?
+  loyaltyPurchases LoyaltyPurchase[]
+  loyaltyAdminTransactions LoyaltyTransaction[] @relation("LoyaltyAdminTransactions")
+  loyaltyAdminRefunds LoyaltyRefund[] @relation("LoyaltyAdminRefunds")
+  loyaltyAdminActions LoyaltyAdminAction[]
 
   @@index([email])
+}
+
+enum LoyaltyTransactionType {
+  PURCHASE_REWARD
+  REDEMPTION
+  REFUND_REVERSAL
+  REDEMPTION_RESTORE
+  ADMIN_ADJUSTMENT
+  EXPIRATION
+  PROMOTIONAL_BONUS
+}
+
+enum LoyaltyRedemptionStatus {
+  RESERVED
+  SETTLED
+  RELEASED
+}
+
+/// Disabled until the payment, refund and reservation lifecycle is integrated.
+model LoyaltyProgramConfig {
+  id                    String        @id @default("default")
+  enabled               Boolean       @default(false)
+  baseRate              Decimal       @default(1) @db.Decimal(10, 4)
+  pointsPerEuro         Decimal       @default(100) @db.Decimal(12, 2)
+  minimumRedemption     Decimal       @default(100) @db.Decimal(12, 2)
+  redemptionIncrement   Decimal       @default(100) @db.Decimal(12, 2)
+  maxDiscountPercent    Decimal       @default(20) @db.Decimal(5, 2)
+  evaluationDays        Int           @default(60)
+  expirationMonths      Int           @default(12)
+  updatedAt             DateTime      @updatedAt
+  tiers                 LoyaltyTier[]
+}
+
+model LoyaltyTier {
+  id          String               @id @default(cuid())
+  configId    String               @default("default")
+  name        String               @db.VarChar(100)
+  position    Int
+  threshold   Decimal              @db.Decimal(12, 2)
+  multiplier  Decimal              @db.Decimal(10, 4)
+  description String               @default("") @db.Text
+  color       String               @default("#D4AF37") @db.VarChar(32)
+  icon        String               @default("") @db.VarChar(100)
+  benefits    Json                 @default("[]")
+  config      LoyaltyProgramConfig @relation(fields: [configId], references: [id], onDelete: Restrict)
+
+  @@unique([configId, position])
+  @@unique([configId, name])
+}
+
+/// The signed balance is the sum of ledger transactions; negative means debt.
+model LoyaltyAccount {
+  id           String               @id @default(cuid())
+  userId       String               @unique
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  /// Set once the 60-day historical points migration has been executed.
+  historicalBackfillAt DateTime?
+  historicalBackfillBy String?
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions LoyaltyTransaction[]
+  lots         LoyaltyPointsLot[]
+  rewards      LoyaltyOrderReward[]
+  redemptions  LoyaltyRedemption[]
+}
+
+/// Immutable checkout amounts and authenticated customer attribution.
+model LoyaltyPurchase {
+  id            String  @id @default(cuid())
+  orderId       String  @unique
+  userId        String
+  productGross  Decimal @db.Decimal(12, 2)
+  eligibleSpend Decimal @db.Decimal(12, 2)
+  shippingGross Decimal @db.Decimal(12, 2)
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  user          User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+}
+
+/// Append-only. Corrections are recorded as separate compensating transactions.
+model LoyaltyTransaction {
+  id                String                 @id @default(cuid())
+  sequence          BigInt                 @unique @default(autoincrement())
+  accountId         String
+  orderId           String?
+  actorId           String?
+  adminActor        String?
+  type              LoyaltyTransactionType
+  points            Decimal                @db.Decimal(16, 2)
+  balanceAfter      Decimal                @db.Decimal(16, 2)
+  description       String                 @db.Text
+  idempotencyKey    String                 @unique @db.VarChar(255)
+  multiplier        Decimal?               @db.Decimal(10, 4)
+  eligibleSpend     Decimal?               @db.Decimal(12, 2)
+  expiresAt         DateTime?
+  createdAt         DateTime               @default(now())
+  account           LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  order             Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actor             User?                  @relation("LoyaltyAdminTransactions", fields: [actorId], references: [id], onDelete: Restrict)
+  lot               LoyaltyPointsLot?
+  allocations       LoyaltyLotAllocation[]
+
+  @@index([accountId, createdAt, id])
+  @@index([accountId, sequence])
+  @@index([orderId])
+  @@index([actorId])
+}
+
+model LoyaltyPointsLot {
+  id             String                @id @default(cuid())
+  accountId      String
+  transactionId  String                @unique
+  originalPoints Decimal               @db.Decimal(16, 2)
+  remainingPoints Decimal              @db.Decimal(16, 2)
+  expiresAt      DateTime?
+  createdAt      DateTime              @default(now())
+  account        LoyaltyAccount        @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  transaction    LoyaltyTransaction    @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  allocations    LoyaltyLotAllocation[]
+
+  @@index([accountId, expiresAt, createdAt])
+}
+
+model LoyaltyOrderReward {
+  id                  String         @id @default(cuid())
+  orderId             String         @unique
+  accountId           String
+  tierName            String         @db.VarChar(100)
+  multiplier          Decimal        @db.Decimal(10, 4)
+  baseRate            Decimal        @db.Decimal(10, 4)
+  eligibleSpend       Decimal        @db.Decimal(12, 2)
+  refundedSpend       Decimal        @default(0) @db.Decimal(12, 2)
+  pointsEarned        Decimal        @db.Decimal(16, 2)
+  pointsReversed      Decimal        @default(0) @db.Decimal(16, 2)
+  paidAt              DateTime
+  createdAt           DateTime       @default(now())
+  order               Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  account             LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId, paidAt])
+}
+
+model LoyaltyRedemption {
+  id              String                  @id @default(cuid())
+  orderId         String                  @unique
+  accountId       String
+  status          LoyaltyRedemptionStatus @default(RESERVED)
+  points          Decimal                 @db.Decimal(16, 2)
+  discountNet     Decimal                 @db.Decimal(12, 2)
+  discountGross   Decimal                 @db.Decimal(12, 2)
+  pointsRestored  Decimal                 @default(0) @db.Decimal(16, 2)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  order           Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  account         LoyaltyAccount          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  allocations     LoyaltyLotAllocation[]
+
+  @@index([accountId, status])
+}
+
+model LoyaltyLotAllocation {
+  id            String            @id @default(cuid())
+  lotId         String
+  redemptionId  String?
+  transactionId String?
+  points        Decimal           @db.Decimal(16, 2)
+  lot           LoyaltyPointsLot  @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  redemption    LoyaltyRedemption? @relation(fields: [redemptionId], references: [id], onDelete: Restrict)
+  transaction   LoyaltyTransaction? @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@unique([lotId, redemptionId])
+  @@unique([lotId, transactionId])
+  @@index([redemptionId])
+  @@index([transactionId])
+}
+
+/// Records externally confirmed refunds; it does not initiate a bank refund.
+model LoyaltyRefund {
+  id                String   @id @default(cuid())
+  orderId           String
+  actorId           String
+  externalReference String   @unique @db.VarChar(255)
+  reason            String   @db.Text
+  eligibleSpend     Decimal  @db.Decimal(12, 2)
+  pointsReversed    Decimal  @db.Decimal(16, 2)
+  pointsRestored    Decimal  @db.Decimal(16, 2)
+  createdAt         DateTime @default(now())
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actor             User     @relation("LoyaltyAdminRefunds", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([actorId])
+}
+
+model LoyaltyAdminAction {
+  id         String   @id @default(cuid())
+  actorId    String?
+  adminActor String?
+  action     String   @db.VarChar(100)
+  reason     String   @db.Text
+  before     Json
+  after      Json
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([actorId, createdAt])
 }
 
 /// OAuth account linked to a User (Auth.js adapter requirement)

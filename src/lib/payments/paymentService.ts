@@ -12,6 +12,9 @@ import { sendOrderEmails } from '@/lib/email';
 import { captureServerError } from '@/lib/observability/sentry';
 import { captureServerEvent } from '@/lib/analytics/posthog-server';
 import { Prisma } from '@prisma/client';
+import { finalizeLoyaltyPurchase } from '@/lib/loyalty/purchase';
+import { releaseRedemption } from '@/lib/loyalty/redemption';
+import { lockAccount } from '@/lib/loyalty/ledger';
 
 interface PaymentSuccessContext {
   orderId: string;
@@ -50,6 +53,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
     let alreadyPaid = false;
 
     const order = await db.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`);
       // Fetch order to check current state
       const currentOrder = await tx.order.findUnique({
         where: { id: orderId },
@@ -68,6 +72,9 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
           shippingLocality: true,
           shippingProvince: true,
           shippingMode: true,
+          status: true,
+          loyaltyPurchase: { select: { shippingGross: true, userId: true } },
+          loyaltyRedemption: { select: { discountGross: true } },
         },
       });
 
@@ -79,6 +86,13 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
       if (currentOrder.paymentStatus === 'PAID') {
         alreadyPaid = true;
         return currentOrder;
+      }
+      if (currentOrder.loyaltyPurchase && (currentOrder.status === 'CANCELLED' || currentOrder.status === 'DEVUELTO')) {
+        throw new Error('Cannot confirm payment for a cancelled or refunded order');
+      }
+      if (currentOrder.loyaltyPurchase) {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "LoyaltyProgramConfig" WHERE "id" = 'default' FOR SHARE`);
+        await lockAccount(tx, currentOrder.loyaltyPurchase.userId);
       }
 
       // Decrement stock for all items (preorders share the same stock pool)
@@ -137,9 +151,12 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
           shippingProvince: true,
           shippingMode: true,
           paymentStatus: true,
+          loyaltyPurchase: { select: { shippingGross: true } },
+          loyaltyRedemption: { select: { discountGross: true } },
         },
       });
 
+      await finalizeLoyaltyPurchase(tx, orderId);
       return updatedOrder;
     });
 
@@ -182,7 +199,9 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
       }, 0);
 
       const totalAmount = parseFloat(order.totalAmount.toString());
-      const shippingCost = Math.round((totalAmount - itemsTotal) * 100) / 100;
+      const shippingCost = order.loyaltyPurchase
+        ? Number(order.loyaltyPurchase.shippingGross)
+        : Math.round((totalAmount - itemsTotal) * 100) / 100;
 
       // Send confirmation emails
       await sendOrderEmails({
@@ -206,6 +225,7 @@ export async function handlePaymentSuccess(context: PaymentSuccessContext) {
         })),
         paymentStatus: 'paid',
         shippingCost,
+        loyaltyDiscount: order.loyaltyRedemption ? Number(order.loyaltyRedemption.discountGross) : undefined,
         shippingMode: order.shippingMode,
         shipping: {
           address: order.shippingAddress,
@@ -267,6 +287,7 @@ export async function handlePaymentFailure(context: PaymentFailureContext) {
 
   try {
     const order = await db.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`);
       // Fetch current order
       const currentOrder = await tx.order.findUnique({
         where: { id: orderId },
@@ -295,6 +316,8 @@ export async function handlePaymentFailure(context: PaymentFailureContext) {
         select: { id: true, paymentStatus: true, status: true },
       });
 
+      const redemption = await tx.loyaltyRedemption.findUnique({ where: { orderId }, select: { id: true } });
+      if (redemption) await releaseRedemption(tx, orderId, new Date());
       return updatedOrder;
     });
 

@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
         shippingCity: true,
         shippingLocality: true,
         shippingProvince: true,
+        loyaltyPurchase: { select: { shippingGross: true } },
+        loyaltyRedemption: { select: { discountGross: true } },
       },
     });
 
@@ -73,7 +75,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate shipping cost
-    const shippingCost = Math.round((totalAmount - itemsSubtotal) * 100) / 100;
+    const shippingCost = order.loyaltyPurchase
+      ? Number(order.loyaltyPurchase.shippingGross)
+      : Math.round((totalAmount - itemsSubtotal) * 100) / 100;
 
     return NextResponse.json({
       id: order.id,
@@ -84,6 +88,7 @@ export async function GET(request: NextRequest) {
       totalAmount,
       itemsSubtotal,
       shippingCost,
+      loyaltyDiscount: order.loyaltyRedemption ? Number(order.loyaltyRedemption.discountGross) : 0,
       items: order.items,
       shipping: {
         address: order.shippingAddress,

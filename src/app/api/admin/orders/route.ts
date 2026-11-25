@@ -200,11 +200,18 @@ export async function PATCH(request: NextRequest) {
         shippingProvider: true,
         shipmentId: true,
         shipment: { select: { paymentStatus: true } },
+        loyaltyPurchase: { select: { id: true } },
       },
     });
 
     if (!currentOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+    if (currentOrder.loyaltyPurchase && ['CANCELLED', 'FAILED', 'DEVUELTO'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Este pedido tiene fidelización. La cancelación o devolución requiere conciliación de puntos, todavía no disponible.' },
+        { status: 409 },
+      );
     }
 
     // Check if we're transitioning from PROCESSING to SHIPPED (to send email)

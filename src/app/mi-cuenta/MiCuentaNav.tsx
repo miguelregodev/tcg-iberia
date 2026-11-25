@@ -11,6 +11,7 @@ import { signOut } from 'next-auth/react';
 
 interface Props {
   userName: string;
+  showLoyalty: boolean;
 }
 
 const NAV_ITEMS = [
@@ -20,7 +21,7 @@ const NAV_ITEMS = [
   { href: '/mi-cuenta/alertas-stock', label: 'Alertas de Stock', icon: '🔔' },
 ];
 
-export function MiCuentaNav({ userName }: Props) {
+export function MiCuentaNav({ userName, showLoyalty }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const {isB2B, logout: logoutB2B } = useB2BSession();
@@ -72,6 +73,11 @@ export function MiCuentaNav({ userName }: Props) {
               </Link>
             ))}
 
+            {showLoyalty && (
+              <Link href="/mi-cuenta/recompensas" className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-surfaceHover hover:text-premium-gold">
+                <span aria-hidden="true">★</span> Recompensas (prueba)
+              </Link>
+            )}
             <hr className="my-2 border-dark-border" />
           </>
         )}

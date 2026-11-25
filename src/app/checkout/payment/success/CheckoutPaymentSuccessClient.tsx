@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { trackCheckoutCompleted, trackCheckoutFailed } from '@/lib/analytics/events';
+import { useSession } from 'next-auth/react';
+import { LoyaltyTierProgress } from '@/components/LoyaltyTierProgress';
+import { formatLoyaltyPoints, type TierTrackItem } from '@/lib/loyalty/presentation';
 
 interface OrderData {
   id: string;
@@ -16,6 +19,7 @@ interface OrderData {
   totalAmount: number;
   itemsSubtotal: number;
   shippingCost: number;
+  loyaltyDiscount: number;
   items: Array<{
     name: string;
     quantity: number;
@@ -35,12 +39,42 @@ interface Props {
   orderNumber: string | null;
 }
 
+interface LoyaltySummary {
+  pointsEarned: string;
+  previousTier: string;
+  currentTier: string;
+  multiplier: string;
+  available: string;
+  value: string;
+  nextTier: string | null;
+  remaining: string;
+  progress: number;
+  tiers: TierTrackItem[];
+}
+
 export default function CheckoutPaymentSuccessClient({ orderNumber }: Props) {
   const { clearCart } = useCart();
+  const { status } = useSession();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
+  const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
+  const [loyaltyError, setLoyaltyError] = useState(false);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || orderData?.paymentStatus !== 'PAID') return;
+    const controller = new AbortController();
+    fetch(`/api/user/loyalty/orders/${encodeURIComponent(orderData.id)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('No se pudo cargar el resumen de recompensas.');
+        return response.json() as Promise<LoyaltySummary>;
+      })
+      .then((data) => { if (!controller.signal.aborted) setLoyalty(data); })
+      .catch(() => { if (!controller.signal.aborted) setLoyaltyError(true); });
+    return () => controller.abort();
+  }, [status, orderData?.id, orderData?.paymentStatus]);
 
   useEffect(() => {
     if (!orderNumber) {
@@ -234,6 +268,22 @@ export default function CheckoutPaymentSuccessClient({ orderNumber }: Props) {
               )}
 
               {/* Order Details */}
+              {orderData.paymentStatus === 'PAID' && loyalty && (
+                <section className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-8">
+                  <h2 className="text-xl font-bold text-text-primary">Tus recompensas</h2>
+                  <p className="mt-2 text-text-secondary">Has ganado {formatLoyaltyPoints(loyalty.pointsEarned)} puntos con el nivel {loyalty.previousTier}.</p>
+                  <p className="mt-2 text-text-secondary">Saldo disponible: {formatLoyaltyPoints(loyalty.available)} puntos ({loyalty.value} €).</p>
+                  <p className="mt-2 text-text-primary">Nivel actual: {loyalty.currentTier} · x{loyalty.multiplier}</p>
+                  {loyalty.previousTier !== loyalty.currentTier && <p className="mt-2 text-premium-gold">Tu nivel ha cambiado a {loyalty.currentTier}.</p>}
+                  {loyalty.nextTier ? (
+                    <>
+                      <p className="mt-2 text-text-secondary">Te faltan {loyalty.remaining} € para {loyalty.nextTier}.</p>
+                    </>
+                  ) : <p className="mt-2 text-text-secondary">Has alcanzado el nivel máximo.</p>}
+                  <LoyaltyTierProgress tiers={loyalty.tiers} currentTier={loyalty.currentTier} progress={loyalty.progress} />
+                </section>
+              )}
+              {loyaltyError && <p role="alert" className="mb-4 text-danger">No se pudo cargar el resumen de recompensas.</p>}
               {orderData.paymentStatus === 'PAID' && (
                 <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8">
                   <h2 className="text-xl font-bold text-text-primary mb-6">
@@ -271,6 +321,12 @@ export default function CheckoutPaymentSuccessClient({ orderNumber }: Props) {
                         {orderData.itemsSubtotal.toFixed(2)}€
                       </span>
                     </div>
+                    {orderData.loyaltyDiscount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-text-secondary">Descuento de puntos:</span>
+                        <span className="text-text-primary font-semibold">-{orderData.loyaltyDiscount.toFixed(2)}€</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-text-secondary">Gastos de Envío:</span>
                       <span className="text-text-primary font-semibold">

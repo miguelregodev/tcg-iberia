@@ -31,6 +31,10 @@ import { SHIPPING_CONFIG } from '@/lib/shipping/config';
 import { isOrderItemSnapshot } from '@/lib/orders/items';
 import { priceOrderItems, toShippingItems } from '@/lib/orders/pricing';
 import { RETRIABLE_PAYMENT_STATUSES } from '@/lib/orders/retry';
+import { calculateTaxExclusiveProducts } from '@/lib/loyalty/calculations';
+import { isLoyaltyCheckoutEnabled } from '@/lib/loyalty/local-preview';
+import { lockAccount, LoyaltyOperationError } from '@/lib/loyalty/ledger';
+import { reserveRedemption } from '@/lib/loyalty/redemption';
 import { getRedsysConfig, getRedsysApiUrl } from '@/lib/payments/redsys/config';
 import { nextRedsysOrderId } from '@/lib/payments/redsys/orderId';
 import {
@@ -72,6 +76,8 @@ interface CreateRedsysPaymentRequest {
    * it's updated in place instead of creating a duplicate — covers failed/abandoned
    * payment retries and "added more items, retry" without ever stacking new orders. */
   cartId?: string;
+  loyaltyPoints?: string;
+  loyaltyExpectedTotal?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -86,6 +92,16 @@ export async function POST(request: NextRequest) {
     // session. Guests (and any tampered request) silently fall back to immediate shipping.
     const session = await auth();
     const isAuthenticated = Boolean(session?.user?.id);
+    if (body.loyaltyPoints !== undefined && (typeof body.loyaltyPoints !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(body.loyaltyPoints))) {
+      return NextResponse.json({ error: 'Cantidad de puntos inválida.' }, { status: 400 });
+    }
+    const requestedPoints = new Prisma.Decimal(body.loyaltyPoints ?? '0');
+    if (requestedPoints.greaterThan(0) && (typeof body.loyaltyExpectedTotal !== 'string' || !/^\d+\.\d{2}$/.test(body.loyaltyExpectedTotal))) {
+      return NextResponse.json({ error: 'Actualiza el resumen del canje antes de pagar.' }, { status: 400 });
+    }
+    if (requestedPoints.greaterThan(0) && (!isAuthenticated || !isLoyaltyCheckoutEnabled())) {
+      return NextResponse.json({ error: 'El canje no está disponible.' }, { status: 400 });
+    }
     const groupedShipping = Boolean(body.groupedShipping) && isAuthenticated;
 
     if (!items || items.length === 0) {
@@ -175,6 +191,21 @@ export async function POST(request: NextRequest) {
       const sessionUserId = session?.user?.id
         ? (await tx.user.findUnique({ where: { id: session.user.id }, select: { id: true } }))?.id
         : undefined;
+      if (isLoyaltyCheckoutEnabled() && sessionUserId) {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "LoyaltyProgramConfig" WHERE "id" = 'default' FOR SHARE`);
+      }
+      const loyaltyConfig = isLoyaltyCheckoutEnabled() && sessionUserId
+        ? await tx.loyaltyProgramConfig.findUniqueOrThrow({ where: { id: 'default' }, select: { enabled: true } }) : null;
+      const loyaltyEnabled = Boolean(loyaltyConfig?.enabled && sessionUserId);
+      if (!loyaltyEnabled && requestedPoints.greaterThan(0)) throw new LoyaltyOperationError('El canje no está disponible.');
+      if (loyaltyEnabled && sessionUserId) {
+        await lockAccount(tx, sessionUserId);
+        const pending = cartId && await tx.order.findFirst({
+          where: { cartId, paymentStatus: 'PENDING_PAYMENT', loyaltyPurchase: { userId: sessionUserId } },
+          select: { id: true },
+        });
+        if (pending) throw new LoyaltyOperationError('Este carrito tiene un pago pendiente de confirmación. Contacta con la tienda si no se resuelve.');
+      }
       const linkedUserId = sessionUserId
         ?? (customerEmail
           ? (await tx.user.findUnique({ where: { email: customerEmail }, select: { id: true } }))?.id
@@ -184,13 +215,14 @@ export async function POST(request: NextRequest) {
       // the same customer, update it in place instead of creating a duplicate — this is
       // what makes failed-payment retries, abandoned-checkout retries, and "added more
       // items then retried" all land on the SAME order instead of stacking new ones.
-      const existingOrder = cartId
+      const existingOrder = cartId && !loyaltyEnabled
         ? await tx.order.findFirst({
             where: {
               cartId,
               email: normalizedEmail,
               userId: linkedUserId ?? null,
               paymentStatus: { in: [...RETRIABLE_PAYMENT_STATUSES] },
+              loyaltyPurchase: { is: null },
             },
             select: { id: true },
           })
@@ -236,7 +268,7 @@ export async function POST(request: NextRequest) {
       }
 
       const orderNumber = await generateOrderNumber(tx);
-      return tx.order.create({
+      const created = await tx.order.create({
         data: { ...sharedData, orderNumber, cartId },
         select: {
           id: true,
@@ -245,6 +277,41 @@ export async function POST(request: NextRequest) {
           totalAmount: true,
           email: true,
         },
+      });
+      if (!loyaltyEnabled || !sessionUserId) return created;
+      const shippingGross = new Prisma.Decimal(shippingCost).toDecimalPlaces(2);
+      const originalTotal = new Prisma.Decimal(totalAmountCents).dividedBy(100);
+      const productGross = originalTotal.minus(shippingGross);
+      if (productGross.lessThan(0) || originalTotal.lessThan('0.01')) {
+        throw new LoyaltyOperationError('Importe del pedido inválido.');
+      }
+      const reservation = requestedPoints.greaterThan(0) ? await reserveRedemption(tx, {
+        userId: sessionUserId,
+        orderId: created.id,
+        points: requestedPoints.toString(),
+        eligibleSubtotalGross: productGross.toString(),
+        eligibleSubtotalNet: calculateTaxExclusiveProducts(productGross, '0.21').toString(),
+        paymentLimitGross: originalTotal.minus('0.01').toString(),
+        taxRate: '0.21',
+        now: new Date(),
+      }) : null;
+      const discount = reservation?.discountGross ?? new Prisma.Decimal(0);
+      if (reservation && !originalTotal.minus(discount).equals(body.loyaltyExpectedTotal!)) {
+        throw new LoyaltyOperationError('El importe ha cambiado. Revisa el resumen antes de pagar.');
+      }
+      await tx.loyaltyPurchase.create({
+        data: {
+          orderId: created.id,
+          userId: sessionUserId,
+          productGross: productGross.minus(discount),
+          eligibleSpend: calculateTaxExclusiveProducts(productGross.minus(discount), '0.21'),
+          shippingGross,
+        },
+      });
+      return tx.order.update({
+        where: { id: created.id },
+        data: { totalAmount: originalTotal.minus(discount) },
+        select: { id: true, orderNumber: true, redsysOrderId: true, totalAmount: true, email: true },
       });
     });
 
@@ -261,7 +328,7 @@ export async function POST(request: NextRequest) {
 
     // Build Redsys merchant parameters (using official uppercase field names)
     const merchantParams: RedsysMerchantParameters = {
-      DS_MERCHANT_AMOUNT: String(totalAmountCents),
+      DS_MERCHANT_AMOUNT: order.totalAmount.times(100).toFixed(0),
       DS_MERCHANT_CURRENCY: '978', // EUR
       DS_MERCHANT_ORDER: redsysOrderId,
       DS_MERCHANT_MERCHANTCODE: config.merchantCode,
@@ -275,7 +342,7 @@ export async function POST(request: NextRequest) {
 
     // Log payment details (safe: no sensitive keys)
     console.log('[REDSYS] Order ID:', redsysOrderId);
-    console.log('[REDSYS] Amount (cents):', totalAmountCents);
+    console.log('[REDSYS] Amount (cents):', merchantParams.DS_MERCHANT_AMOUNT);
     console.log('[REDSYS] Notification URL:', notificationUrl);
     console.log('[REDSYS] Merchant Parameters:', merchantParams);
 
@@ -301,6 +368,7 @@ export async function POST(request: NextRequest) {
       redsysOrderId: order.redsysOrderId,
     });
   } catch (error: unknown) {
+    if (error instanceof LoyaltyOperationError) return NextResponse.json({ error: error.message }, { status: 400 });
     console.error('[REDSYS] Payment creation error:', error);
     captureServerError({
       error,

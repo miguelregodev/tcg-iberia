@@ -14,6 +14,31 @@ import { estimateShippingCost } from '@/lib/shipping/client-calculator';
 import { SHIPPING_CONFIG } from '@/lib/shipping/config';
 import { createOrderItemSnapshot } from '@/lib/orders/items';
 import { formatReleaseDate, getProductInventoryState, getProductStatusLabel } from '@/lib/products/state';
+import { LoyaltyTierProgress } from '@/components/LoyaltyTierProgress';
+import { formatLoyaltyPoints, type TierTrackItem } from '@/lib/loyalty/presentation';
+
+interface LoyaltyQuote {
+  available: string;
+  reserved: string;
+  pointsPerEuro: string;
+  minimum: string;
+  increment: string;
+  tier: string;
+  multiplier: string;
+  nextTier: string | null;
+  remaining: string;
+  remainingAfterOrder: string | null;
+  earnedPoints: string;
+  pointsToRedeem: string;
+  progress: number;
+  tiers: TierTrackItem[];
+  productGross: string;
+  discount: string;
+  shipping: string;
+  net: string;
+  vat: string;
+  total: string;
+}
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -39,6 +64,10 @@ export function CheckoutForm() {
   const [calculatedShippingCost, setCalculatedShippingCost] = useState<number | null>(null);
   const [isCanaryZone, setIsCanaryZone] = useState(false);
   const [groupedShipping, setGroupedShipping] = useState(false);
+  const [redeemLoyaltyPoints, setRedeemLoyaltyPoints] = useState(false);
+  const [loyaltyInfo, setLoyaltyInfo] = useState<LoyaltyQuote | null>(null);
+  const [loyaltyQuote, setLoyaltyQuote] = useState<LoyaltyQuote | null>(null);
+  const [loyaltyError, setLoyaltyError] = useState<string | null>(null);
   const didRunInitialStockCheck = useRef(false);
 
   const isAuthenticated = status === 'authenticated';
@@ -122,6 +151,46 @@ export function CheckoutForm() {
       cancelled = true;
     };
   }, [session?.user?.email, status]);
+
+  const loyaltyQuoteBody = useMemo(() => JSON.stringify({
+    items: items.map((item) => createOrderItemSnapshot(item.product, item.quantity)),
+    postalCode: formData.shippingPostalCode,
+    groupedShipping,
+    redeemAll: redeemLoyaltyPoints,
+  }), [items, formData.shippingPostalCode, groupedShipping, redeemLoyaltyPoints]);
+
+  useEffect(() => {
+    setLoyaltyQuote(null);
+    setLoyaltyError(null);
+    if (!isAuthenticated || !isValidSpanishPostalCode(formData.shippingPostalCode) || items.length === 0) {
+      if (!isAuthenticated) setLoyaltyInfo(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/user/loyalty/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: loyaltyQuoteBody,
+          signal: controller.signal,
+        });
+        if (response.status === 404) {
+          setLoyaltyInfo(null);
+          return;
+        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'No se pudo calcular el canje.');
+        setLoyaltyInfo(data);
+        setLoyaltyQuote(data);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        Sentry.captureException(error, { tags: { module: 'checkout', action: 'loyalty_quote' } });
+        setLoyaltyError(error instanceof Error ? error.message : 'No se pudo calcular el canje.');
+      }
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [isAuthenticated, formData.shippingPostalCode, items.length, loyaltyQuoteBody]);
 
   // Re-validates current cart items against live stock and pricing. Any item that's no
   // longer purchasable (out of stock / unpublished / deleted) gets its quantity zeroed out
@@ -292,6 +361,11 @@ export function CheckoutForm() {
     setError(null);
     setStockWarning(null);
     setPriceWarning(null);
+    if (redeemLoyaltyPoints && !loyaltyQuote) {
+      setError('Espera a que se confirme el resumen de puntos o revisa la cantidad.');
+      return;
+    }
+    const pointsToRedeem = redeemLoyaltyPoints ? loyaltyQuote?.pointsToRedeem ?? '0' : '0';
 
     // Re-validate stock and pricing right before paying: if anything went out of stock or
     // its price/discount changed since the cart was loaded, update the cart, warn the
@@ -355,6 +429,7 @@ export function CheckoutForm() {
           customerData: formData,
           groupedShipping: isAuthenticated && groupedShipping,
           cartId,
+          ...(Number(pointsToRedeem) > 0 && loyaltyQuote ? { loyaltyPoints: pointsToRedeem, loyaltyExpectedTotal: loyaltyQuote.total } : {}),
         }),
       });
 
@@ -650,7 +725,7 @@ export function CheckoutForm() {
                   ? 'Comprobando disponibilidad...'
                   : isProcessing
                   ? 'Procesando...'
-                  : `Pagar de forma segura ${effectiveTotal.toFixed(2)}€`}
+                  : `Pagar de forma segura ${loyaltyQuote ? loyaltyQuote.total : effectiveTotal.toFixed(2)}€`}
               </button>
 
               {/* Back Link */}
@@ -662,8 +737,8 @@ export function CheckoutForm() {
         </div>
 
         {/* Order Summary Section */}
-        <div className="md:col-span-1">
-          <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8 sticky top-20">
+        <div className="md:col-span-1 md:sticky md:top-20 self-start">
+          <div className="bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-8">
             <h2 className="text-xl font-bold text-text-primary mb-4">Resumen del Pedido</h2>
 
             <FreeShippingProgress
@@ -736,8 +811,14 @@ export function CheckoutForm() {
             }`}>
               <div className="flex justify-between text-sm text-text-secondary">
                 <span>Subtotal</span>
-                <span className="font-semibold text-text-primary">{totalPrice.toFixed(2)}€</span>
+                <span className="font-semibold text-text-primary">{loyaltyQuote?.productGross ?? totalPrice.toFixed(2)}€</span>
               </div>
+              {loyaltyQuote && Number(loyaltyQuote.discount) > 0 && (
+                <div className="flex justify-between text-sm text-text-secondary">
+                  <span>Descuento de puntos</span><span>-{loyaltyQuote.discount}€</span>
+                </div>
+              )}
+              {loyaltyQuote && <p className="text-xs text-text-secondary">Productos: base {loyaltyQuote.net} € + IVA incluido {loyaltyQuote.vat} €.</p>}
               <div className={`flex justify-between text-sm ${
                 groupedShipping ? 'text-premium-gold font-semibold' : postalCodeFilled ? 'text-success font-semibold' : 'text-text-secondary'
               }`}>
@@ -745,7 +826,9 @@ export function CheckoutForm() {
                 <span className={`font-semibold ${
                   groupedShipping ? 'text-premium-gold' : postalCodeFilled ? 'text-success' : 'text-text-primary'
                 }`}>
-                  {groupedShipping
+                  {loyaltyQuote
+                    ? (groupedShipping ? 'Gratis ahora' : Number(loyaltyQuote.shipping) === 0 ? 'Gratis' : `${loyaltyQuote.shipping}€`)
+                    : groupedShipping
                     ? 'Gratis ahora'
                     : calculatedShippingCost === null
                     ? defaultShippingCost === 0
@@ -760,7 +843,7 @@ export function CheckoutForm() {
               <div className="flex justify-between text-sm font-bold text-text-primary pt-2 border-t border-dark-border">
                 <span>Total:</span>
                 <span className="text-premium-gold text-sm">
-                  {effectiveTotal.toFixed(2)}€
+                  {loyaltyQuote ? loyaltyQuote.total : effectiveTotal.toFixed(2)}€
                 </span>
               </div>
             </div>
@@ -772,6 +855,51 @@ export function CheckoutForm() {
               </div>
             )}
           </div>
+
+          {loyaltyInfo && (
+            <section aria-labelledby="loyalty-checkout-title" className="mt-6 bg-dark-surface border border-dark-border rounded-lg shadow-elevated p-6">
+              <h2 id="loyalty-checkout-title" className="text-lg font-bold text-text-primary mb-2">Recompensas</h2>
+              <p className="text-sm text-text-secondary">Disponibles: {formatLoyaltyPoints(loyaltyInfo.available)} puntos · {loyaltyInfo.tier} (x{loyaltyInfo.multiplier})</p>
+              {Number(loyaltyInfo.reserved) > 0 && <p className="text-sm text-text-secondary">Reservados en pagos pendientes: {formatLoyaltyPoints(loyaltyInfo.reserved)} puntos.</p>}
+              <p className="mt-1 text-xs text-text-secondary">{loyaltyInfo.pointsPerEuro} puntos = 1 €. Mínimo canjeable: {loyaltyInfo.minimum} puntos.</p>
+
+              <div className="mt-4 flex items-center gap-3">
+                <input id="redeemLoyaltyPoints" type="checkbox" checked={redeemLoyaltyPoints}
+                  onChange={(event) => setRedeemLoyaltyPoints(event.target.checked)}
+                  className="h-4 w-4" />
+                <label htmlFor="redeemLoyaltyPoints" className="text-sm text-text-primary">Canjear mis puntos en este pedido</label>
+              </div>
+              {redeemLoyaltyPoints && loyaltyQuote && (Number(loyaltyQuote.pointsToRedeem) > 0
+                ? <p className="mt-2 text-sm text-text-primary">
+                    Se canjearán {formatLoyaltyPoints(loyaltyQuote.pointsToRedeem)} puntos (descuento de {loyaltyQuote.discount} €).
+                    {Number(loyaltyQuote.pointsToRedeem) < Number(loyaltyInfo.available) && ' 20% de descuento máximo aplicado.'}
+                  </p>
+                : <p className="mt-2 text-sm text-text-secondary">Este pedido no permite canjear puntos.</p>)}
+
+              {loyaltyQuote && (
+                <div className="mt-4 border-t border-dark-border pt-4 space-y-2">
+                  <p className="text-sm text-text-primary">
+                    Ganarás <span className="font-semibold text-premium-gold">{formatLoyaltyPoints(loyaltyQuote.earnedPoints)} puntos</span> si completas este pedido ({loyaltyQuote.tier}, x{loyaltyQuote.multiplier}).
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    Los puntos se calculan sobre el importe total del pedido, con IVA y envío incluidos, sin restar el descuento por puntos canjeados. Se aplica el multiplicador de tu nivel y se eliminan los decimales al final.
+                  </p>
+                  {loyaltyQuote.nextTier && loyaltyQuote.remainingAfterOrder !== null
+                    ? <p className="text-sm text-text-secondary">
+                        {loyaltyQuote.remainingAfterOrder === '0.00'
+                          ? `Con este pedido alcanzarás el gasto necesario para ${loyaltyQuote.nextTier}.`
+                          : `Te quedarían ${loyaltyQuote.remainingAfterOrder} € de gasto para subir a ${loyaltyQuote.nextTier}.`}
+                      </p>
+                    : <p className="text-sm text-text-secondary">Has alcanzado el nivel máximo.</p>}
+                </div>
+              )}
+
+              <div className="mt-4">
+                <LoyaltyTierProgress tiers={loyaltyInfo.tiers} currentTier={loyaltyInfo.tier} progress={loyaltyInfo.progress} />
+              </div>
+              {loyaltyError && <p role="alert" className="mt-2 text-sm text-danger">{loyaltyError}</p>}
+            </section>
+          )}
         </div>
       </div>
     </div>

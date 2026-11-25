@@ -32,6 +32,7 @@ export interface OrderEmailPayload {
   items: OrderEmailItem[];
   paymentStatus: string; // 'paid' | 'unpaid' | 'no_payment_required' (Stripe values)
   shippingCost?: number; // Calculated shipping cost; if not provided, will be computed
+  loyaltyDiscount?: number;
   /** "Agrupar Envío" orders defer shipment (and its fee) until the customer requests it. Defaults to IMMEDIATE. */
   shippingMode?: 'IMMEDIATE' | 'GROUPED';
   shipping?: {
@@ -308,6 +309,7 @@ function totalBreakdownHtml(
   shippingCost: number,
   total: number,
   shippingLabel?: string,
+  loyaltyDiscount?: number,
 ): string {
   const shippingDisplay = shippingLabel ?? (shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost));
   return `
@@ -316,6 +318,10 @@ function totalBreakdownHtml(
         <td style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Subtotal</td>
         <td align="right" style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};font-weight:500;">${formatCurrency(subtotal)}</td>
       </tr>
+      ${loyaltyDiscount ? `<tr>
+        <td style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Descuento de puntos</td>
+        <td align="right" style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};">-${formatCurrency(loyaltyDiscount)}</td>
+      </tr>` : ''}
       <tr>
         <td style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.textMuted};">Env&iacute;o</td>
         <td align="right" style="padding:8px 0;font-family:${FONT_STACK};font-size:13px;color:${BRAND.text};font-weight:500;">${shippingDisplay}</td>
@@ -396,7 +402,7 @@ function buildCustomerHtml(payload: OrderEmailPayload): string {
         <!-- Items header -->
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Resumen del pedido</div>
         ${itemsTableHtml(payload.items)}
-        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload))}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload), payload.loyaltyDiscount)}
 
         <p style="margin:32px 0 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${BRAND.textMuted};">
           ${isGrouped(payload) ? 'Te avisaremos cuando solicites y salga tu env&iacute;o.' : 'Te enviaremos otro correo en cuanto tu pedido salga de nuestro almac&eacute;n.'} Si tienes cualquier duda, escr&iacute;benos a
@@ -478,7 +484,7 @@ function buildAdminHtml(payload: OrderEmailPayload): string {
 
         <div style="font-family:${FONT_STACK};font-size:13px;letter-spacing:0.1em;color:${BRAND.textMuted};text-transform:uppercase;font-weight:600;margin:0 0 4px 0;">Art&iacute;culos</div>
         ${itemsTableHtml(payload.items)}
-        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload))}
+        ${totalBreakdownHtml(subtotal, shippingCost, payload.totalAmount, shippingLabelFor(payload), payload.loyaltyDiscount)}
       </td>
     </tr>
   `;
@@ -509,6 +515,7 @@ function buildCustomerText(payload: OrderEmailPayload): string {
     ...lines,
     '',
     `Subtotal: ${formatCurrency(subtotal)}`,
+    ...(payload.loyaltyDiscount ? [`Descuento de puntos: -${formatCurrency(payload.loyaltyDiscount)}`] : []),
     `Envio:    ${shippingDisplay}`,
     `Total:    ${formatCurrency(payload.totalAmount)}`,
     '',
@@ -538,6 +545,7 @@ function buildAdminText(payload: OrderEmailPayload): string {
     ...lines,
     '',
     `Subtotal: ${formatCurrency(subtotal)}`,
+    ...(payload.loyaltyDiscount ? [`Descuento de puntos: -${formatCurrency(payload.loyaltyDiscount)}`] : []),
     `Envio:    ${shippingDisplay}`,
     `Total:    ${formatCurrency(payload.totalAmount)}`,
   ].join('\n');

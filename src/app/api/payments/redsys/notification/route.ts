@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
         email: true,
         totalAmount: true,
         paymentStatus: true,
+        loyaltyPurchase: { select: { id: true } },
       },
     });
 
@@ -265,6 +266,9 @@ export async function POST(request: NextRequest) {
     // Verify payment amount matches order
     try {
       verifyPaymentAmount(order, paymentAmount, paymentCurrency);
+      if (order.loyaltyPurchase && !order.totalAmount.times(100).equals(paymentAmount)) {
+        throw new Error('Loyalty payment must match the order amount exactly');
+      }
     } catch (error) {
       console.error('Payment amount verification failed:', error);
 
@@ -278,6 +282,11 @@ export async function POST(request: NextRequest) {
           responseCode,
         },
       });
+
+      // An amount mismatch is not proof that a loyalty payment failed.
+      if (order.loyaltyPurchase) {
+        return NextResponse.json({ error: 'Payment requires reconciliation' }, { status: 500 });
+      }
 
       // Mark order as failed due to amount mismatch
       await handlePaymentFailure({
@@ -305,8 +314,8 @@ export async function POST(request: NextRequest) {
         });
 
         // Update order with Redsys transaction details
-        await db.order.update({
-          where: { id: order.id },
+        await db.order.updateMany({
+          where: { id: order.id, paymentStatus: 'PAID' },
           data: {
             redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
@@ -343,8 +352,8 @@ export async function POST(request: NextRequest) {
         });
 
         // Update order with Redsys details
-        await db.order.update({
-          where: { id: order.id },
+        await db.order.updateMany({
+          where: { id: order.id, paymentStatus: 'PAYMENT_FAILED' },
           data: {
             redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
@@ -364,6 +373,7 @@ export async function POST(request: NextRequest) {
             responseCode,
           },
         });
+        if (order.loyaltyPurchase) return NextResponse.json({ error: 'Payment processing failed' }, { status: 500 });
       }
     } else {
       // Payment declined/error
@@ -375,8 +385,8 @@ export async function POST(request: NextRequest) {
         });
 
         // Update order with Redsys details
-        await db.order.update({
-          where: { id: order.id },
+        await db.order.updateMany({
+          where: { id: order.id, paymentStatus: 'PAYMENT_FAILED' },
           data: {
             redsysTransactionId: transactionId || null,
             redsysResponseCode: responseCode,
@@ -396,6 +406,7 @@ export async function POST(request: NextRequest) {
             responseCode,
           },
         });
+        if (order.loyaltyPurchase) return NextResponse.json({ error: 'Payment processing failed' }, { status: 500 });
       }
     }
 
