@@ -16,7 +16,9 @@ vi.mock('./ledger', async (original) => ({
   applyManualAdjustment: mocks.adjust,
 }));
 
-import { LoyaltyBalanceConflictError, setLoyaltyBalance } from './admin-accounts';
+vi.mock('./spending', () => ({ getQualifyingSpend: vi.fn().mockResolvedValue(new Prisma.Decimal(0)) }));
+
+import { listLoyaltyAccounts, LoyaltyBalanceConflictError, setLoyaltyBalance } from './admin-accounts';
 import { LoyaltyOperationError } from './ledger';
 
 const findUnique = vi.fn();
@@ -71,5 +73,27 @@ describe('setLoyaltyBalance', () => {
       await expect(setLoyaltyBalance(tx, { ...input, targetBalance })).rejects.toBeInstanceOf(LoyaltyOperationError);
     }
     expect(mocks.lock).not.toHaveBeenCalled();
+  });
+});
+
+describe('listLoyaltyAccounts', () => {
+  it('excludes users that are B2B customers from the listing and the total', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const count = vi.fn().mockResolvedValue(0);
+    const client = {
+      b2bCustomer: { findMany: vi.fn().mockResolvedValue([{ email: 'sales@example.test' }]) },
+      loyaltyProgramConfig: { findUniqueOrThrow: vi.fn().mockResolvedValue({ evaluationDays: 60, tiers: [] }) },
+      user: { findMany, count },
+    } as unknown as Parameters<typeof listLoyaltyAccounts>[0];
+    await listLoyaltyAccounts(client, { query: 'sales', page: 1, pageSize: 25, now: input.now });
+    const where = {
+      NOT: { email: { in: ['sales@example.test'], mode: 'insensitive' } },
+      OR: [
+        { email: { contains: 'sales', mode: 'insensitive' } },
+        { fullName: { contains: 'sales', mode: 'insensitive' } },
+      ],
+    };
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where }));
+    expect(count).toHaveBeenCalledWith({ where });
   });
 });

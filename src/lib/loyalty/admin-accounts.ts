@@ -38,14 +38,19 @@ export async function listLoyaltyAccounts(
   input: { query: string; page: number; pageSize: number; now: Date },
 ): Promise<LoyaltyAccountPage> {
   const query = input.query.trim();
-  const where: Prisma.UserWhereInput = query
-    ? {
-        OR: [
-          { email: { contains: query, mode: 'insensitive' } },
-          { fullName: { contains: query, mode: 'insensitive' } },
-        ],
-      }
-    : {};
+  // B2B customers don't earn points; they are linked to retail users only by email.
+  const b2bEmails = (await db.b2bCustomer.findMany({ select: { email: true } })).map((customer) => customer.email);
+  const where: Prisma.UserWhereInput = {
+    ...(b2bEmails.length ? { NOT: { email: { in: b2bEmails, mode: 'insensitive' } } } : {}),
+    ...(query
+      ? {
+          OR: [
+            { email: { contains: query, mode: 'insensitive' } },
+            { fullName: { contains: query, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  };
   const [config, users, total] = await Promise.all([
     db.loyaltyProgramConfig.findUniqueOrThrow({
       where: { id: 'default' },
