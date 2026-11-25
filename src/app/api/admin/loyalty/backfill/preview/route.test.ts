@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   local: vi.fn(), admin: vi.fn(), transaction: vi.fn(), readOnly: vi.fn(), preview: vi.fn(), capture: vi.fn(),
 }));
-vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyLocalPreview: mocks.local }));
+vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyEnabled: mocks.local }));
 vi.mock('@/lib/loyalty/admin', () => ({ getLoyaltyAdministrator: mocks.admin }));
 vi.mock('@/lib/loyalty/backfill', () => ({ previewLoyaltyBackfill: mocks.preview }));
 vi.mock('@/lib/db', () => ({ db: { $transaction: mocks.transaction } }));

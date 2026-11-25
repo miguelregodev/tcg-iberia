@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/admin-auth', () => ({ isAdminAuthenticated: mocks.isAdmin }));
 vi.mock('@/lib/b2b/admin-auth', () => ({ getAdminActor: () => 'admin:real@example.test' }));
-vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyLocalPreview: mocks.preview, isLoyaltyCheckoutEnabled: () => false }));
+vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyEnabled: mocks.preview, isLoyaltyLocalPreview: () => false, isLoyaltyCheckoutEnabled: () => false }));
 vi.mock('@/lib/observability/sentry', () => ({ captureServerError: vi.fn() }));
 vi.mock('@/lib/db', () => ({
   db: {
@@ -93,7 +93,7 @@ describe('admin loyalty configuration', () => {
     }));
   });
 
-  it('allows activation only in the local preview', async () => {
+  it('allows activation only when the module is available', async () => {
     mocks.preview.mockReturnValue(true);
     expect((await PUT(request('PUT', { ...payload, enabled: true }))).status).toBe(200);
     expect(mocks.configUpdate).toHaveBeenCalledWith(expect.objectContaining({

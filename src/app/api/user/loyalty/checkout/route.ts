@@ -100,6 +100,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     captureServerError({ error, module: 'loyalty_checkout_quote', request });
-    return NextResponse.json({ error: 'No se pudo calcular la vista previa.' }, { status: 500 });
+    return NextResponse.json({ error: 'No se pudo calcular el resumen de puntos.' }, { status: 500 });
   }
 }

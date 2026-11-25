@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getLoyaltyAdministrator } from '@/lib/loyalty/admin';
 import { listLoyaltyAccounts } from '@/lib/loyalty/admin-accounts';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { captureServerError } from '@/lib/observability/sentry';
 
 const PAGE_SIZES = new Set([25, 50, 100]);
 
 export async function GET(request: NextRequest) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   if (!getLoyaltyAdministrator(request)) return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
   const params = request.nextUrl.searchParams;
   const page = Number(params.get('page') ?? '1');

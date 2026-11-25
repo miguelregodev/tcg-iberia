@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { calculateTierProgress } from '@/lib/loyalty/calculations';
 import { getLocalAccount } from '@/lib/loyalty/ledger';
-import { isLoyaltyCheckoutEnabled, isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyCheckoutEnabled, isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { formatLoyaltyPoints, serializeTierTrack } from '@/lib/loyalty/presentation';
 import { LoyaltyTierProgress } from '@/components/LoyaltyTierProgress';
 
@@ -23,8 +23,8 @@ const dateFormatter = new Intl.DateTimeFormat('es-ES', {
 
 export default async function RewardsPage() {
   const session = await auth();
-  if (!isLoyaltyLocalPreview() || !session?.user?.id) {
-    return <p className="text-text-secondary">La vista previa de recompensas no está disponible.</p>;
+  if (!isLoyaltyEnabled() || !session?.user?.id) {
+    return <p className="text-text-secondary">El programa de recompensas no está disponible.</p>;
   }
 
   try {
@@ -35,9 +35,9 @@ export default async function RewardsPage() {
     return (
       <section className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Recompensas: vista previa local</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Recompensas</h1>
           <p className="mt-2 text-text-secondary">
-            {isLoyaltyCheckoutEnabled() ? 'Vista previa local del programa de recompensas.' : 'Solo se pueden probar ajustes manuales. Las compras y los canjes no están activos.'}
+            {isLoyaltyCheckoutEnabled() ? 'Gana puntos con cada compra y canjéalos como descuento en el checkout.' : 'Las compras y los canjes de puntos todavía no están activos.'}
           </p>
         </div>
         <div className="card p-6">
@@ -81,6 +81,6 @@ export default async function RewardsPage() {
     );
   } catch (error) {
     Sentry.captureException(error, { tags: { module: 'loyalty_account_preview' } });
-    return <p role="alert" className="text-text-secondary">No se pudo cargar la vista previa de recompensas. Comprueba que esté activada.</p>;
+    return <p role="alert" className="text-text-secondary">No se pudieron cargar tus recompensas. Inténtalo de nuevo más tarde.</p>;
   }
 }

@@ -12,7 +12,7 @@ import { formatLoyaltyPoints, formatTierMultiplier } from '@/lib/loyalty/present
 type AccountPage = LoyaltyAccountPage;
 const euroFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
 
-type Settings = LoyaltyConfigInput & { enabled: boolean; localPreview: boolean; localCheckout: boolean };
+type Settings = LoyaltyConfigInput & { enabled: boolean; available: boolean; localPreview: boolean; checkout: boolean };
 type DecimalSetting = 'baseRate' | 'pointsPerEuro' | 'minimumRedemption' | 'redemptionIncrement' | 'maxDiscountPercent';
 
 const fields: Array<{ key: DecimalSetting; label: string }> = [
@@ -359,9 +359,12 @@ export default function LoyaltySettingsPage() {
       <main className="container-custom max-w-5xl px-4 py-8">
         <h1 className="text-2xl font-bold text-text-primary">Configuración de fidelización</h1>
         {settings && <p className="mt-2 text-sm text-text-secondary">
-          {settings.localCheckout
-            ? 'Vista previa local: compras y canjes de prueba habilitados. Las devoluciones requieren conciliación y todavía no están disponibles.'
-            : 'Vista previa local: solo permite ajustes manuales. Las compras y los canjes no están activos.'}
+          {settings.localPreview ? 'Vista previa local: ' : ''}
+          {!settings.available
+            ? 'El programa no está disponible en este entorno. Define LOYALTY_ENABLED=1 para habilitarlo.'
+            : settings.checkout
+              ? 'Compras y canjes de puntos habilitados. Las devoluciones no ajustan los puntos automáticamente; corrígelas con un ajuste manual.'
+              : 'Solo permite ajustes manuales. Las compras y los canjes no están activos (LOYALTY_CHECKOUT_ENABLED).'}
         </p>}
         <p className="mt-1 text-sm text-text-secondary">La configuración se administra con la sesión del backoffice.</p>
         {loading && <p role="status" className="mt-6 py-16 text-center text-sm text-text-muted">Cargando configuración…</p>}
@@ -377,11 +380,11 @@ export default function LoyaltySettingsPage() {
             className="mt-6 space-y-6"
           >
             <CollapsibleSection title="Reglas generales">
-              {settings.localPreview && (
+              {settings.available && (
                 <label className="mb-4 flex items-center gap-2 text-sm text-text-primary">
                   <input type="checkbox" className="h-4 w-4 rounded border-dark-border text-premium-gold focus:ring-premium-gold" checked={settings.enabled}
                     onChange={(event) => setSettings({ ...settings, enabled: event.target.checked })} />
-                  Activar vista previa solo en este entorno local
+                  {settings.localPreview ? 'Activar vista previa solo en este entorno local' : 'Activar programa de fidelización'}
                 </label>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
@@ -442,13 +445,13 @@ export default function LoyaltySettingsPage() {
               <span className={labelTextClass}>Motivo del cambio</span>
               <textarea className={inputClass} required maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} />
             </label>
-            <button type="submit" className="btn btn-primary text-sm disabled:opacity-50" disabled={saving || (settings.enabled && !settings.localPreview)}>
+            <button type="submit" className="btn btn-primary text-sm disabled:opacity-50" disabled={saving || (settings.enabled && !settings.available)}>
               {saving ? 'Guardando…' : 'Guardar configuración'}
             </button>
           </form>
         )}
-        {settings?.localPreview && settings.enabled && <LoyaltyAccountsTable pointsPerEuro={settings.pointsPerEuro} />}
-        {settings?.localPreview && settings.enabled && <AdjustmentForm />}
+        {settings?.available && settings.enabled && <LoyaltyAccountsTable pointsPerEuro={settings.pointsPerEuro} />}
+        {settings?.available && settings.enabled && <AdjustmentForm />}
       </main>
     </div>
   );

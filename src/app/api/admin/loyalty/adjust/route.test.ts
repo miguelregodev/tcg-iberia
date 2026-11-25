@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   adjust: vi.fn(),
 }));
 
-vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyLocalPreview: mocks.preview }));
+vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyEnabled: mocks.preview }));
 vi.mock('@/lib/loyalty/admin', () => ({ getLoyaltyAdministrator: mocks.admin }));
 vi.mock('@/lib/loyalty/ledger', () => ({
   applyManualAdjustment: mocks.adjust,

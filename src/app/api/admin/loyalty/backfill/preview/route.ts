@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getLoyaltyAdministrator } from '@/lib/loyalty/admin';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { previewLoyaltyBackfill } from '@/lib/loyalty/backfill';
 import { captureServerError } from '@/lib/observability/sentry';
 
 export async function POST(request: NextRequest) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   if (!getLoyaltyAdministrator(request)) {
     return NextResponse.json({ error: 'Se requiere una sesión de backoffice.' }, { status: 403 });
   }

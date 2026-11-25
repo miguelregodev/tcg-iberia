@@ -3,11 +3,11 @@ import { db } from '@/lib/db';
 import { getLoyaltyAdministrator } from '@/lib/loyalty/admin';
 import { LoyaltyBalanceConflictError, setLoyaltyBalance } from '@/lib/loyalty/admin-accounts';
 import { LoyaltyOperationError } from '@/lib/loyalty/ledger';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { captureServerError } from '@/lib/observability/sentry';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   const adminActor = getLoyaltyAdministrator(request);
   if (!adminActor) return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
   let body: unknown;

@@ -5,11 +5,11 @@ import { db } from '@/lib/db';
 import { captureServerError } from '@/lib/observability/sentry';
 import { calculateTierProgress } from '@/lib/loyalty/calculations';
 import { getLocalAccount } from '@/lib/loyalty/ledger';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { serializeTierTrack } from '@/lib/loyalty/presentation';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });

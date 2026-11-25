@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getLoyaltyAdministrator } from '@/lib/loyalty/admin';
-import { isLoyaltyCheckoutEnabled, isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyCheckoutEnabled, isLoyaltyEnabled, isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
 import { parseLoyaltyConfig } from '@/lib/loyalty/config';
 import { captureServerError } from '@/lib/observability/sentry';
 
@@ -31,6 +31,10 @@ function serializeConfig(config: ConfigRecord) {
   };
 }
 
+function availability() {
+  return { available: isLoyaltyEnabled(), localPreview: isLoyaltyLocalPreview(), checkout: isLoyaltyCheckoutEnabled() };
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!getLoyaltyAdministrator(request)) {
@@ -40,7 +44,7 @@ export async function GET(request: NextRequest) {
       where: { id: 'default' },
       include: configInclude,
     });
-    return NextResponse.json({ ...serializeConfig(config), localPreview: isLoyaltyLocalPreview(), localCheckout: isLoyaltyCheckoutEnabled() });
+    return NextResponse.json({ ...serializeConfig(config), ...availability() });
   } catch (error) {
     captureServerError({ error, module: 'loyalty_config_get', request });
     return NextResponse.json({ error: 'No se pudo cargar la configuración.' }, { status: 500 });
@@ -64,7 +68,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Configuración inválida.' }, { status: 400 });
     }
     const input = body as Record<string, unknown>;
-    if (typeof input.enabled !== 'boolean' || (input.enabled && !isLoyaltyLocalPreview())) {
+    if (typeof input.enabled !== 'boolean' || (input.enabled && !isLoyaltyEnabled())) {
       return NextResponse.json({ error: 'El programa todavía no se puede activar.' }, { status: 400 });
     }
     const enabled = input.enabled;
@@ -87,7 +91,7 @@ export async function PUT(request: NextRequest) {
         where: { id: 'default' },
         include: configInclude,
       });
-      if (before.enabled && !isLoyaltyLocalPreview()) throw new Error('Active loyalty program cannot be edited by this endpoint');
+      if (before.enabled && !isLoyaltyEnabled()) throw new Error('Active loyalty program cannot be edited by this endpoint');
       const { tiers, ...settings } = config;
       await tx.loyaltyTier.deleteMany({ where: { configId: 'default' } });
       await tx.loyaltyProgramConfig.update({ where: { id: 'default' }, data: { ...settings, enabled } });
@@ -110,7 +114,7 @@ export async function PUT(request: NextRequest) {
       return serializeConfig(after);
     });
 
-    return NextResponse.json({ ...updated, localPreview: isLoyaltyLocalPreview(), localCheckout: isLoyaltyCheckoutEnabled() });
+    return NextResponse.json({ ...updated, ...availability() });
   } catch (error) {
     captureServerError({ error, module: 'loyalty_config_put', request });
     return NextResponse.json({ error: 'No se pudo guardar la configuración.' }, { status: 500 });

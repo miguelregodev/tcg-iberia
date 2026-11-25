@@ -3,11 +3,11 @@ import { Prisma } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getLocalAccount } from '@/lib/loyalty/ledger';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { captureServerError } from '@/lib/observability/sentry';
 
 export async function GET(request: NextRequest) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   try {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });

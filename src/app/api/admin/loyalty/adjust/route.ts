@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getLoyaltyAdministrator } from '@/lib/loyalty/admin';
 import { applyManualAdjustment, LoyaltyOperationError } from '@/lib/loyalty/ledger';
-import { isLoyaltyLocalPreview } from '@/lib/loyalty/local-preview';
+import { isLoyaltyEnabled } from '@/lib/loyalty/local-preview';
 import { captureServerError } from '@/lib/observability/sentry';
 
 export async function POST(request: NextRequest) {
-  if (!isLoyaltyLocalPreview()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
+  if (!isLoyaltyEnabled()) return NextResponse.json({ error: 'No disponible.' }, { status: 404 });
   try {
     const adminActor = getLoyaltyAdministrator(request);
     if (!adminActor) return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });

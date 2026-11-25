@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   account: vi.fn(),
   capture: vi.fn(),
 }));
-vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyLocalPreview: mocks.enabled }));
+vi.mock('@/lib/loyalty/local-preview', () => ({ isLoyaltyEnabled: mocks.enabled }));
 vi.mock('@/lib/auth', () => ({ auth: mocks.auth }));
 vi.mock('@/lib/loyalty/ledger', () => ({ getLocalAccount: mocks.account }));
 vi.mock('@/lib/observability/sentry', () => ({ captureServerError: mocks.capture }));
